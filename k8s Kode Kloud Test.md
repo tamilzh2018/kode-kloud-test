@@ -1,0 +1,1427 @@
+To deploy **Qwen** (the large language model from Tongyi Lab) in your **Kubernetes (K8s) cluster**, you need to follow several key steps, including:
+
+1. **Obtaining the Qwen model**
+2. **Setting up the environment**
+3. **Creating a Docker image**
+4. **Deploying the model to Kubernetes (K8s)**
+
+Here's a step-by-step guide based on the assumption that you are using a GPU-enabled Kubernetes cluster.
+
+---
+
+## ✅ Prerequisites
+
+- A running Kubernetes cluster with access for deployment (e.g. via `kubectl`)
+- Access to Docker registry (e.g. Docker Hub, or your own private registry)
+- GPU support if using GPU acceleration (e.g. NVIDIA devices and NVIDIA's Kubernetes device plugin)
+- Python 3.8+ and CUDA (if training or inference uses GPU)
+
+---
+
+## 🔧 Step 1: Build or Pull Qwen Docker Image
+
+You can find the Qwen model (Tongyi Chat, Qwen, etc.) on [Qwen's GitHub repository](https://github.com/QwenLM).
+
+### Option A: Use an Existing Image
+
+Check if there's a publicly available Docker image for Qwen (e.g. on Docker Hub or Harbor):
+```bash
+docker pull qwen/qwen:latest
+```
+
+### Option B: Build Your Own Image
+
+1. Clone the repo:
+```bash
+git clone https://github.com/QwenLM/Qwen.git
+cd Qwen
+```
+
+2. Build a Docker container:
+```bash
+docker build -t qwen-app:latest .
+```
+> Note: You may need to include `cu118`, `nvidia/cuda`, or other CUDA versions in your Dockerfile if GPU is involved.
+
+---
+
+## 📦 Step 2: Push Image to Registry
+
+If you're using a private registry or Docker Hub (recommended for Kubernetes use):
+
+```bash
+docker tag qwen-app:latest your-registry/qwen-app:latest
+docker push your-registry/qwen-app:latest
+```
+
+---
+
+## 🚀 Step 3: Deploy to Kubernetes
+
+Create a `deployment.yaml` file (adjust it for your environment):
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: qwen-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: qwen
+  template:
+    metadata:
+      labels:
+        app: qwen
+    spec:
+      containers:
+      - name: qwen
+        image: your-registry/qwen-app:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8000  # Replace with the model server port
+        resources:
+          limits:
+            nvidia.com/gpu: 1  # If using GPU
+          requests:
+            nvidia.com/gpu: 1
+      imagePullSecrets:
+        - name: regcred  # If using a private registry
+```
+
+Also, create a `service.yaml`:
+
+```yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: qwen-svc
+spec:
+  type: LoadBalancer
+  ports:
+    - port: 80
+      targetPort: 8000
+  selector:
+    app: qwen
+```
+
+Apply the configuration:
+
+```bash
+kubectl apply -f deployment.yaml
+kubectl apply -f service.yaml
+```
+
+---
+
+## 🔄 Step 4: Access the Model
+
+Once deployed:
+
+- Get the LoadBalancer IP or Ingress URL.
+- You can send requests via:
+
+```bash
+curl -X POST http://<ip>:80/generate \
+  -H "Content-Type: application/json" \
+  -d '{"prompt": "Hello, how are you?"}'
+```
+
+Make sure your Qwen implementation includes a REST or HTTP-based endpoint like this.
+
+---
+
+## 🧠 Optional: GPU Configuration
+
+If using NVIDIA GPUs:
+
+- Install [NVIDIA Kubernetes device plugin](https://github.com/NVIDIA/k8s-device-plugin).
+- Ensure your worker nodes have NVIDIA drivers and `nvidia-docker` set up properly.
+
+---
+
+## 🔐 Security and Best Practices
+
+- Use a private registry with imagePullSecrets.
+- Ensure access to your model is secured.
+- Consider using Ingress with TLS if exposing publicly.
+
+---
+
+## 📚 References
+
+- [Qwen GitHub Repository](https://github.com/QwenLM/Qwen)
+- [NVIDIA Kubernetes GPU Setup](https://github.com/NVIDIA/k8s-device-plugin)
+- [Kubernetes Deployment Guide](https://kubernetes.io/docs/concepts/workloads/controllers/deployment/)
+
+---
+
+## 🛠 Need Help with Specific Version or Setup?
+
+Let me know:
+
+- Which Qwen version? (Chat, Max, Qwen2, etc.)
+- Are you using CPU or GPU?
+- Do you have a specific framework (like Transformers, FastAPI, etc.)?
+- Are you using a private registry?
+
+I can generate a full `Dockerfile`, `deployment.yaml`, and setup script tailored to your needs.
+
+
+1. **Deploy Pods in Kubernetes Cluster**
+The Nautilus DevOps team is diving into Kubernetes for application management. One team member has a task to create a pod according to the details below:
+
+
+Create a pod named pod-httpd using the httpd image with the latest tag. Ensure to specify the tag as httpd:latest.
+
+Set the app label to httpd_app, and name the container as httpd-container.
+
+Note: The kubectl utility on jump_host is configured to operate with the Kubernetes cluster.
+Use the below yaml code:
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: pod-httpd
+  labels:
+    app: httpd_app
+spec:
+  containers:
+    - name: httpd-container
+      image: httpd:latest
+      ports:
+      - containerPort: 80
+
+
+2. **Deploy Applications with Kubernetes Deployments**
+
+The Nautilus DevOps team is delving into Kubernetes for app management. One team member needs to create a deployment following these details:
+
+
+Create a deployment named nginx to deploy the application nginx using the image nginx:latest (ensure to specify the tag)
+
+
+
+
+3. **Setup Kubernetes Namespaces and PODs**
+
+The Nautilus DevOps team is planning to deploy some micro services on Kubernetes platform. The team has already set up a Kubernetes cluster and now they want to set up some namespaces, deployments etc. Based on the current requirements, the team has shared some details as below:
+
+Create a namespace named dev and deploy a POD within it. Name the pod dev-nginx-pod and use the nginx image with the latest tag. Ensure to specify the tag as nginx:latest.
+
+4. **Set Resource Limits in Kubernetes Pods**
+
+The Nautilus DevOps team has noticed performance issues in some Kubernetes-hosted applications due to resource constraints. To address this, they plan to set limits on resource utilization. Here are the details:
+
+
+Create a pod named httpd-pod with a container named httpd-container. Use the httpd image with the latest tag (specify as httpd:latest). Set the following resource limits:
+
+Requests: Memory: 15Mi, CPU: 100m
+
+Limits: Memory: 20Mi, CPU: 100m
+
+5. **Execute Rolling Updates in Kubernetes**
+
+An application currently running on the Kubernetes cluster employs the nginx web server. The Nautilus application development team has introduced some recent changes that need deployment. They've crafted an image nginx:1.19 with the latest updates.
+
+
+Execute a rolling update for this application, integrating the nginx:1.19 image. The deployment is named nginx-deployment.
+
+Ensure all pods are operational post-update.
+
+To perform a **rolling update** for the `nginx-deployment` in your Kubernetes cluster using the updated image `nginx:1.19`, follow these steps:
+### ✅ Step 1: Verify the Deployment Exists and Check the Actual Container Name
+
+Run this to check if `nginx-deployment` exists:
+
+kubectl get deployments
+# You should see `nginx-deployment` in the output.
+kubectl get deployment nginx-deployment -o jsonpath='{.spec.template.spec.containers[*].name}'
+
+# This will return the container name(s). For example, it might return: `nginx-container`
+
+### ✅ Step 2: Perform the Rolling Update
+
+Update the image for the deployment using:
+
+kubectl set image deployment/nginx-deployment nginx=nginx:1.19
+
+* This will trigger a **rolling update**.
+* The pod name `nginx` must match the container name in the deployment spec. If unsure, inspect the deployment:
+
+kubectl get deployment nginx-deployment -o yaml
+
+### ✅ Step 3: Monitor the Rollout Status
+
+Watch the status of the rollout:
+
+kubectl rollout status deployment/nginx-deployment
+
+It should output something like:
+
+deployment "nginx-deployment" successfully rolled out
+
+### ✅ Step 4: Verify All Pods Are Running
+
+Check the status of the pods:
+
+kubectl get pods -l app=nginx
+
+### ✅ Step 5: (Optional) Confirm Image Version in Deployment
+
+kubectl get deployment nginx-deployment -o=jsonpath='{.spec.template.spec.containers[*].image}'
+
+You should see: `nginx:1.19`
+
+6. **Revert Deployment to Previous Version in Kubernetes**
+
+Earlier today, the Nautilus DevOps team deployed a new release for an application. However, a customer has reported a bug related to this recent release. Consequently, the team aims to revert to the previous version.
+
+
+There exists a deployment named nginx-deployment; initiate a rollback to the previous revision.
+
+Ans: 
+View Deployment History: kubectl rollout history deployment nginx-deployment
+Rollback Command: kubectl rollout undo deployment nginx-deployment
+Verify Rollback Status: kubectl rollout status deployment nginx-deployment
+verify the current image (to confirm it's no longer using nginx:stable): kubectl get deployment nginx-deployment -o=jsonpath='{.spec.template.spec.containers[*].image}'
+Verify Pods running: kubectl get po
+
+7. **Deploy ReplicaSet in Kubernetes Cluster**
+
+The Nautilus DevOps team is gearing up to deploy applications on a Kubernetes cluster for migration purposes. A team member has been tasked with creating a ReplicaSet outlined below:
+
+
+
+Create a ReplicaSet using nginx image with latest tag (ensure to specify as nginx:latest) and name it nginx-replicaset.
+
+
+Apply labels: app as nginx_app, type as front-end.
+
+
+Name the container nginx-container. Ensure the replica count is 4.
+
+Ans:
+apiVersion: apps/v1
+kind: ReplicaSet
+metadata:
+  name: nginx-replicaset
+  labels:
+    app: nginx_app
+    type: front-end
+spec:
+  replicas: 4 
+  selector:
+    matchLabels:
+      app: nginx_app
+      type: front-end
+  template:
+    metadata:
+      labels:
+        app: nginx_app
+        type: front-end
+    spec:
+      containers:
+      - name: nginx-container
+        image: nginx:latest
+        ports:
+        - containerPort: 80
+
+8. **Schedule Cronjobs in Kubernetes**
+The Nautilus DevOps team is setting up recurring tasks on different schedules. Currently, they're developing scripts to be executed periodically. To kickstart the process, they're creating cron jobs in the Kubernetes cluster with placeholder commands. Follow the instructions below:
+
+Create a cronjob named nautilus.
+
+Set Its schedule to something like */6 * * * *. You can set any schedule for now.
+
+
+Name the container cron-nautilus.
+
+
+Utilize the httpd image with latest tag (specify as httpd:latest).
+
+
+Execute the dummy command echo Welcome to xfusioncorp!.
+
+
+Ensure the restart policy is OnFailure.
+
+Ans:
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: nautilus
+spec:
+  schedule: "*/6 * * * *"  # Runs every 6 minutes
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: cron-nautilus
+            image: httpd:latest
+            command: ["echo", "Welcome to xfusioncorp!"]
+          restartPolicy: OnFailure
+
+kubectl apply -f nautilus-cronjob.yaml
+Check the CronJob:kubectl get cronjob nautilus
+
+
+9. **Create Countdown Job in Kubernetes**
+
+The Nautilus DevOps team is crafting jobs in the Kubernetes cluster. While they're developing actual scripts/commands, they're currently setting up templates and testing jobs with dummy commands. Please create a job template as per details given below:
+
+
+Create a job named countdown-devops.
+
+The spec template should be named countdown-devops (under metadata), and the container should be named container-countdown-devops
+
+Utilize image ubuntu with latest tag (ensure to specify as ubuntu:latest), and set the restart policy to Never.
+
+Execute the command sleep 5
+
+Ans:
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: countdown-devops
+spec:
+  template:
+    metadata:
+      name: countdown-devops
+    spec:
+      containers:
+      - name: container-countdown-devops
+        image: ubuntu:latest
+        command: ["sleep", "5"]
+      restartPolicy: Never
+
+10. **Set Up Time Check Pod in Kubernetes**
+The Nautilus DevOps team needs a time check pod created in a specific Kubernetes namespace for logging purposes. Initially, it's for testing, but it may be integrated into an existing cluster later. Here's what's required:
+
+
+Create a pod called time-check in the datacenter namespace. The pod should contain a container named time-check, utilizing the busybox image with the latest tag (specify as busybox:latest).
+
+Create a config map named time-config with the data TIME_FREQ=2 in the same namespace.
+
+Configure the time-check container to execute the command: while true; do date; sleep $TIME_FREQ;done. Ensure the result is written /opt/security/time/time-check.log. Also, add an environmental variable TIME_FREQ in the container, fetching its value from the config map TIME_FREQ key.
+
+Create a volume log-volume and mount it at /opt/security/time within the container.
+
+Ans:
+To fulfill the requirements, you’ll need to create:
+
+A namespace called datacenter
+
+A ConfigMap called time-config with the TIME_FREQ=2
+
+A Pod named time-check in the same namespace with:
+
+A container named time-check using busybox:latest
+
+Environment variable TIME_FREQ from the ConfigMap
+
+A command to log the time every $TIME_FREQ seconds
+
+A volume mounted at /opt/security/time
+
+The log output directed to /opt/security/time/time-check.log
+
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: datacenter
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: time-config
+  namespace: datacenter
+data:
+  TIME_FREQ: "2"
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: time-check
+  namespace: datacenter
+spec:
+  containers:
+  - name: time-check
+    image: busybox:latest
+    command: ["/bin/sh", "-c"]
+    args:
+      - while true; do date >> /opt/security/time/time-check.log; sleep $TIME_FREQ; done
+    env:
+    - name: TIME_FREQ
+      valueFrom:
+        configMapKeyRef:
+          name: time-config
+          key: TIME_FREQ
+    volumeMounts:
+    - name: log-volume
+      mountPath: /opt/security/time
+  volumes:
+  - name: log-volume
+    emptyDir: {}
+
+
+11. **Resolve Pod Deployment Issue**
+A junior DevOps team member encountered difficulties deploying a stack on the Kubernetes cluster. The pod fails to start, presenting errors. Let's troubleshoot and rectify the issue promptly.
+
+
+There is a pod named webserver, and the container within it is named nginx-container, its utilizing the nginx:latest image.
+
+Additionally, there's a sidecar container named sidecar-container using the ubuntu:latest image.
+
+Identify and address the issue to ensure the pod is in the running state and the application is accessible.
+Ans:
+kubectl get pods webserver -o wide
+kubectl logs webserver -c nginx-container
+kubectl describe pod webserver
+kubectl edit pod webserver
+
+
+12. **Update Deployment and Service in Kubernetes**
+
+An application deployed on the Kubernetes cluster requires an update with new features developed by the Nautilus application development team. The existing setup includes a deployment named nginx-deployment and a service named nginx-service. Below are the necessary changes to be implemented without deleting the deployment and service:
+
+
+1.) Modify the service nodeport from 30008 to 32165
+
+2.) Change the replicas count from 1 to 5
+
+3.) Update the image from nginx:1.18 to nginx:latest
+
+Ans:
+kubectl edit service nginx-service
+kubectl edit deployment nginx-deployment
+kubectl get deployment nginx-deployment
+kubectl get svc nginx-service
+
+
+13. **Deploy Highly Available Pods with ReplicationController**
+The Nautilus DevOps team is establishing a ReplicationController to deploy multiple pods for hosting applications that require a highly available infrastructure. Follow the specifications below to create the ReplicationController:
+
+
+Create a ReplicationController using the httpd image with latest tag, and name it httpd-replicationcontroller.
+
+Assign labels app as httpd_app, and type as front-end. Ensure the container is named httpd-container and set the replica count to 3.
+
+All pods should be running state post-deployment.
+
+ans:
+apiVersion: v1
+kind: ReplicationController
+metadata:
+  name: httpd-replicationcontroller
+spec:
+  replicas: 3
+  selector:
+    app: httpd_app
+    type: front-end
+  template:
+    metadata:
+      labels:
+        app: httpd_app
+        type: front-end
+    spec:
+      containers:
+        - name: httpd-container
+          image: httpd:latest
+
+14. **Resolve VolumeMounts Issue in Kubernetes**
+
+We encountered an issue with our Nginx and PHP-FPM setup on the Kubernetes cluster this morning, which halted its functionality. Investigate and rectify the issue:
+
+The pod name is nginx-phpfpm and configmap name is nginx-config. Identify and fix the problem.
+
+Once resolved, copy /home/thor/index.php file from the jump host to the nginx-container within the nginx document root. After this, you should be able to access the website using Website button on the top bar.
+
+--
+
+Q. 1-Task:
+We've successfully deployed a pod named httpd-app-t1q3. We require some data to be copied from the jump_host to this specific Pod. Further details are outlined below:
+
+Copy file /home/thor/welcome.txt to pod httpd-app-t1q3 Pod under location /opt.
+
+Note: The kubectl utility on jump_host has been configured to work with the kubernetes cluster.
+
+Q. 2 Task:
+An engineer was tasked with creating a Kubernetes Pod template for a specific application deployment within the Kubernetes cluster. To ensure easy modification in the future.
+
+The directive is to generate a template file named official-t1q2.yml within the /usr/official-t1q2/ directory on the jump_host. This template will facilitate the creation of a pod named official-nginx-t1q2, utilizing the nginx image.
+
+The objective is to establish a template that streamlines the process of generating the designated pod within the Kubernetes cluster.
+
+Note: The kubectl utility on jump_host has been configured to work with the kubernetes cluster.
+
+Q. 3 Task:
+Recently, during an audit, it was identified that there are some deployments on Kubernetes cluster which are no longer needed. Therefore, the team wants to delete some obslete deployments. Find below more details about the same.
+
+There is a deployment named web-app-t2q4, delete the same.
+
+Note: The kubectl utility on jump_host has been configured to work with the kubernetes cluster.
+
+Q. 4 Task:
+There is an application deployed on Kubernetes cluster. Recently, the Nautilus application development team developed a new version of the application that needs to be deployed now. As per new updates some new changes need to be made in this existing setup. So update the deployment and service as per details mentioned below:
+
+We already have a deployment named nginx-deployment1-t2q3 and service named nginx-service1-t2q3. Some changes need to be made in this deployment and service, make sure not to delete the deployment and service.
+
+Change the image from nginx:mainline-alpine3.18-slim to nginx:mainline-alpine-slim
+
+Note: The kubectl utility on jump_host has been configured to work with the kubernetes cluster.
+
+Q. 5 Task:
+Recently, the Nautilus DevOps team identified performance issues affecting certain applications on the Kubernetes cluster. Analysis revealed resource constraints, with some applications exhausting memory and CPU, while others were overconsuming resources beyond their requirements. To address this, the team plans to implement resource limits. Here are the details:
+
+Create a pod named httpd-pod-t3q6 and a container under it named as httpd-container-t3q6, use httpd image with latest tag only (remember to mention the tag i.e httpd:latest), further set the following limits:
+
+Requests:
+
+Memory: 15Mi
+CPU: 100m
+Limits:
+
+Memory: 20Mi
+CPU: 100m
+Note: The kubectl utility on jump_host has been configured to work with the kubernetes cluster.
+
+Q. 6 Task:
+The Nautilus DevOps team is actively creating jobs within the Kubernetes cluster. While they are in the process of finalizing actual scripts/commands, they are presently structuring templates and testing the jobs using placeholder commands. Below are the specifications for creating a job template:
+
+Create a job named countdown-nautilus-t3q2.
+
+The spec template should be named as countdown-nautilus-t3q2 (under metadata), and the container should be named as container-countdown-nautilus-t3q2.
+
+Use image debian with latest tag only and remember to mention tag i.e debian:latest, and restart policy should be Never.
+
+Use command sleep 5.
+
+Note: The kubectl utility on jump_host has been configured to work with the kubernetes cluster.
+
+Q. 7 Task:
+One of our junior DevOps team members encountered an issue while deploying a stack on the Kubernetes cluster. The webserver-t4q1 pod, with the nginx-container and a sidecar container named sidecar-container, is failing to start and remains in an error state.
+
+Your task is to investigate and rectify the problem to ensure the successful running state of the webserver-t4q1 pod. The nginx-container uses the nginx:latest image, while the sidecar-container utilizes the ubuntu:latest image. Ensure the webserver-t4q1 pod is running as expected and the application is accessible.
+
+Note: The kubectl utility on jump_host has been configured to work with the kubernetes cluster.
+
+Q. 8 Task:
+We encountered complications while deploying an app on the Kubernetes cluster, resulting in its improper functionality. Your task is to investigate and restore its proper operation.
+
+App deployment name is purple-app-deployment-t4q5. The service associated with the app is currently non-operational on nodePort 32232.
+
+Your objective is to troubleshoot the service issue associated with the purple-app-deployment-t4q5. Ensure that the app becomes accessible and functional on nodePort 32232.
+
+Please proceed with the necessary diagnostics and adjustments to resolve the service issue and access the app using Purple App button on the top.
+
+Note: The kubectl on jump_host has been configured to work with the kubernetes cluster.
+
+Q. 9 Task:
+One of the services named service-t5q6 needs some updates, as during deployment some required labels were missing from this service. Make changes to this service as per details mentioned below:
+
+Update service-t5q6 service to add a label component: front-end-t5q6.
+
+Q. 10: Task
+During an investigating it was found that one of the applications on the Kubernetes cluster is having some issues, the team discovered that the service was configured with an incorrect target port. We need to update the service as follows:
+
+Update service-t5q4 service to use target port 80.
+
+Here are the step-by-step commands and explanations to complete **each of the 10 Kubernetes tasks** using the `kubectl` CLI on the `jump_host`, as requested.
+
+
+
+## ✅ **Q1: Copy file to Pod**
+
+### **Task:** Copy `/home/thor/welcome.txt` to pod `httpd-app-t1q3` under `/opt`
+
+kubectl cp /home/thor/welcome.txt httpd-app-t1q3:/opt/
+
+## ✅ **Q2: Create a Pod template YAML**
+
+### **Task:** Create `official-t1q2.yml` in `/usr/official-t1q2/` for a pod `official-nginx-t1q2` using `nginx` image
+
+mkdir -p /usr/official-t1q2/
+cat <<EOF > /usr/official-t1q2/official-t1q2.yml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: official-nginx-t1q2
+spec:
+  containers:
+  - name: nginx
+    image: nginx
+EOF
+
+## ✅ **Q3: Delete a deployment**
+
+### **Task:** Delete deployment named `web-app-t2q4`
+
+kubectl delete deployment web-app-t2q4
+
+
+## ✅ **Q4: Update Deployment Image**
+
+### **Task:** Update `nginx-deployment1-t2q3` deployment image from `nginx:mainline-alpine3.18-slim` to `nginx:mainline-alpine-slim`
+
+
+kubectl set image deployment/nginx-deployment1-t2q3 *nginx*=nginx:mainline-alpine-slim
+
+
+> Replace `*nginx*` with the actual container name if it is not `nginx`.
+
+
+
+## ✅ **Q5: Create pod with resource limits**
+
+### **Task:** Create pod `httpd-pod-t3q6` with container using `httpd:latest` and the specified CPU/memory limits
+
+
+cat <<EOF | kubectl apply -f -
+apiVersion: v1
+kind: Pod
+metadata:
+  name: httpd-pod-t3q6
+spec:
+  containers:
+  - name: httpd-container-t3q6
+    image: httpd:latest
+    resources:
+      requests:
+        memory: "15Mi"
+        cpu: "100m"
+      limits:
+        memory: "20Mi"
+        cpu: "100m"
+EOF
+
+
+
+
+## ✅ **Q6: Create a Job**
+
+### **Task:** Create a job `countdown-nautilus-t3q2` with `debian:latest`, running `sleep 5`, restart policy `Never`
+
+
+cat <<EOF | kubectl apply -f -
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: countdown-nautilus-t3q2
+spec:
+  template:
+    metadata:
+      name: countdown-nautilus-t3q2
+    spec:
+      containers:
+      - name: container-countdown-nautilus-t3q2
+        image: debian:latest
+        command: ["sleep", "5"]
+      restartPolicy: Never
+EOF
+
+
+
+
+## ✅ **Q7: Fix `webserver-t4q1` pod**
+
+### **Task:** Investigate and fix pod `webserver-t4q1` with `nginx-container` and `sidecar-container` (ubuntu)
+
+
+kubectl describe pod webserver-t4q1
+kubectl logs webserver-t4q1 -c sidecar-container
+kubectl logs webserver-t4q1 -c nginx-container
+
+
+> Common issues could be missing commands for `ubuntu` container.
+
+### If sidecar container has no command, update pod YAML like:
+
+yaml
+...
+  containers:
+  - name: sidecar-container
+    image: ubuntu:latest
+    command: ["sleep", "3600"]
+
+
+**Fix command (if Pod is managed by a Deployment, edit the deployment):**
+
+
+kubectl edit pod webserver-t4q1
+
+
+Update `sidecar-container` to include a valid `command`, e.g.:
+
+
+command: ["sleep", "3600"]
+
+
+Then delete the pod to restart it (if not a deployment):
+
+
+kubectl delete pod webserver-t4q1
+
+
+
+
+## ✅ **Q8: Fix `purple-app-deployment-t4q5` service**
+
+### **Task:** Service on `nodePort 32232` not working.
+
+1. **Check service:**
+
+
+kubectl get svc
+kubectl describe svc <service-name>
+
+
+2. **Verify ports:**
+
+
+kubectl edit svc <service-name>
+
+
+* Ensure correct `targetPort`
+* Ensure `type: NodePort`
+* Ensure `nodePort: 32232`
+
+3. **Verify Pods backing the deployment are running:**
+
+
+kubectl get pods -l app=purple-app-deployment-t4q5
+
+
+4. **Check if selector matches the deployment's labels.**
+
+Fix mismatch, then:
+
+
+kubectl rollout restart deployment purple-app-deployment-t4q5
+
+
+
+
+## ✅ **Q9: Add a label to a service**
+
+### **Task:** Add label `component=front-end-t5q6` to service `service-t5q6`
+
+
+kubectl label svc service-t5q6 component=front-end-t5q6 --overwrite
+
+
+
+
+## ✅ **Q10: Update service target port**
+
+### **Task:** Update `service-t5q4` targetPort to 80
+
+
+kubectl edit svc service-t5q4
+
+
+* Find `targetPort` field and update:
+
+yaml
+ports:
+- port: 80
+  targetPort: 80
+
+
+> Save and exit editor.
+
+**Level 2:**
+# Day 1: Kubernetes Shared Volumes
+We are working on an application that will be deployed on multiple containers within a pod on Kubernetes cluster. There is a requirement to share a volume among the containers to save some temporary data. The Nautilus DevOps team is developing a similar template to replicate the scenario. Below you can find more details about it.
+
+Create a pod named volume-share-xfusion.
+
+For the first container, use image ubuntu with latest tag only and remember to mention the tag i.e ubuntu:latest, container should be named as volume-container-xfusion-1, and run a sleep command for it so that it remains in running state. Volume volume-share should be mounted at path /tmp/blog.
+
+For the second container, use image ubuntu with the latest tag only and remember to mention the tag i.e ubuntu:latest, container should be named as volume-container-xfusion-2, and again run a sleep command for it so that it remains in running state. Volume volume-share should be mounted at path /tmp/apps.
+
+Volume name should be volume-share of type emptyDir.
+
+After creating the pod, exec into the first container i.e volume-container-xfusion-1, and just for testing create a file blog.txt with any content under the mounted path of first container i.e /tmp/blog.
+
+The file blog.txt should be present under the mounted path /tmp/apps on the second container volume-container-xfusion-2 as well, since they are using a shared volume.
+
+# Day2: Kubernetes Sidecar Containers
+We have a web server container running the nginx image. The access and error logs generated by the web server are not critical enough to be placed on a persistent volume. However, Nautilus developers need access to the last 24 hours of logs so that they can trace issues and bugs. Therefore, we need to ship the access and error logs for the web server to a log-aggregation service. Following the separation of concerns principle, we implement the Sidecar pattern by deploying a second container that ships the error and access logs from nginx. Nginx does one thing, and it does it well—serving web pages. The second container also specializes in its task—shipping logs. Since containers are running on the same Pod, we can use a shared emptyDir volume to read and write logs.
+
+Create a pod named webserver.
+
+Create an emptyDir volume shared-logs.
+
+Create two containers from nginx and ubuntu images with latest tag only and remember to mention tag i.e nginx:latest, nginx container name should be nginx-container and ubuntu container name should be sidecar-container on webserver pod.
+
+Add command on sidecar-container "sh","-c","while true; do cat /var/log/nginx/access.log /var/log/nginx/error.log; sleep 30; done"
+
+Mount the volume shared-logs on both containers at location /var/log/nginx, all containers should be up and running.
+
+Ans:
+apiVersion: v1
+kind: Pod
+metadata:
+  name: webserver
+spec:
+  volumes:
+    - name: shared-logs
+      emptyDir: {}
+  containers:
+    - name: nginx-container
+      image: nginx:latest
+      volumeMounts:
+        - name: shared-logs
+          mountPath: /var/log/nginx
+    - name: sidecar-container
+      image: ubuntu:latest
+      command: ["sh", "-c", "while true; do cat /var/log/nginx/access.log /var/log/nginx/error.log; sleep 30; done"]
+      volumeMounts:
+        - name: shared-logs
+          mountPath: /var/log/nginx
+# Day3: Deploy Nginx Web Server on Kubernetes Cluster
+Some of the Nautilus team developers are developing a static website and they want to deploy it on Kubernetes cluster. They want it to be highly available and scalable. Therefore, based on the requirements, the DevOps team has decided to create a deployment for it with multiple replicas. Below you can find more details about it:
+
+Create a deployment using nginx image with latest tag only and remember to mention the tag i.e nginx:latest. Name it as nginx-deployment. The container should be named as nginx-container, also make sure replica counts are 3.
+
+Create a NodePort type service named nginx-service. The nodePort should be 30011.
+
+Note: The kubectl utility on jump_host has been configured to work with the kubernetes cluster.
+Ans:
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-deployment
+  labels:
+    app: nginx-deployment
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: nginx-deployment
+  template:
+    metadata:
+      labels:
+        app: nginx-deployment
+    spec:
+      containers:
+      - name: nginx-container
+        image: nginx:latest
+        ports:
+        - containerPort: 80
+---
+apiVersion: v1
+kind: Service 
+metadata:
+  name: nginx-service
+spec:
+  selector:
+    app: nginx-deployment
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 80
+      nodePort: 30011
+  type: NodePort
+
+# Day 4: Print Environment Variables
+The Nautilus DevOps team is working on to setup some pre-requisites for an application that will send the greetings to different users. There is a sample deployment, that needs to be tested. Below is a scenario which needs to be configured on Kubernetes cluster. Please find below more details about it.
+
+Create a pod named print-envars-greeting.
+
+Configure spec as, the container name should be print-env-container and use bash image.
+
+Create three environment variables:
+
+a. GREETING and its value should be Welcome to
+
+b. COMPANY and its value should be xFusionCorp
+
+c. GROUP and its value should be Industries
+
+Use command ["/bin/sh", "-c", 'echo "$(GREETING) $(COMPANY) $(GROUP)"'] (please use this exact command), also set its restartPolicy policy to Never to avoid crash loop back.
+
+You can check the output using kubectl logs -f print-envars-greeting command.
+
+Ans:
+Here's the Kubernetes manifest YAML file to create the pod as described:
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: print-envars-greeting
+spec:
+  containers:
+  - name: print-env-container
+    image: bash
+    env:
+    - name: GREETING
+      value: "Welcome to"
+    - name: COMPANY
+      value: "xFusionCorp"
+    - name: GROUP
+      value: "Industries"
+    command: ["/bin/sh", "-c", 'echo "$(GREETING) $(COMPANY) $(GROUP)"']
+  restartPolicy: Never
+
+### Steps to apply and verify:
+1. **Save the file** as `print-envars-greeting.yaml`.
+2. **Apply it** to your cluster:
+   bash
+   kubectl apply -f print-envars-greeting.yaml
+   
+3. **Check the output**:
+   bash
+   kubectl logs -f print-envars-greeting
+
+You should see:
+
+Welcome to xFusionCorp Industries
+
+# Day5: Rolling Updates And Rolling Back Deployments in Kubernetes
+
+Create a namespace nautilus.
+Deployment name should be: `httpd-deploy`**
+- Deploys 2 replicas of the `httpd:2.4.28` container.
+- Uses **RollingUpdate** strategy:
+  - `maxUnavailable: 1`: At most one pod can be unavailable during the update.
+  - `maxSurge: 1`: At most one extra pod can be created during the update.
+- Labels: `app: httpd-deploy` used for pod selection.
+
+Service name should be  `httpd-service`**
+- Type: `NodePort` — exposes the app externally on port `30011`.
+- Namespace: `nautilus` — make sure this namespace exists.
+- Selects pods with label `app: httpd-deploy`.
+
+Ans:
+### 🧪 Steps to Deploy
+
+1. **Create Namespace :**
+ 
+   kubectl create namespace nautilus
+ 
+
+2. **Create the Configuration:**
+ apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: httpd-deploy
+  labels:
+    app: httpd-deploy
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+      maxSurge: 1
+  selector:
+    matchLabels:
+      app: httpd-deploy
+  template:
+    metadata:
+      labels:
+        app: httpd-deploy
+    spec:
+      containers:
+      - name: httpd
+        image: httpd:2.4.28
+        ports:
+        - containerPort: 80
+---
+apiVersion: v1
+kind: Service 
+metadata:
+  name: httpd-service
+  namespace: nautilus
+spec:
+  selector:
+    app: httpd-deploy
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 80
+      nodePort: 30011
+  type: NodePort
+
+kubectl apply -f your-config.yaml
+ 
+3. **Verify Deployment:**
+ 
+   kubectl get pods -n nautilus
+   kubectl rollout status deployment/httpd-deploy -n nautilus
+ 
+4. **Check Service Exposure:**
+ 
+  kubectl get svc httpd-service -n nautilus
+ 
+5. **Access the App:**
+   - Use any node’s IP and port `30011`:
+   
+     http://<node-ip>:30011
+   
+### 🔁 Rolling Update & Rollback Commands
+
+- **Update Image:**
+
+  kubectl set image deployment/httpd-deploy httpd=httpd:2.4.29 -n nautilus
+
+- **Rollback:**
+  kubectl rollout undo deployment/httpd-deploy -n nautilus
+
+- **View History:**
+  kubectl rollout history deployment/httpd-deploy -n nautilus
+---
+# Day 6: Deploy Jenkins on Kubernetes
+The Nautilus DevOps team is planning to set up a Jenkins CI server to create/manage some deployment pipelines for some of the projects. They want to set up the Jenkins server on Kubernetes cluster. Below you can find more details about the task:
+
+1) Create a namespace jenkins
+
+2) Create a Service for jenkins deployment. Service name should be jenkins-service under jenkins namespace, type should be NodePort, nodePort should be 30008
+
+3) Create a Jenkins Deployment under jenkins namespace, It should be name as jenkins-deployment , labels app should be jenkins , container name should be jenkins-container , use jenkins/jenkins image , containerPort should be 8080 and replicas count should be 1.
+
+Make sure to wait for the pods to be in running state and make sure you are able to access the Jenkins login screen in the browser before hitting the Check button.
+
+Ans:
+### ✅ **Step 1: Create a Namespace `jenkins`**
+
+kubectl create namespace jenkins
+---
+### ✅ **Step 2: Create a NodePort Service for Jenkins and Jenkins Deployment***
+
+Create a YAML file called `jenkins.yaml` with the following content:
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: jenkins-service
+  namespace: jenkins
+spec:
+  type: NodePort
+  selector:
+    app: jenkins
+  ports:
+    - port: 8080
+      targetPort: 8080
+      nodePort: 30008
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jenkins-deployment
+  namespace: jenkins
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: jenkins
+  template:
+    metadata:
+      labels:
+        app: jenkins
+    spec:
+      containers:
+        - name: jenkins-container
+          image: jenkins/jenkins
+          ports:
+            - containerPort: 8080
+
+kubectl apply -f jenkins.yaml
+
+### ✅ **Step 3: Wait for Jenkins Pod to be Running**
+
+Use this command to watch the pod status:
+
+kubectl get pods -n jenkins -w
+
+Wait until the pod status changes to `Running`.
+
+### ✅ **Step 4: Access Jenkins in Browser**
+
+If you're running Minikube or a local cluster, get the node IP:
+
+Then open the following URL in your browser:
+
+http://<Node-IP>:30008
+
+You should see the **Jenkins login screen**.
+
+# Day 7: Deploy Grafana on Kubernetes Cluster
+
+The Nautilus DevOps teams is planning to set up a Grafana tool to collect and analyze analytics from some applications. They are planning to deploy it on Kubernetes cluster. Below you can find more details.
+
+1.) Create a deployment named grafana-deployment-devops using any grafana image for Grafana app. Set other parameters as per your choice.
+
+2.) Create NodePort type service with nodePort 32000 to expose the app.
+
+You need not to make any configuration changes inside the Grafana app once deployed, just make sure you are able to access the Grafana login page
+
+Ans:
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: grafana-deployment-devops
+  labels:
+    app: grafana
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: grafana
+  template:
+    metadata:
+      labels:
+        app: grafana
+    spec:
+      containers:
+      - name: grafana
+        image: grafana/grafana:latest
+        ports:
+        - containerPort: 3000
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: grafana-service
+spec:
+  type: NodePort
+  selector:
+    app: grafana
+  ports:
+  - protocol: TCP
+    port: 3000
+    targetPort: 3000
+    nodePort: 32000
+# Day 8: Deploy Tomcat App on Kubernetes
+A new java-based application is ready to be deployed on a Kubernetes cluster. The development team had a meeting with the DevOps team to share the requirements and application scope. The team is ready to setup an application stack for it under their existing cluster. Below you can find the details for this:
+
+
+Create a namespace named tomcat-namespace-datacenter.
+
+Create a deployment for tomcat app which should be named as tomcat-deployment-datacenter under the same namespace you created. Replica count should be 1, the container should be named as tomcat-container-datacenter, its image should be gcr.io/kodekloud/centos-ssh-enabled:tomcat and its container port should be 8080.
+
+Create a service for tomcat app which should be named as tomcat-service-datacenter under the same namespace you created. Service type should be NodePort and nodePort should be 32227.
+
+Before clicking on Check button please make sure the application is up and running.
+
+You can use any labels as per your choice.
+
+Ans:
+apiVersion: v1
+kind: Service
+metadata:
+  name: tomcat-service-datacenter
+  namespace: tomcat-namespace-datacenter
+  labels:
+    app: tomcat
+spec:
+  type: NodePort
+  selector:
+    app: tomcat
+  ports:
+  - protocol: TCP
+    port: 8080
+    targetPort: 8080
+    nodePort: 32227
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tomcat-deployment-datacenter
+  namespace: tomcat-namespace-datacenter
+  labels:
+    app: tomcat
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: tomcat
+  template:
+    metadata:
+      labels:
+        app: tomcat
+    spec:
+      containers:
+      - name: tomcat-container-datacenter
+        image: gcr.io/kodekloud/centos-ssh-enabled:tomcat
+        ports:
+        - containerPort: 8080
+# Day 9: Deploy Node App on Kubernetes
+The Nautilus development team has completed development of one of the node applications, which they are planning to deploy on a Kubernetes cluster. They recently had a meeting with the DevOps team to share their requirements. Based on that, the DevOps team has listed out the exact requirements to deploy the app. Find below more details:
+
+
+Create a deployment using gcr.io/kodekloud/centos-ssh-enabled:node image, replica count must be 2.
+
+Create a service to expose this app, the service type must be NodePort, targetPort must be 8080 and nodePort should be 30012.
+
+Make sure all the pods are in Running state after the deployment.
+
+You can check the application by clicking on NodeApp button on top bar.
+
+You can use any labels as per your choice.
+Ans:
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: node-app-deployment
+  labels:
+    app: node-app
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: node-app
+  template:
+    metadata:
+      labels:
+        app: node-app
+    spec:
+      containers:
+        - name: node-app
+          image: gcr.io/kodekloud/centos-ssh-enabled:node
+          ports:
+            - containerPort: 8080
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: node-app-service
+spec:
+  selector:
+    app: node-app
+  ports:
+    - protocol: TCP
+      port: 8080
+      targetPort: 8080
+      nodePort: 30012
+  type: NodePort
+# Day 10: Troubleshoot Deployment issues in Kubernetes
+Last week, the Nautilus DevOps team deployed a redis app on Kubernetes cluster, which was working fine so far. This morning one of the team members was making some changes in this existing setup, but he made some mistakes and the app went down. We need to fix this as soon as possible. Please take a look.
+
+The deployment name is redis-deployment. The pods are not in running state right now, so please look into the issue and fix the same.
+Ans:
+1  kubectl get deploy
+2  kubectl get po
+3  kubectl logs redis-deployment-6fd9d5fcb-sklsz 
+4  kubectl describe po redis-deployment-6fd9d5fcb-sklsz 
+5  kubectl edit deploy redis-deployment  
+ Check is there typo on image or volume attachemnet or configmap or secret resolve that
+Thanks for sharing part of the deployment YAML snippet! I can see the `volumeMounts` section where the `config` volume is mounted at `/redis-master`. This corresponds to the volume named `config`, which tries to use a ConfigMap (likely the `redis-cofig` typo you mentioned earlier).
+
+---
+
+### Here’s what you should do:
+
+Look for the **volumes** section (usually under `spec.template.spec.volumes`) in your deployment YAML. It should look something like:
+
+```yaml
+volumes:
+  - name: config
+    configMap:
+      name: redis-cofig   # <-- This is the typo to fix
+```
+
+Change it to:
+
+```yaml
+volumes:
+  - name: config
+    configMap:
+      name: redis-config   # <-- Corrected ConfigMap name
+```
+
+---
+
+### Full example snippet:
+
+```yaml
+spec:
+  containers:
+  - name: redis-container
+    image: redis:latest
+    imagePullPolicy: IfNotPresent
+    ports:
+    - containerPort: 6379
+      protocol: TCP
+    resources:
+      requests:
+        cpu: 300m
+    volumeMounts:
+    - mountPath: /redis-master-data
+      name: data
+    - mountPath: /redis-master
+      name: config
+  volumes:
+  - name: config
+    configMap:
+      name: redis-config
+  - name: data
+    emptyDir: {}
+```
+
+---
+
+### Next steps:
+
+1. Fix the typo in the deployment by running:
+
+```bash
+kubectl edit deployment redis-deployment
+```
+
+2. Save after correcting the ConfigMap name under volumes.
+
+3. Make sure the ConfigMap `redis-config` exists:
+
+```bash
+kubectl get configmap redis-config
+```
+
+If it does not exist, create it. For example:
+
+```bash
+kubectl create configmap redis-config --from-literal=redis.conf="maxmemory 2mb"
+```
+
+(or use your actual redis config)
+
+4. Then rollout restart the deployment:
+
+```bash
+kubectl rollout restart deployment redis-deployment
+```
+
+5. Check pods:
+
+```bash
+kubectl get pods -l app=redis-deployment
+```
+
+
+# Day 11: Fix issue with LAMP Environment in Kubernetes
+
+**Level 3**
+# Day 1 Deploy Apache Web Server on Kubernetes CLuster
+# Day 2 Deploy Lamp Stack on Kubernetes Cluster
+# Day 3 Init Containers in Kubernetes
+# Day 4 Persistent Volumes in Kubernetes
+# Day 5 Manage Secrets in Kubernetes
+# Day 6 Environment Variables in Kubernetes
+# Day 7 Kubernetes LEMP Setup
+# Day 8 Kubernetes Troubleshooting
+# Day 9 Deploy Iron Gallery App on Kubernetes
+# Day 10 Fix Python App Deployed on Kubernetes Cluster
+**Level 4**
+# Day 1 Deploy Redis Deployment on Kubernetes
+# Day 2 Deploy MySQL on Kubernetes
+# Day 3 Kubernetes Nginx and PhpFPM Setup
+# Day 4 Deploy Drupal App on Kubernetes
+# Day 5 Deploy Guest Book App on Kubernetes
