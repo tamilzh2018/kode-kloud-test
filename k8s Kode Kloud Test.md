@@ -1407,6 +1407,39 @@ kubectl get pods -l app=redis-deployment
 
 
 # Day 11: Fix issue with LAMP Environment in Kubernetes
+One of the DevOps team member was trying to install a WordPress website on a LAMP stack which is essentially deployed on Kubernetes cluster. It was working well and we could see the installation page a few hours ago. However something is messed up with the stack now due to a website went down. Please look into the issue and fix it:
+
+FYI, deployment name is lamp-wp and its using a service named lamp-service. The Apache is using http default port and nodeport is 30008. From the application logs it has been identified that application is facing some issues while connecting to the database in addition to other issues. Additionally, there are some environment variables associated with the pods like MYSQL_ROOT_PASSWORD, MYSQL_DATABASE,  MYSQL_USER, MYSQL_PASSWORD, MYSQL_HOST.
+
+
+Also do not try to delete/modify any other existing components like deployment name, service name, types, labels etc.
+
+Ans:
+    1 kubectl get deployment lamp-wp -o yaml > lamp-wp-deployment.yaml
+    2  kubectl get svc mysql-service -o yaml > mysql-svc.yaml
+    3  kubectl get svc lamp-service -o yaml > lamp-svc.yaml
+    4  kubectl get cm
+    5  kubectl get secret
+    6  kubectl get cm php-config -o yaml > cm.yaml
+    7  kubectl get secret mysql-db-url -o yaml > db-url.yaml
+    8  kubectl get secret mysql-host -o yaml > host.yaml
+    9  kubectl get secret mysql-root-pass -o yaml > root.yaml
+   10  kubectl get secret mysql-user-pass -o yaml > user.yaml
+   11  cat cm.yaml 
+   12  cat db-url.yaml 
+   13  cat host.yaml 
+   14  cat lamp-svc.yaml 
+   15  cat lamp-wp-deployment.yaml 
+   16  cat root.yaml 
+   17  cat user.yaml 
+   18  cat mysql-svc.yaml 
+   19  kubectl get svc -o wide
+   20  kubectl patch svc lamp-service -p '{"spec":{"ports":[{"port":8080,"targetPort":80,"nodePort":30008}]}}'
+   21  kubectl edit svc lamp-service 
+   22  kubectl get po
+   23  kubectl exec -it lamp-wp-56c7c454fc-s4gb6 -- /bin/bash
+   24  kubectl logs -f deployment/lamp-wp
+   25  kubectl exec -it lamp-wp-56c7c454fc-s4gb6 -c httpd-php-container -- printenv | grep MYSQL
 
 **Level 3**
 # Day 1 Deploy Apache Web Server on Kubernetes CLuster

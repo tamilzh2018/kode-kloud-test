@@ -1112,8 +1112,44 @@ resource "aws_iam_role" "this" {
   })
 }
 40. **Policy Variable Setup Using Terraform**
+The Nautilus DevOps team is automating IAM policy creation using Terraform to enhance security and access management. As part of this task, they need to create an IAM policy with specific requirements.
 
-**Level2**
+For this task, create an AWS IAM policy using Terraform with the following requirements:
+
+The IAM policy name iampolicy_yousuf should be stored in a variable named KKE_iampolicy.
+Note:
+
+The configuration values should be stored in a variables.tf file.
+
+The Terraform script should be structured with a main.tf file referencing variables.tf.
+
+Ans:
+variable "KKE_iampolicy" {
+  default     = "iampolicy_yousuf"
+  type        = string
+  description = "Name of the IAM policy"
+}
+
+resource "aws_iam_policy" "yousuf_policy" {
+  name        = var.KKE_iampolicy
+  description = "IAM policy created by Terraform for user Yousuf"
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = [
+          "ec2:Describe*",
+          "s3:ListAllMyBuckets"
+        ]
+        Effect   = "Allow"
+        Resource = "*"
+      }
+    ]
+  })
+}
+
+**Level 2**
 # Q1 Create VPC and Subnet Using Terraform
 # Q2 Launch EC2 in Private VPC Subnet Using Terraform
 # Q3 Replace Existing EC2 Instance via Terraform

@@ -1865,7 +1865,16 @@ sudo dnf install docker-ce docker-ce-cli containerd.io docker-buildx-plugin dock
 sudo systemctl enable --now docker
 
 Day 36: **Deploy Nginx Container on Application Server**
+The Nautilus DevOps team is conducting application deployment tests on selected application servers. They require a nginx container deployment on Application Server 1. Complete the task with the following instructions:
 
+
+On Application Server 1 create a container named nginx_1 using the nginx image with the alpine tag. Ensure container is in a running state.
+Ans:
+docker pull nginx:alpine
+docker run -d -p 8080:80 --name nginx_1 nginx:alpine
+docker ps
+docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' nginx_1
+curl 172.12.0.2
 Day 37: **Copy File to Docker Container**
 
 Day 38: **Pull Docker Image**
