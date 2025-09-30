@@ -25,22 +25,22 @@ You can find the Qwen model (Tongyi Chat, Qwen, etc.) on [Qwen's GitHub reposito
 ### Option A: Use an Existing Image
 
 Check if there's a publicly available Docker image for Qwen (e.g. on Docker Hub or Harbor):
-```bash
+
 docker pull qwen/qwen:latest
-```
+
 
 ### Option B: Build Your Own Image
 
 1. Clone the repo:
-```bash
+
 git clone https://github.com/QwenLM/Qwen.git
 cd Qwen
-```
+
 
 2. Build a Docker container:
-```bash
+
 docker build -t qwen-app:latest .
-```
+
 > Note: You may need to include `cu118`, `nvidia/cuda`, or other CUDA versions in your Dockerfile if GPU is involved.
 
 ---
@@ -49,10 +49,10 @@ docker build -t qwen-app:latest .
 
 If you're using a private registry or Docker Hub (recommended for Kubernetes use):
 
-```bash
+
 docker tag qwen-app:latest your-registry/qwen-app:latest
 docker push your-registry/qwen-app:latest
-```
+
 
 ---
 
@@ -60,7 +60,7 @@ docker push your-registry/qwen-app:latest
 
 Create a `deployment.yaml` file (adjust it for your environment):
 
-```yaml
+yaml
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -88,11 +88,11 @@ spec:
             nvidia.com/gpu: 1
       imagePullSecrets:
         - name: regcred  # If using a private registry
-```
+
 
 Also, create a `service.yaml`:
 
-```yaml
+yaml
 apiVersion: v1
 kind: Service
 metadata:
@@ -104,14 +104,14 @@ spec:
       targetPort: 8000
   selector:
     app: qwen
-```
+
 
 Apply the configuration:
 
-```bash
+
 kubectl apply -f deployment.yaml
 kubectl apply -f service.yaml
-```
+
 
 ---
 
@@ -122,11 +122,11 @@ Once deployed:
 - Get the LoadBalancer IP or Ingress URL.
 - You can send requests via:
 
-```bash
+
 curl -X POST http://<ip>:80/generate \
   -H "Content-Type: application/json" \
   -d '{"prompt": "Hello, how are you?"}'
-```
+
 
 Make sure your Qwen implementation includes a REST or HTTP-based endpoint like this.
 
@@ -1322,27 +1322,27 @@ Thanks for sharing part of the deployment YAML snippet! I can see the `volumeMou
 
 Look for the **volumes** section (usually under `spec.template.spec.volumes`) in your deployment YAML. It should look something like:
 
-```yaml
+yaml
 volumes:
   - name: config
     configMap:
       name: redis-cofig   # <-- This is the typo to fix
-```
+
 
 Change it to:
 
-```yaml
+yaml
 volumes:
   - name: config
     configMap:
       name: redis-config   # <-- Corrected ConfigMap name
-```
+
 
 ---
 
 ### Full example snippet:
 
-```yaml
+yaml
 spec:
   containers:
   - name: redis-container
@@ -1365,7 +1365,7 @@ spec:
       name: redis-config
   - name: data
     emptyDir: {}
-```
+
 
 ---
 
@@ -1373,44 +1373,32 @@ spec:
 
 1. Fix the typo in the deployment by running:
 
-```bash
 kubectl edit deployment redis-deployment
-```
 
 2. Save after correcting the ConfigMap name under volumes.
 
 3. Make sure the ConfigMap `redis-config` exists:
 
-```bash
 kubectl get configmap redis-config
-```
 
 If it does not exist, create it. For example:
 
-```bash
 kubectl create configmap redis-config --from-literal=redis.conf="maxmemory 2mb"
-```
 
 (or use your actual redis config)
 
 4. Then rollout restart the deployment:
 
-```bash
 kubectl rollout restart deployment redis-deployment
-```
 
 5. Check pods:
 
-```bash
 kubectl get pods -l app=redis-deployment
-```
-
 
 # Day 11: Fix issue with LAMP Environment in Kubernetes
 One of the DevOps team member was trying to install a WordPress website on a LAMP stack which is essentially deployed on Kubernetes cluster. It was working well and we could see the installation page a few hours ago. However something is messed up with the stack now due to a website went down. Please look into the issue and fix it:
 
 FYI, deployment name is lamp-wp and its using a service named lamp-service. The Apache is using http default port and nodeport is 30008. From the application logs it has been identified that application is facing some issues while connecting to the database in addition to other issues. Additionally, there are some environment variables associated with the pods like MYSQL_ROOT_PASSWORD, MYSQL_DATABASE,  MYSQL_USER, MYSQL_PASSWORD, MYSQL_HOST.
-
 
 Also do not try to delete/modify any other existing components like deployment name, service name, types, labels etc.
 
