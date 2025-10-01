@@ -40,7 +40,46 @@ provider "aws" {
 
 
 The Nautilus DevOps team is strategizing the migration of a portion of their infrastructure to the AWS cloud. Recognizing the scale of this undertaking, they have opted to approach the migration in incremental steps rather than as a single massive transition. To achieve this, they have segmented large tasks into smaller, more manageable units. This granular approach enables the team to execute the migration in gradual phases, ensuring smoother implementation and minimizing disruption to ongoing operations. By breaking down the migration into smaller tasks, the Nautilus DevOps team can systematically progress through each stage, allowing for better control, risk mitigation, and optimization of resources throughout the migration process.
+Usage: terraform [global options] <subcommand> [args]
 
+The available commands for execution are listed below.
+The primary workflow commands are given first, followed by
+less common or more advanced commands.
+
+Main commands:
+  init          Prepare your working directory for other commands
+  validate      Check whether the configuration is valid
+  plan          Show changes required by the current configuration
+  apply         Create or update infrastructure
+  destroy       Destroy previously-created infrastructure
+
+All other commands:
+  console       Try Terraform expressions at an interactive command prompt
+  fmt           Reformat your configuration in the standard style
+  force-unlock  Release a stuck lock on the current workspace
+  get           Install or upgrade remote Terraform modules
+  graph         Generate a Graphviz graph of the steps in an operation
+  import        Associate existing infrastructure with a Terraform resource
+  login         Obtain and save credentials for a remote host
+  logout        Remove locally-stored credentials for a remote host
+  metadata      Metadata related commands
+  modules       Show all declared modules in a working directory
+  output        Show output values from your root module
+  providers     Show the providers required for this configuration
+  refresh       Update the state to match remote systems
+  show          Show the current state or a saved plan
+  state         Advanced state management
+  taint         Mark a resource instance as not fully functional
+  test          Execute integration tests for Terraform modules
+  untaint       Remove the 'tainted' state from a resource instance
+  version       Show the current Terraform version
+  workspace     Workspace management
+
+Global options (use these before the subcommand, if any):
+  -chdir=DIR    Switch to a different working directory before executing the
+                given subcommand.
+  -help         Show this help output, or the help for a specified subcommand.
+  -version      An alias for the "version" subcommand.
 
 1. **Create Key Pair Using Terraform**
 
@@ -1151,7 +1190,122 @@ resource "aws_iam_policy" "yousuf_policy" {
 
 **Level 2**
 # Q1 Create VPC and Subnet Using Terraform
+To ensure proper resource provisioning order, the DevOps team wants to explicitly define the dependency between an AWS VPC and a Subnet. The objective is to create a VPC and then a Subnet that explicitly depends on it using Terraform's depends_on argument.
+
+Please complete the following tasks:
+
+Create a VPC named nautilus-vpc.
+
+Create a Subnet named nautilus-subnet.
+
+Ensure the Subnet uses the depends_on argument to explicitly depend on the VPC resource.
+
+Create the main.tf file (do not create a separate .tf file) to provision a VPC and Subnet.
+
+Use variables.tf, define the following variables:
+
+KKE_VPC_NAME for the VPC name.
+KKE_SUBNET_NAME for the Subnet name.
+Use terraform.tfvars to input the names of the VPC and subnet.
+
+In outputs.tf, output the following:
+
+kke_vpc_name: The name of the VPC.
+kke_subnet_name: The name of the Subnet.
+
+Ans:
+### ✅ 1. `main.tf`
+
+provider "aws" {
+  region = "us-east-1" # Change if needed
+}
+
+resource "aws_vpc" "nautilus_vpc" {
+  cidr_block = "10.0.0.0/16"
+  tags = {
+    Name = var.KKE_VPC_NAME
+  }
+}
+
+resource "aws_subnet" "nautilus_subnet" {
+  vpc_id                  = aws_vpc.nautilus_vpc.id
+  cidr_block              = "10.0.1.0/24"
+  availability_zone       = "us-east-1a" # Adjust as needed
+  map_public_ip_on_launch = true
+
+  tags = {
+    Name = var.KKE_SUBNET_NAME
+  }
+
+  depends_on = [aws_vpc.nautilus_vpc]
+}
+
+### ✅ 2. `variables.tf`
+
+variable "KKE_VPC_NAME" {
+  description = "Name of the VPC"
+  type        = string
+}
+
+variable "KKE_SUBNET_NAME" {
+  description = "Name of the Subnet"
+  type        = string
+}
+### ✅ 3. `terraform.tfvars`
+
+KKE_VPC_NAME    = "nautilus-vpc"
+KKE_SUBNET_NAME = "nautilus-subnet"
+
+### ✅ 4. `outputs.tf`
+
+output "kke_vpc_name" {
+  description = "The name of the VPC"
+  value       = var.KKE_VPC_NAME
+}
+
+output "kke_subnet_name" {
+  description = "The name of the Subnet"
+  value       = var.KKE_SUBNET_NAME
+}
+
+### 📌 Notes:
+
+* `depends_on` in the subnet is explicitly ensuring that Terraform knows to wait until the VPC is created, even though the `vpc_id` reference would usually handle this implicitly.
+* This is useful in more complex setups where implicit dependency might be insufficient or unclear.
+* Adjust the region, AZ, and CIDR blocks based on your specific AWS environment if needed.
+
 # Q2 Launch EC2 in Private VPC Subnet Using Terraform
+The Nautilus DevOps team is expanding their AWS infrastructure and requires the setup of a private Virtual Private Cloud (VPC) along with a subnet. This VPC and subnet configuration will ensure that resources deployed within them remain isolated from external networks and can only communicate within the VPC. Additionally, the team needs to provision an EC2 instance under the newly created private VPC. This instance should be accessible only from within the VPC, allowing for secure communication and resource management within the AWS environment.
+
+Create a VPC named xfusion-priv-vpc with the CIDR block 10.0.0.0/16.
+
+Create a subnet named xfusion-priv-subnet inside the VPC with the CIDR block 10.0.1.0/24 and auto-assign IP option must not be enabled.
+
+Create an EC2 instance named xfusion-priv-ec2 inside the subnet and instance type must be t2.micro.
+
+Ensure the security group of the EC2 instance allows access only from within the VPC's CIDR block.
+
+Create the main.tf file (do not create a separate .tf file) to provision the VPC, subnet and EC2 instance.
+
+Use variables.tf file with the following variable names:
+
+KKE_VPC_CIDR for the VPC CIDR block.
+KKE_SUBNET_CIDR for the subnet CIDR block.
+Use the outputs.tf file with the following variable names:
+
+KKE_vpc_name for the name of the VPC.
+KKE_subnet_name for the name of the subnet.
+KKE_ec2_private for the name of the EC2 instance.
+
+Notes:
+
+The Terraform working directory is /home/bob/terraform.
+
+Right-click under the EXPLORER section in VS Code and select Open in Integrated Terminal to launch the terminal.
+
+Before submitting the task, ensure that terraform plan returns No changes. Your infrastructure matches the configuration.
+Ans:
+
 # Q3 Replace Existing EC2 Instance via Terraform
 # Q4 Deploy Multiple EC2 Instances with Terraform
 # Q5 Associate Elastic IP with EC2 Instance Using Terraform
@@ -1184,3 +1338,4 @@ resource "aws_iam_policy" "yousuf_policy" {
 # Q10 Managing Terraform Workspaces for Environment Isolation Using Terraform
 
 **Level 4**
+***Certifcation Test***

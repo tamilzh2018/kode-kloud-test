@@ -400,12 +400,133 @@ media        devops     <IMAGE_ID>   ...
   `docker commit ubuntu_latest media:devops`
 
 # Q4: Docker EXEC Operations
+One of the Nautilus DevOps team members was working to configure services on a kkloud container that is running on App Server 3 in Stratos Datacenter. Due to some personal work he is on PTO for the rest of the week, but we need to finish his pending work ASAP. Please complete the remaining work as per details given below:
 
+a. Install apache2 in kkloud container using apt that is running on App Server 3 in Stratos Datacenter.
+
+b. Configure Apache to listen on port 3004 instead of default http port. Do not bind it to listen on specific IP or hostname only, i.e it should listen on localhost, 127.0.0.1, container ip, etc.
+
+c. Make sure Apache service is up and running inside the container. Keep the container in running state at the end
+Ans:
+
+ 1  apt update
+    2  apt install apache2
+    3  sed -i 's/^Listen 80$/Listen 3004/' /etc/apache2/ports.conf
+    4  srevice apache2 restart 
+    5  service apache2 restart 
+    * Restarting Apache httpd web server apache2                                                                                                                    AH00558: apache2: Could not reliably determine the server's fully qualified domain name, using 172.12.0.2. Set the 'ServerName' directive globally to suppress this message
+                
+    6  echo "ServerName localhost" > /etc/apache2/conf-available/servername.conf
+    7  a2enconf servername
+    8  service apache2 restart 
+    9  netstat -tuln | grep 3004
+   10  ss -tuln | grep 3004
+   11  apt install netstat
+   12  apt install -y net-tools
+   13  netstat -tuln | grep 3004
 # Q5: Write a Docker File
+As per recent requirements shared by the Nautilus application development team, they need custom images created for one of their projects. Several of the initial testing requirements are already been shared with DevOps team. Therefore, create a docker file /opt/docker/Dockerfile (please keep D capital of Dockerfile) on App server 2 in Stratos DC and configure to build an image with the following requirements:
+
+a. Use ubuntu:24.04 as the base image.
+
+b. Install apache2 and configure it to work on 6400 port. (do not update any other Apache configuration settings like document root etc).
+Ans:
+# Use Ubuntu 24.04 base image
+FROM ubuntu:24.04
+
+# Prevent interactive prompts during package installation
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Install apache2
+RUN apt-get update && \
+    apt-get install -y apache2 && \
+    apt-get clean
+
+# Change Apache to listen on port 6400
+RUN sed -i 's/^Listen 80$/Listen 6400/' /etc/apache2/ports.conf
+
+# Expose port 6400
+EXPOSE 6400
+
+# Start Apache in foreground
+CMD ["/usr/sbin/apache2ctl", "-D", "FOREGROUND"]
 
 **Level 3**
 # Q1 Create a Docker Network
+The Nautilus DevOps team needs to set up several docker environments for different applications. One of the team members has been assigned a ticket where he has been asked to create some docker networks to be used later. Complete the task based on the following ticket description:
+
+a. Create a docker network named as beta on App Server 1 in Stratos DC.
+
+b. Configure it to use bridge drivers.
+
+c. Set it to use subnet 172.28.0.0/24 and iprange 172.28.0.0/24.
+Ans:
+docker network create \
+  --driver bridge \
+  --subnet 172.28.0.0/24 \
+  --ip-range 172.28.0.0/24 \
+  beta
+# Verify the Network:
+docker network inspect beta
+
 # Q2 Docker Volumes Mapping
+The Nautilus DevOps team is testing applications containerization, which is supposed to be migrated on docker container-based environments soon. In today's stand-up meeting one of the team members has been assigned a task to create and test a docker container with certain requirements. Below are more details:
+
+a. On App Server  1 in Stratos DC pull nginx image (preferably latest tag but others should work too).
+
+b. Create a new container with name demo from the image you just pulled.
+
+c. Map the host volume /opt/sysops with container volume /tmp. There is an sample.txt file present on same server under /tmp; copy that file to /opt/sysops. Also please keep the container in running state.
+Ans:
+
+### 1️⃣ Pull the NGINX image
+
+docker pull nginx:latest
+
+You can also use:
+
+docker pull nginx
+
+### 2️⃣ Create the host directory `/opt/sysops` (if it doesn’t exist)
+
+mkdir -p /opt/sysops
+
+### 3️⃣ Copy the file `sample.txt` to `/opt/sysops`
+
+cp /tmp/sample.txt /opt/sysops/
+
+You can verify:
+ls -l /opt/sysops/
+
+### 4️⃣ Run the container with volume mounted
+
+docker run -d \
+  --name demo \
+  -v /opt/sysops:/tmp \
+  nginx
+
+Explanation:
+
+* `-d`: run in detached mode (keeps it running)
+* `--name demo`: name the container
+* `-v /opt/sysops:/tmp`: mount host `/opt/sysops` to container’s `/tmp`
+
+### 5️⃣ ✅ Verify Container and File
+
+#### Check if the container is running:
+
+docker ps
+
+You should see a container named `demo` running.
+
+#### Check if the file is visible inside the container:
+
+docker exec demo ls /tmp
+
+Expected output:
+
+sample.txt
+
 # Q3 Docker Ports Mapping
 # Q4 Save, Load and Transfer Docker Image
 # Q5 Write a Docker Compose File

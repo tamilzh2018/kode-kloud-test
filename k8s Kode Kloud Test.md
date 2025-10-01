@@ -1431,8 +1431,248 @@ Ans:
 
 **Level 3**
 # Day 1 Deploy Apache Web Server on Kubernetes CLuster
+There is an application that needs to be deployed on Kubernetes cluster under Apache web server. The Nautilus application development team has asked the DevOps team to deploy it. We need to develop a template as per requirements mentioned below:
+
+
+1.Create a namespace named as httpd-namespace-xfusion.
+2.Create a deployment named as httpd-deployment-xfusion under newly created namespace. For the deployment use httpd image with latest tag only and remember to mention the tag i.e httpd:latest, and make sure replica counts are 2
+3. Create a service named as httpd-service-xfusion under same namespace to expose the deployment, nodePort should be 30004.
+Ans:
+# Create a namespace:
+kubectl create namespace httpd-namespace-xfusion
+# Create a deployment and service Deply.yml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: httpd-deployment-xfusion
+  namespace: httpd-namespace-xfusion
+  labels:
+    app: httpd    
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: httpd     
+  template:
+    metadata:
+      labels:
+        app: httpd        
+    spec:
+      containers:
+      - name: httpd-container
+        image: httpd:latest
+        ports:
+        - containerPort: 80
+---
+
+apiVersion: v1
+kind: Service 
+metadata:
+  name: httpd-service-xfusion
+  namespace: httpd-namespace-xfusion
+spec:
+  selector:
+    app: httpd
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 80
+      nodePort: 30004
+  type: NodePort
+
 # Day 2 Deploy Lamp Stack on Kubernetes Cluster
+The Nautilus DevOps team want to deploy a PHP website on Kubernetes cluster. They are going to use Apache as a web server and Mysql for database. The team had already gathered the requirements and now they want to make this website live. Below you can find more details:
+
+1) Create a config map php-config for php.ini with variables_order = "EGPCS" data.
+
+2) Create a deployment named lamp-wp.
+
+3) Create two containers under it. First container must be httpd-php-container using image webdevops/php-apache:alpine-3-php7 and second container must be mysql-container from image mysql:5.6. Mount php-config configmap in httpd container at /opt/docker/etc/php/php.ini location.
+
+4) Create kubernetes generic secrets for mysql related values like myql root password, mysql user, mysql password, mysql host and mysql database. Set any values of your choice.
+
+5) Add some environment variables for both containers:
+
+a) MYSQL_ROOT_PASSWORD, MYSQL_DATABASE, MYSQL_USER, MYSQL_PASSWORD and MYSQL_HOST. Take their values from the secrets you created. Please make sure to use env field (do not use envFrom) to define the name-value pair of environment variables.
+
+6) Create a node port type service lamp-service to expose the web application, nodePort must be 30008.
+
+7) Create a service for mysql named mysql-service and its port must be 3306.
+
+8) We already have /tmp/index.php file on jump_host server.
+
+a) Copy this file into httpd container under Apache document root i.e /app and replace the dummy values for mysql related variables with the environment variables you have set for mysql related parameters. Please make sure you do not hard code the mysql related details in this file, you must use the environment variables to fetch those values.
+
+b) You must be able to access this index.php on node port 30008 at the end, please note that you should see Connected successfully message while accessing this page.
+Ans:
+You're very close to completion — based on your logs and actions, the PHP-Apache container (`httpd-php-container`) is up and serving traffic on NodePort `30008`. ✅
+
+Let’s walk through a few **important checks** and steps to **finalize** everything based on your recent output and command (`kubectl edit secret mysql-secret`).
+
+---
+
+## ✅ Your Current Status
+
+* ✔️ Apache and PHP are **running fine**.
+* ✔️ The service is available externally at port **30008**.
+* ✔️ HTTP requests are returning **HTTP 200**, which means Apache is serving **some content**.
+* ✔️ You're editing the **`mysql-secret`**, which means you're likely fine-tuning the database credentials.
+
+---
+
+## 🧪 What You Need to Check/Do Next
+
+### 1. ✅ **Ensure `index.php` is in the right location (`/app`)**
+
+On your **jump host**, copy the updated `index.php` into the correct container:
+
+
+kubectl cp /tmp/index.php <pod-name>:/app/index.php -c httpd-php-container
+
+
+Get the pod name:
+
+
+kubectl get pods
+
+
+Example:
+
+
+kubectl cp /tmp/index.php lamp-wp-7946b4684c-h8t8c:/app/index.php -c httpd-php-container
+
+
+---
+
+### 2. ✅ **Ensure `index.php` uses environment variables**
+
+Your file should **NOT** hardcode MySQL values. It should use `getenv()`:
+
+php
+<?php
+$host = getenv('MYSQL_HOST');
+$db   = getenv('MYSQL_DATABASE');
+$user = getenv('MYSQL_USER');
+$pass = getenv('MYSQL_PASSWORD');
+
+$conn = mysqli_connect($host, $user, $pass, $db);
+if (!$conn) {
+    die("Connection failed: " . mysqli_connect_error());
+}
+echo "Connected successfully";
+?>
+
+
+You can verify it was copied correctly:
+
+
+kubectl exec -it <pod> -c httpd-php-container -- cat /app/index.php
+
+
+---
+
+### 3. ✅ **Ensure MySQL is initialized and ready**
+
+Check logs for the **`mysql-container`**:
+
+
+kubectl logs lamp-wp-7946b4684c-h8t8c -c mysql-container
+
+
+You're looking for messages like:
+
+
+ready for connections
+
+
+Also, make sure the environment variables match your secret values. If not, you can update the secret:
+
+
+kubectl edit secret mysql-secret
+
+
+Update any value (base64 encoded). For example, to set `MYSQL_DATABASE` to `wpdb`, encode it:
+
+
+echo -n "wpdb" | base64
+
+
+Paste that into the secret YAML under the correct key.
+
+---
+
+### 4. ✅ **Test the Application**
+
+Now open in browser:
+
+
+http://<node-ip>:30008
+
+
+Or in lab:
+
+
+https://ilgcehjizfxiofcg.labs.kodekloud.com:30008
+
+
+Expected output:
+
+
+Connected successfully
+
+
+If you still see only Apache default page or error:
+
+* File may not be copied
+* MySQL not ready
+* Apache doc root may not be `/app` (verify via DockerHub docs of the image)
+
+
 # Day 3 Init Containers in Kubernetes
+There are some applications that need to be deployed on Kubernetes cluster and these apps have some pre-requisites where some configurations need to be changed before deploying the app container. Some of these changes cannot be made inside the images so the DevOps team has come up with a solution to use init containers to perform these tasks during deployment. Below is a sample scenario that the team is going to test first.
+
+Create a Deployment named as ic-deploy-datacenter.
+
+Configure spec as replicas should be 1, labels app should be ic-datacenter, template's metadata lables app should be the same ic-datacenter.
+
+The initContainers should be named as ic-msg-datacenter, use image fedora with latest tag and use command '/bin/bash', '-c' and 'echo Init Done - Welcome to xFusionCorp Industries > /ic/beta'. The volume mount should be named as ic-volume-datacenter and mount path should be /ic.
+
+Main container should be named as ic-main-datacenter, use image fedora with latest tag and use command '/bin/bash', '-c' and 'while true; do cat /ic/beta; sleep 5; done'. The volume mount should be named as ic-volume-datacenter and mount path should be /ic.
+
+Volume to be named as ic-volume-datacenter and it should be an emptyDir type
+Ans:
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ic-deploy-datacenter
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ic-datacenter
+  template:
+    metadata:
+      labels:
+        app: ic-datacenter
+    spec:
+      volumes:
+        - name: ic-volume-datacenter
+          emptyDir: {}
+      initContainers:
+        - name: ic-msg-datacenter
+          image: fedora:latest
+          command: ["/bin/bash", "-c", "echo Init Done - Welcome to xFusionCorp Industries > /ic/beta"]
+          volumeMounts:
+            - name: ic-volume-datacenter
+              mountPath: /ic
+      containers:
+        - name: ic-main-datacenter
+          image: fedora:latest
+          command: ["/bin/bash", "-c", "while true; do cat /ic/beta; sleep 5; done"]
+          volumeMounts:
+            - name: ic-volume-datacenter
+              mountPath: /ic
+
 # Day 4 Persistent Volumes in Kubernetes
 # Day 5 Manage Secrets in Kubernetes
 # Day 6 Environment Variables in Kubernetes

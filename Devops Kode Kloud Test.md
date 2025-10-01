@@ -96,11 +96,13 @@ Disregard the current status of SELinux via the command line; the final status a
 Ans:
 sudo yum install selinux-policy selinux-policy-targeted -y
 sudo vi /etc/selinux/config
-Change it to:
+
+Change it to: SELINUX=enforcing
 SELINUX=disabled
 Verify Configuration: 
 grep SELINUX= /etc/selinux/config
 
+or sudo sed -i 's/^SELINUX=enforcing/SELINUX=disabled/' /etc/selinux/config
 
 Day 6: **Create a Cron Job**
 The Nautilus system admins team has prepared scripts to automate several day-to-day tasks. They want them to be deployed on all app servers in Stratos DC on a set schedule. Before that they need to test similar functionality with a sample cron job. Therefore, perform the steps below:
@@ -1876,7 +1878,14 @@ docker ps
 docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' nginx_1
 curl 172.12.0.2
 Day 37: **Copy File to Docker Container**
+The Nautilus DevOps team possesses confidential data on App Server 1 in the Stratos Datacenter. A container named ubuntu_latest is running on the same server. Copy an encrypted file /tmp/nautilus.txt.gpg from the docker host to the ubuntu_latest container located at /home/. Ensure the file is not modified during this operation.
 
+Ans:
+To copy the encrypted file `/tmp/nautilus.txt.gpg` from the Docker host to the `ubuntu_latest` container without modifying it, follow these steps:
+ 1  docker ps -a
+    2  docker cp /tmp/nautilus.txt.gpg ubuntu_latest:/home/nautilus.txt.gpg
+    3  docker exec -it ubuntu_latest ls -l /home
+    4  history
 Day 38: **Pull Docker Image**
 
 Day 39: **Create a Docker Image From Container**
