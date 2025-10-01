@@ -1305,11 +1305,452 @@ Right-click under the EXPLORER section in VS Code and select Open in Integrated 
 
 Before submitting the task, ensure that terraform plan returns No changes. Your infrastructure matches the configuration.
 Ans:
+Below is a comprehensive Terraform setup for your infrastructure requirements to create a private VPC, a subnet, and an EC2 instance, ensuring they are isolated and follow the constraints you outlined.
+
+### **1. `main.tf`**
+
+This file defines the infrastructure for the VPC, subnet, EC2 instance, and security group.
+
+
+provider "aws" {
+  region = "us-east-1" # Change this to your preferred region
+}
+
+# Create the VPC
+resource "aws_vpc" "xfusion_priv_vpc" {
+  cidr_block = var.KKE_VPC_CIDR
+  enable_dns_support = true
+  enable_dns_hostnames = true
+  tags = {
+    Name = "xfusion-priv-vpc"
+  }
+}
+
+# Create the subnet within the VPC
+resource "aws_subnet" "xfusion_priv_subnet" {
+  vpc_id                  = aws_vpc.xfusion_priv_vpc.id
+  cidr_block              = var.KKE_SUBNET_CIDR
+  availability_zone       = "us-east-1a" # You can change the availability zone as needed
+  map_public_ip_on_launch = false
+  tags = {
+    Name = "xfusion-priv-subnet"
+  }
+}
+
+# Create a security group that allows access only from within the VPC CIDR block
+resource "aws_security_group" "xfusion_priv_sg" {
+  vpc_id = aws_vpc.xfusion_priv_vpc.id
+
+  ingress {
+    from_port   = 0
+    to_port     = 65535
+    protocol    = "tcp"
+    cidr_blocks = [var.KKE_VPC_CIDR] # Allow access only from the VPC's CIDR block
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 65535
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = {
+    Name = "xfusion-priv-sg"
+  }
+}
+
+# Create an EC2 instance inside the private subnet
+resource "aws_instance" "xfusion_priv_ec2" {
+  ami           = "ami-0c55b159cbfafe1f0" # Replace with the Amazon Linux 2 AMI in your region
+  instance_type = "t2.micro"
+  subnet_id     = aws_subnet.xfusion_priv_subnet.id
+  key_name      = "datacenter-key" # Replace with your actual key name
+  security_groups = [aws_security_group.xfusion_priv_sg.name]
+  tags = {
+    Name = "xfusion-priv-ec2"
+  }
+}
+
+# Output the names of the created resources
+output "KKE_vpc_name" {
+  value = aws_vpc.xfusion_priv_vpc.tags["Name"]
+}
+
+output "KKE_subnet_name" {
+  value = aws_subnet.xfusion_priv_subnet.tags["Name"]
+}
+
+output "KKE_ec2_private" {
+  value = aws_instance.xfusion_priv_ec2.tags["Name"]
+}
+
+
+### **2. `variables.tf`**
+
+This file defines the variables used for the VPC CIDR block and the subnet CIDR block.
+
+
+variable "KKE_VPC_CIDR" {
+  description = "The CIDR block for the VPC"
+  type        = string
+  default     = "10.0.0.0/16"
+}
+
+variable "KKE_SUBNET_CIDR" {
+  description = "The CIDR block for the subnet"
+  type        = string
+  default     = "10.0.1.0/24"
+}
+
+
+### **3. `outputs.tf`**
+
+This file defines the outputs for the resource names after creation.
+
+
+output "KKE_vpc_name" {
+  description = "The name of the VPC"
+  value       = aws_vpc.xfusion_priv_vpc.tags["Name"]
+}
+
+output "KKE_subnet_name" {
+  description = "The name of the subnet"
+  value       = aws_subnet.xfusion_priv_subnet.tags["Name"]
+}
+
+output "KKE_ec2_private" {
+  description = "The name of the EC2 instance"
+  value       = aws_instance.xfusion_priv_ec2.tags["Name"]
+}
+
+
+### **4. `terraform.tfvars` (Optional)**
+
+This file can be used to override the default values of the variables if needed.
+
+
+KKE_VPC_CIDR   = "10.0.0.0/16"
+KKE_SUBNET_CIDR = "10.0.1.0/24"
+
+
+### **Explanation of Key Elements:**
+
+* **VPC**: The `aws_vpc` resource creates a private VPC named `xfusion-priv-vpc` with the CIDR block `10.0.0.0/16`. DNS support and hostnames are enabled to ensure proper communication within the VPC.
+
+* **Subnet**: The `aws_subnet` resource creates a private subnet (`xfusion-priv-subnet`) inside the VPC with the CIDR block `10.0.1.0/24`. The `map_public_ip_on_launch` option is set to `false`, ensuring that instances launched in this subnet will not have public IP addresses.
+
+* **Security Group**: The `aws_security_group` resource ensures that the EC2 instance only accepts traffic from within the VPC’s CIDR block. This provides network isolation for the EC2 instance.
+
+* **EC2 Instance**: The `aws_instance` resource provisions an EC2 instance of type `t2.micro` in the private subnet. It uses the security group created earlier to restrict inbound traffic to only within the VPC. You need to replace `ami-0c55b159cbfafe1f0` with the correct Amazon Linux 2 AMI ID for your region.
 
 # Q3 Replace Existing EC2 Instance via Terraform
+To test resilience and recreation behavior in Terraform, the DevOps team needs to demonstrate the use of the -replace option to forcefully recreate an EC2 instance without changing its configuration. Please complete the following tasks:
+
+Use the Terraform CLI -replace option to destroy and recreate the EC2 instance xfusion-ec2, even though the configuration remains unchanged.
+
+Ensure that the instance is recreated successfully.
+
+
+Notes:
+
+The new instance created using the -replace option should have a different instance ID than the previously provisioned instance.
+
+The Terraform working directory is /home/bob/terraform.
+
+Right-click under the EXPLORER section in VS Code and select Open in Integrated Terminal to launch the terminal.
+
+Before submitting the task, ensure that terraform plan returns No changes. Your infrastructure matches the configuration.
+Ans:
+**Check terrafrom reference name from main.tf** ex: resource aws_instance webserver {}
+**Use reference name to check old instance id**: terraform state show aws_instance.web_server
+**Use replace command to recreate new instance**: terraform apply -replace  aws_instance.web_server
+terraform plan
 # Q4 Deploy Multiple EC2 Instances with Terraform
+The Nautilus DevOps team wants to provision multiple EC2 instances in AWS using Terraform. Each instance should follow a consistent naming convention and be deployed using a modular and scalable setup.
+
+Use Terraform to:
+
+Create 3 EC2 instances using the count parameter.
+
+Name each EC2 instance with the prefix datacenter-instance (e.g., datacenter-instance-1).
+
+Instances should be t2.micro.
+
+The key named should be datacenter-key.
+
+Create main.tf file (do not create a separate .tf file) to provision these instances.
+
+Use variables.tf file with the following:
+
+KKE_INSTANCE_COUNT: number of instances.
+KKE_INSTANCE_TYPE: type of the instance.
+KKE_KEY_NAME: name of key used.
+KKE_INSTANCE_PREFIX: name of the instnace.
+Use the locals.tf file to define a local variable named AMI_ID that retrieves the latest Amazon Linux 2 AMI using a data source.
+
+Use terraform.tfvars to assign values to the variables.
+
+Use outputs.tf file to output the following:
+
+kke_instance_names: names of the instances created.
+Ans:
+Here's a complete setup for your Terraform configuration to provision 3 EC2 instances using the specifications you've provided. The configuration includes multiple files: `main.tf`, `variables.tf`, `locals.tf`, `terraform.tfvars`, and `outputs.tf`.
+
+### **1. `main.tf`**
+
+resource "aws_instance" "datacenter_instance" {
+  count             = var.KKE_INSTANCE_COUNT
+  ami               = local.AMI_ID
+  instance_type     = var.KKE_INSTANCE_TYPE
+  key_name          = var.KKE_KEY_NAME
+  tags = {
+    Name = "${var.KKE_INSTANCE_PREFIX}-${count.index + 1}"
+  }
+}
+
+output "kke_instance_names" {
+  value = [for instance in aws_instance.datacenter_instance : instance.tags["Name"]]
+}
+
+### **2. `variables.tf`**
+
+This file will define the variables that are used in the `main.tf` file.
+
+variable "KKE_INSTANCE_COUNT" {
+  description = "The number of instances to create"
+  type        = number
+  default     = 3
+}
+
+variable "KKE_INSTANCE_TYPE" {
+  description = "The type of the EC2 instance"
+  type        = string
+  default     = "t2.micro"
+}
+
+variable "KKE_KEY_NAME" {
+  description = "The name of the key pair"
+  type        = string
+  default     = "datacenter-key"
+}
+
+variable "KKE_INSTANCE_PREFIX" {
+  description = "The prefix for the instance names"
+  type        = string
+  default     = "datacenter-instance"
+}
+
+### **3. `locals.tf`**
+
+This file will define the local variable for the latest Amazon Linux 2 AMI ID.
+
+data "aws_ami" "amazon_linux" {
+  most_recent = true
+  owners      = ["amazon"]
+  filter {
+    name   = "name"
+    values = ["amzn2-ami-hvm-*-x86_64-gp2"]
+  }
+}
+
+locals {
+  AMI_ID = data.aws_ami.amazon_linux.id
+}
+
+### **4. `terraform.tfvars`**
+
+This file will assign values to the variables defined in `variables.tf`.
+
+KKE_INSTANCE_COUNT   = 3
+KKE_INSTANCE_TYPE    = "t2.micro"
+KKE_KEY_NAME         = "datacenter-key"
+KKE_INSTANCE_PREFIX  = "datacenter-instance"
+
+### **5. `outputs.tf`**
+
+This file will output the names of the instances that were created.
+
+
+output "kke_instance_names" {
+  description = "Names of the EC2 instances created"
+  value       = [for instance in aws_instance.datacenter_instance : instance.tags["Name"]]
+}
+
+### **Explanation:**
+
+* **`main.tf`**: Defines the AWS EC2 instance resource with `count` to create multiple instances. It uses the `local.AMI_ID` for the latest Amazon Linux 2 AMI and assigns a name using the `count.index` to differentiate instances.
+
+* **`variables.tf`**: Defines the variables that will be used to customize the instance count, instance type, key name, and prefix.
+
+* **`locals.tf`**: Retrieves the latest Amazon Linux 2 AMI ID dynamically via a data source.
+
+* **`terraform.tfvars`**: Provides values to the variables for the desired number of instances, instance type, key name, and naming prefix.
+
+* **`outputs.tf`**: Outputs the names of all EC2 instances that were provisioned using the defined naming convention.
+
 # Q5 Associate Elastic IP with EC2 Instance Using Terraform
+The Nautilus DevOps Team has received a new request from the Development Team to set up a new EC2 instance. This instance will be used to host a new application that requires a stable IP address. To ensure that the instance has a consistent public IP, an Elastic IP address needs to be associated with it. This setup will help the Development Team to have a reliable and consistent access point for their application.
+
+Create an EC2 instance named xfusion-ec2 using any Linux AMI like Ubuntu.
+
+Instance type must be t2.micro and associate an Elastic IP address named xfusion-eipwith this instance.
+
+Use the main.tf file (do not create a separate .tf file) to provision the EC2-Instance and Elastic IP.
+
+Use the outputs.tf file and output the instance name using variable KKE_instance_name and the Elastic IP using variable KKE_eip.
+
+
+Notes:
+
+The Terraform working directory is /home/bob/terraform.
+
+Right-click under the EXPLORER section in VS Code and select Open in Integrated Terminal to launch the terminal.
+
+Before submitting the task, ensure that terraform plan returns No changes. Your infrastructure matches the configuration.
+Ans:
+To complete this task using Terraform, follow these steps to set up an EC2 instance with an associated Elastic IP, and output the required variables.
+
+
+
+### ✅ **Goal Recap:**
+
+* Create **EC2 instance**: `xfusion-ec2`
+* Use **Ubuntu AMI**
+* Use instance type: `t2.micro`
+* Associate an **Elastic IP**: `xfusion-eip`
+* All resources should be in **main.tf**
+* Use **outputs.tf** to output:
+
+  * EC2 name as `KKE_instance_name`
+  * Elastic IP as `KKE_eip`
+
+
+
+## ✅ 1. `main.tf` (Create EC2 + Elastic IP)
+
+
+provider "aws" {
+  region = "us-east-1" # or change to your preferred region
+}
+
+# Get latest Ubuntu AMI
+data "aws_ami" "ubuntu" {
+  most_recent = true
+  owners      = ["099720109477"] # Canonical
+
+  filter {
+    name   = "name"
+    values = ["ubuntu/images/hvm-ssd/ubuntu-focal-20.04-amd64-server-*"]
+  }
+
+  filter {
+    name   = "virtualization-type"
+    values = ["hvm"]
+  }
+}
+
+# EC2 instance
+resource "aws_instance" "xfusion_ec2" {
+  ami           = data.aws_ami.ubuntu.id # real ubunutu ami           = "ami-0360c520857e3138f"
+  instance_type = "t2.micro"
+  tags = {
+    Name = "xfusion-ec2"
+  }
+}
+
+
+# Elastic IP
+resource "aws_eip" "xfusion_eip" {
+  instance = aws_instance.xfusion_ec2.id
+  domain   = "vpc"
+
+  tags = {
+    Name = "xfusion-eip"
+  }
+
+
+## ✅ 2. `outputs.tf`
+
+
+output "KKE_instance_name" {
+  value = aws_instance.xfusion_ec2.tags["Name"]
+}
+
+output "KKE_eip" {
+  value = aws_eip.xfusion_eip.public_ip
+}
+
+
 # Q6 Launch EC2 Instance from Custom AMI Using Terraform
+The Nautilus DevOps team needs to create an AMI from an existing EC2 instance for backup and scaling purposes. The following steps are required:
+
+They have an existing EC2 instance named devops-ec2.
+
+They need to create an AMI named devops-ec2-ami from this instance.
+
+Additionally, they need to launch a new EC2 instance named devops-ec2-new using this AMI.
+
+Update the main.tf file (do not create a different or separate.tf file) to provision an AMI and then launch an EC2 Instance from that AMI.
+
+Create an outputs.tf file to output the following values:
+
+KKE_ami_id for the AMI ID you created.
+KKE_new_instance_id for the EC2 instance ID you created.
+Ans:
+# Step 1: Create the original EC2 instance
+resource "aws_instance" "ec2" {
+  ami                    = "ami-0c101f26f147fa7fd"
+  instance_type          = "t2.micro"
+  vpc_security_group_ids = ["sg-75a6dd38641663b49"]
+
+  tags = {
+    Name = "devops-ec2"
+  }
+}
+
+# Step 2: Create an AMI from the above instance
+resource "aws_ami_from_instance" "ec2_ami" {
+  name               = "devops-ec2-ami"
+  source_instance_id = aws_instance.ec2.id
+
+  tags = {
+    Name = "devops-ec2-ami"
+  }
+
+  depends_on = [aws_instance.ec2]
+}
+
+# Step 3: Launch new EC2 instance using the AMI
+resource "aws_instance" "new_ec2" {
+  ami                    = aws_ami_from_instance.ec2_ami.id
+  instance_type          = "t2.micro"
+  vpc_security_group_ids = ["sg-75a6dd38641663b49"]
+
+  tags = {
+    Name = "devops-ec2-new"
+  }
+
+  depends_on = [aws_ami_from_instance.ec2_ami]
+}
+
+output "KKE_ami_id" {
+  value = aws_ami_from_instance.ec2_ami.id
+  description = "The AMI ID created from the original instance."
+}
+
+output "KKE_new_instance_id" {
+  value = aws_instance.new_ec2.id
+  description = "The ID of the new EC2 instance launched from the AMI."
+}
+# Important Notes
+
+Provisioning Order: Terraform handles dependencies using depends_on, but referencing resources already establishes implicit dependencies (e.g., using aws_instance.ec2.id).
+
+AMI Availability Delay: Creating an AMI may take time. Terraform will wait until it's available before launching the new instance.
+
+AMI Naming: AMI names must be unique in your AWS account/region. If you plan to run this multiple times, consider adding a timestamp or random suffix.
+
 # Q7 Stream Kinesis Data to CloudWatch Using Terraform
 # Q8 Sync Data to S3 Bucket with Terraform
 # Q9 Prevent S3 Bucket Deletion via Terraform
