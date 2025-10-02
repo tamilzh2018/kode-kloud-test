@@ -517,7 +517,7 @@ stapp03 ansible_host=172.16.238.12 ansible_user=banner ansible_ssh_pass=BigGr33n
    
 
 2. **Add the following content:**
-   yaml
+   
    - name: Install httpd on all app servers
      hosts: appservers
      become: yes
@@ -1039,6 +1039,140 @@ Create a Playbook: /home/thor/playbooks/index.yml
         enabled: yes
 
 # Q2 Ansible Create Users and Groups
+Several new developers and DevOps engineers just joined the xFusionCorp industries. They have been assigned the Nautilus project, and as per the onboarding process we need to create user accounts for new joinees on at least one of the app servers in Stratos DC. We also need to create groups and make new users members of those groups. We need to accomplish this task using Ansible. Below you can find more information about the task.
+
+There is already an inventory file ~/playbooks/inventory on jump host.
+
+On jump host itself there is a list of users in ~/playbooks/data/users.yml file and there are two groups — admins and developers —that have list of different users. Create a playbook ~/playbooks/add_users.yml on jump host to perform the following tasks on app server 3 in Stratos DC.
+
+a. Add all users given in the users.yml file on app server 3.
+
+b. Also add developers and admins groups on the same server.
+
+c. As per the list given in the users.yml file, make each user member of the respective group they are listed under.
+
+d. Make sure home directory for all of the users under developers group is /var/www (not the default i.e /var/www/{USER}). Users under admins group should use the default home directory (i.e /home/devid for user devid).
+
+e. Set password Rc5C9EyvbU for all of the users under developers group and dCV3szSGNA for of the users under admins group. Make sure to use the password given in the ~/playbooks/secrets/vault.txt file as Ansible vault password to encrypt the original password strings. You can use ~/playbooks/secrets/vault.txt file as a vault secret file while running the playbook (make necessary changes in ~/playbooks/ansible.cfg file).
+
+f. All users under admins group must be added as sudo users. To do so, simply make them member of the wheel group as well.
+
+Note: Validation will try to run the playbook using command ansible-playbook -i inventory add_users.yml so please make sure playbook works this way, without passing any extra arguments.
+Ans:
+To fulfill the onboarding requirements using **Ansible** for xFusionCorp's new developers and DevOps engineers, you need to:
+
+* Create an Ansible playbook `~/playbooks/add_users.yml` targeting **App Server 3 (stapp03)**.
+* Read users from `~/playbooks/data/users.yml`.
+* Create appropriate groups (`admins`, `developers`), users, set home directories, assign them to the correct groups, and configure sudo access (via `wheel` group).
+* Encrypt the user passwords using **Ansible Vault**, and update `ansible.cfg` to use the vault password file so the playbook can be run *without extra arguments*.
+
+---
+
+## ✅ STEP-BY-STEP SETUP
+
+---
+
+### ✅ 1. **Encrypt the passwords using Ansible Vault**
+
+Run these commands **on the jump host**, assuming you're in the `~/playbooks/` directory:
+
+bash
+# Navigate to secrets directory
+cd ~/playbooks/secrets/
+python3 -c "import crypt; print(crypt.crypt('B4zNgHA7Ya', crypt.mksalt(crypt.METHOD_SHA512)))"
+python3 -c "import crypt; print(crypt.crypt('YchZHRcLkL', crypt.mksalt(crypt.METHOD_SHA512)))"
+
+# Encrypt developer password
+ansible-vault encrypt_string --vault-password-file vault.txt 'Rc5C9EyvbU' --name 'dev_password'
+
+# Encrypt admin password
+ansible-vault encrypt_string --vault-password-file vault.txt 'dCV3szSGNA' --name 'admin_password'
+
+
+📌 **Save the output** from each command. It will look something like:
+passwords.yml
+
+dev_password: !vault |
+          $ANSIBLE_VAULT;1.1;AES256
+          62343534613334333838336539316437383566373437656539636433623661323563643735323234
+          ...
+
+
+Copy the full encrypted strings and create a new file `~/playbooks/secrets/user_passwords.yml` like:
+
+
+# ~/playbooks/secrets/user_passwords.yml
+dev_password: !vault |
+          $ANSIBLE_VAULT;1.1;AES256
+          <entire_encrypted_string_here>
+
+admin_password: !vault |
+          $ANSIBLE_VAULT;1.1;AES256
+          <entire_encrypted_string_here>
+Ex:
+dev_password: "$6$randomsalt$hashedvalueforB4zNgHA7Ya"
+admin_password: "$6$randomsalt$hashedvalueforYchZHRcLkL"
+
+---
+
+### ✅ 2. **Update `ansible.cfg`**
+
+Edit `~/playbooks/ansible.cfg` and ensure it includes:
+
+ini
+[defaults]
+host_key_checking = False
+inventory = ./inventory
+vault_password_file = ./secrets/vault.txt
+
+
+---
+
+### ✅ 3. **Create `add_users.yml` playbook**
+
+Create `~/playbooks/add_users.yml` with the following content:
+
+
+---
+- name: Create users and groups on app server 3
+  hosts: stapp03
+  become: yes
+  vars_files:
+    - ./data/users.yml
+    - ./secrets/user_passwords.yml
+
+  tasks:
+    - name: Ensure groups exist
+      group:
+        name: "{{ item }}"
+        state: present
+      loop:
+        - admins
+        - developers
+
+    - name: Ensure 'wheel' group exists (for sudo)
+      group:
+        name: wheel
+        state: present
+
+    - name: Create admin users
+      user:
+        name: "{{ item }}"
+        groups: "admins,wheel"
+        password: "{{ admin_password }}"
+        state: present
+      loop: "{{ admins }}"
+
+    - name: Create developer users
+      user:
+        name: "{{ item }}"
+        groups: "developers"
+        home: "/var/www/{{ item }}"
+        create_home: yes
+        password: "{{ dev_password }}"
+        state: present
+      loop: "{{ developers }}"
+
 # Q3 Managing Jinja2 Templates Using Ansible
 # Q4 Ansible Setup Httpd and PHP
 # Q5 Using Ansible Conditionals

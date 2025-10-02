@@ -1752,6 +1752,72 @@ AMI Availability Delay: Creating an AMI may take time. Terraform will wait until
 AMI Naming: AMI names must be unique in your AWS account/region. If you plan to run this multiple times, consider adding a timestamp or random suffix.
 
 # Q7 Stream Kinesis Data to CloudWatch Using Terraform
+The monitoring team wants to improve observability into the streaming infrastructure. Your task is to implement a solution using Amazon Kinesis and CloudWatch. The team wants to ensure that if write throughput exceeds provisioned limits, an alert is triggered immediately.
+
+As a member of the Nautilus DevOps Team, perform the following tasks using Terraform:
+
+Create a Kinesis Data Stream: Name the stream xfusion-kinesis-stream with a shard count of 1.
+
+Enable Monitoring: Enable shard-level metrics for the stream to track ingestion and throughput errors.
+
+Create a CloudWatch Alarm: Name the alarm xfusion-kinesis-alarm and monitor the WriteProvisionedThroughputExceeded metric. The alarm should trigger if the metric exceeds a threshold of 1.
+
+Ensure Alerting: Configure the CloudWatch alarm to detect write throughput issues exceeding provisioned limits.
+
+Create the main.tf file (do not create a separate .tf file) to provision the Kinesis stream, CloudWatch alarm, and ensure alerting.
+
+Create the outputs.tf file with the following variable names to output:
+
+kke_kinesis_stream_name for the Kinesis stream name.
+
+kke_kinesis_alarm_name for the CloudWatch alarm name.
+
+Ans:
+resource "aws_kinesis_stream" "xfusion_stream" {
+  name             = "xfusion-kinesis-stream"
+  shard_count      = 1
+  retention_period = 24
+
+  shard_level_metrics = [
+    "IncomingBytes",
+    "IncomingRecords",
+    "OutgoingBytes",
+    "OutgoingRecords",
+    "WriteProvisionedThroughputExceeded",
+    "ReadProvisionedThroughputExceeded",
+    "IteratorAgeMilliseconds",
+  ]
+}
+
+resource "aws_cloudwatch_metric_alarm" "xfusion_kinesis_alarm" {
+  alarm_name          = "xfusion-kinesis-alarm"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = 1
+  metric_name         = "WriteProvisionedThroughputExceeded"
+  namespace           = "AWS/Kinesis"
+  period              = 60
+  statistic           = "Sum"
+  threshold           = 1
+  alarm_description   = "Alarm when write throughput exceeds provisioned limit"
+  dimensions = {
+    StreamName = aws_kinesis_stream.xfusion_stream.name
+  }
+  treat_missing_data = "notBreaching"
+
+  # Optional: Add notification actions here, e.g., SNS topic ARN
+  # alarm_actions = [aws_sns_topic.example.arn]
+}
+
+output "kke_kinesis_stream_name" {
+  description = "The name of the Kinesis stream"
+  value       = aws_kinesis_stream.xfusion_stream.name
+}
+
+output "kke_kinesis_alarm_name" {
+  description = "The name of the CloudWatch alarm"
+  value       = aws_cloudwatch_metric_alarm.xfusion_kinesis_alarm.alarm_name
+}
+
 # Q8 Sync Data to S3 Bucket with Terraform
 # Q9 Prevent S3 Bucket Deletion via Terraform
 # Q10 Grant EC2 Access to S3 Bucket Using Terraform

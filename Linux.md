@@ -251,7 +251,15 @@ group::r--
 other::r--
 
 # Q11 String Replacement
+Within the Stratos DC, the backup server holds template XML files crucial for the Nautilus application. Before utilization, these files require valid data insertion. As part of routine maintenance, system admins at xFusionCorp Industries employ string and file manipulation commands.
 
+Your task is to substitute all occurrences of the string Random with Marine within the XML file located at /root/nautilus.xml on the backup server.
+Ans:
+Run the following command on the backup server:
+sudo sed -i 's/Random/Marine/g' /root/nautilus.xml
+You can check that the replacements were successful using:
+sudo grep 'Marine' /root/nautilus.xml
+sudo grep 'Random' /root/nautilus.xml
 # Q12 Secure Data Transfer
 
 # Q13 Restrict Cron Access
