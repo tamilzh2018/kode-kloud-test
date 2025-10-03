@@ -1887,9 +1887,19 @@ To copy the encrypted file `/tmp/nautilus.txt.gpg` from the Docker host to the `
     3  docker exec -it ubuntu_latest ls -l /home
     4  history
 Day 38: **Pull Docker Image**
+Ans:
+# Pull the image
+docker pull busybox:musl
 
+# Re-tag the image old tag new tag
+docker tag busybox:musl busybox:blog
 Day 39: **Create a Docker Image From Container**
+One of the Nautilus developer was working to test new changes on a container. He wants to keep a backup of his changes to the container. A new request has been raised for the DevOps team to create a new image from this container. Below are more details about it:
 
+a. Create an image media:devops on Application Server 1 from a container ubuntu_latest that is running on same server.
+Ans:
+docker ps
+docker commit ubuntu_latest media:devops
 Day 40: **Docker EXEC Operations**
 
 Day 41: **Write a Docker File**

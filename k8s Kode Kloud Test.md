@@ -1754,6 +1754,110 @@ spec:
       nodePort: 30008
 
 # Day 5 Manage Secrets in Kubernetes
+The Nautilus DevOps team is working to deploy some tools in Kubernetes cluster. Some of the tools are licence based so that licence information needs to be stored securely within Kubernetes cluster. Therefore, the team wants to utilize Kubernetes secrets to store those secrets. Below you can find more details about the requirements:
+
+We already have a secret key file news.txt under /opt location on jump host. Create a generic secret named news, it should contain the password/license-number present in news.txt file.
+
+Also create a pod named secret-xfusion.
+
+Configure pod's spec as container name should be secret-container-xfusion, image should be ubuntu with latest tag (remember to mention the tag with image). Use sleep command for container so that it remains in running state. Consume the created secret and mount it under /opt/apps within the container.
+
+To verify you can exec into the container secret-container-xfusion, to check the secret key under the mounted path /opt/apps. Before hitting the Check button please make sure pod/pods are in running state, also validation can take some time to complete so keep patience.
+
+# Exiting details:
+cat /opt/news.txt 
+5ecur3
+
+Ans:
+Here's a step-by-step guide to complete the task as described. This includes:
+
+* Creating a Kubernetes secret from the file `/opt/news.txt`
+* Creating a pod with an Ubuntu container that mounts this secret into a specified path.
+
+---
+
+### ✅ Step 1: Create the Kubernetes Secret
+
+You already have the file `/opt/news.txt` containing the secret (`5ecur3`). To create the secret named `news`:
+
+
+kubectl create secret generic news --from-file=/opt/news.txt
+
+
+> This will create a secret named `news`, and the key will be `news.txt`.
+
+You can verify it with:
+
+
+kubectl describe secret news
+
+
+---
+
+### ✅ Step 2: Create a Pod Spec YAML
+
+Now, create a file named `secret-pod.yaml` with the following content:
+
+yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: secret-xfusion
+spec:
+  containers:
+    - name: secret-container-xfusion
+      image: ubuntu:latest
+      command: [ "sleep", "3600" ]
+      volumeMounts:
+        - name: secret-volume
+          mountPath: "/opt/apps"
+          readOnly: true
+  volumes:
+    - name: secret-volume
+      secret:
+        secretName: news
+
+
+---
+
+### ✅ Step 3: Deploy the Pod
+
+Apply the YAML:
+
+
+kubectl apply -f secret-pod.yaml
+
+
+Wait for the pod to be in **Running** state:
+
+
+kubectl get pods
+
+
+---
+
+### ✅ Step 4: Verify the Secret is Mounted
+
+Exec into the container:
+
+
+kubectl exec -it secret-xfusion -- bash
+
+
+Inside the container, check the content:
+
+
+cat /opt/apps/news.txt
+
+
+You should see:
+
+
+5ecur3
+
+
+
+
 # Day 6 Environment Variables in Kubernetes
 # Day 7 Kubernetes LEMP Setup
 # Day 8 Kubernetes Troubleshooting

@@ -1819,7 +1819,126 @@ output "kke_kinesis_alarm_name" {
 }
 
 # Q8 Sync Data to S3 Bucket with Terraform
+As part of a data migration project, the team lead has tasked the team with migrating data from an existing S3 bucket to a new S3 bucket. The existing bucket contains a substantial amount of data that must be accurately transferred to the new bucket. The team is responsible for creating the new S3 bucket using Terraform and ensuring that all data from the existing bucket is copied or synced to the new bucket completely and accurately. It is imperative to perform thorough verification steps to confirm that all data has been successfully transferred to the new bucket without any loss or corruption.
+
+As a member of the Nautilus DevOps Team, your task is to perform the following using Terraform:
+
+Create a New Private S3 Bucket: Name the bucket xfusion-sync-16792 and store this bucket name in a variable named KKE_BUCKET.
+
+Data Migration: Migrate all data from the existing xfusion-s3-28134 bucket to the new xfusion-sync-16792 bucket.
+
+Ensure Data Consistency: Ensure that both buckets contain the same data after migration.
+
+Update the main.tf file (do not create a separate .tf file) to provision a new private S3 bucket and migrate the data.
+
+Use the variables.tf file with the following variable:
+
+KKE_BUCKET: The name for the new bucket created.
+Use the outputs.tf file with the following outputs:
+
+new_kke_bucket_name: The name of the new bucket created.
+
+new_kke_bucket_acl: The ACL of the new bucket created.
+Ans:
+
+variable "KKE_BUCKET" {
+  description = "The name for the new S3 bucket"
+  type        = string
+  default     = "xfusion-sync-16792"
+}
+# Existing old private S3 bucket
+resource "aws_s3_bucket" "wordpress_bucket" {
+  bucket = "xfusion-s3-28134"
+}
+
+resource "aws_s3_bucket_acl" "wordpress_bucket_acl" {
+  bucket = aws_s3_bucket.wordpress_bucket.id
+  acl    = "private"
+}
+
+# Create the new private S3 bucket
+resource "aws_s3_bucket" "kke_new_bucket" {
+  bucket = var.KKE_BUCKET
+
+  tags = {
+    Name        = var.KKE_BUCKET
+    Environment = "Migration"
+  }
+}
+
+# Ensure the bucket is private
+resource "aws_s3_bucket_acl" "kke_new_bucket_acl" {
+  bucket = aws_s3_bucket.kke_new_bucket.id
+  acl    = "private"
+}
+
+# Sync data from existing bucket to new bucket
+resource "null_resource" "s3_data_migration" {
+  # Ensure this runs after bucket is created
+  depends_on = [aws_s3_bucket.kke_new_bucket, aws_s3_bucket_acl.kke_new_bucket_acl]
+
+  provisioner "local-exec" {
+    command = <<EOT
+      aws s3 sync s3://${aws_s3_bucket.wordpress_bucket.bucket}  s3://${var.KKE_BUCKET} --exact-timestamps
+    EOT
+  }
+}
+output "new_kke_bucket_name" {
+  description = "The name of the new S3 bucket"
+  value       = aws_s3_bucket.kke_new_bucket.id
+}
+
+output "new_kke_bucket_acl" {
+  description = "The ACL of the new S3 bucket"
+  value       = aws_s3_bucket_acl.kke_new_bucket_acl.acl
+}
+
 # Q9 Prevent S3 Bucket Deletion via Terraform
+To ensure secure and accidental-deletion-proof storage, the DevOps team must configure an S3 bucket using Terraform with strict lifecycle protections. The goal is to create a bucket that is dynamically named and protected from being destroyed by mistake. Please complete the following tasks:
+
+Create an S3 bucket named devops-s3-12014.
+
+Apply the prevent_destroy lifecycle rule to protect the bucket.
+
+Create the main.tf file (do not create a separate .tf file) to provision a s3 bucket with prevent_destroy lifecycle rule.
+
+Use the variables.tf file with the following:
+
+KKE_BUCKET_NAME: name of the bucket.
+Use the terraform.tfvars file to input the name of the bucket.
+
+Use the outputs.tffile with the following:
+
+s3_bucket_name: name of the created bucket.
+Ans:
+variable "KKE_BUCKET_NAME" {
+  description = "Name of the S3 bucket"
+  type        = string
+}
+
+# tfvars file content:
+KKE_BUCKET_NAME = "devops-s3-12014"
+
+# Create the new private S3 bucket
+resource "aws_s3_bucket" "devops_bucket" {
+  bucket = var.KKE_BUCKET_NAME
+
+  lifecycle {
+    prevent_destroy = true
+  }
+
+  tags = {
+    Name        = var.KKE_BUCKET_NAME
+    Environment = "DevOps"
+  }
+}
+
+# output file content:
+output "s3_bucket_name" {
+  description = "Name of the created S3 bucket"
+  value       = aws_s3_bucket.devops_bucket.bucket
+}
+
 # Q10 Grant EC2 Access to S3 Bucket Using Terraform
 # Q11 Implement S3 Lifecycle Management Policy Using Terraform
 # Q12 Integrate SNS with SQS for Messaging Using Terraform
@@ -1846,3 +1965,239 @@ output "kke_kinesis_alarm_name" {
 
 **Level 4**
 ***Certifcation Test***
+Q1:
+The Nautilus DevOps team is strategizing the migration of a portion of their infrastructure to the AWS cloud. Recognizing the scale of this undertaking, they have opted to approach the migration in incremental steps rather than as a single massive transition. To achieve this, they have segmented large tasks into smaller, more manageable units. This granular approach enables the team to execute the migration in gradual phases, ensuring smoother implementation and minimizing disruption to ongoing operations. By breaking down the migration into smaller tasks, the Nautilus DevOps team can systematically progress through each stage, allowing for better control, risk mitigation, and optimization of resources throughout the migration process.
+
+For this task, create a key pair using Terraform with the following requirements:
+
+Name of the key pair should be nautilus-kp-t1q1.
+
+Key pair type must be rsa.
+
+The private key file should be saved under /home/bob.
+The Terraform working directory is /home/bob/terraform/t1q1. Create the main.tf file (do not create a different .tf file) to accomplish this task.
+Ans:
+resource "tls_private_key" "nautilus_key" {
+  algorithm = "RSA"
+  rsa_bits  = 4096
+}
+
+resource "aws_key_pair" "nautilus_key_pair" {
+  key_name   = "nautilus-kp-t1q1"
+  public_key = tls_private_key.nautilus_key.public_key_openssh
+}
+
+resource "local_file" "private_key_pem" {
+  content              = tls_private_key.nautilus_key.private_key_pem
+  filename             = "/home/bob/nautilus-kp-t1q1.pem"
+  file_permission      = "0600"
+  directory_permission = "0700"
+}
+
+Q2:
+The Nautilus DevOps team has been creating a couple of services on AWS cloud. They have been breaking down the migration into smaller tasks, allowing for better control, risk mitigation, and optimization of resources throughout the migration process. Recently they came up with requirements mentioned below.
+
+There is an instance named nautilus-ec2-t1q3 and an elastic-ip named nautilus-ec2-eip-t1q3 in us-east-1 region. Attach the nautilus-ec2-eip-t1q3 elastic-ip to the nautilus-ec2-t1q3 instance using Terraform only. The Terraform working directory is /home/bob/terraform/t1q3. Update the main.tf file (do not create a separate .tf file) to attach the specified Elastic IP to the instance.
+Ans:
+# Provision EC2 instance
+resource "aws_instance" "ec2" {
+  ami           = "ami-0c101f26f147fa7fd"
+  instance_type = "t2.micro"
+  subnet_id     = "subnet-6060a3d5146373657"
+  vpc_security_group_ids = [
+    "sg-ea5130dc3fe1b8640"
+  ]
+
+  tags = {
+    Name = "nautilus-ec2-t1q3"
+  }
+}
+
+# Provision Elastic IP
+resource "aws_eip" "ec2_eip" {
+  tags = {
+    Name = "nautilus-ec2-eip-t1q3"
+  }
+}
+
+# Associate Elastic IP with EC2 instance
+resource "aws_eip_association" "eip_assoc" {
+  instance_id   = aws_instance.ec2.id
+  allocation_id = aws_eip.ec2_eip.id
+}
+
+Q3:
+The kirsty DevOps team has been creating a couple of services on AWS cloud. They have been breaking down the migration into smaller tasks, allowing for better control, risk mitigation, and optimization of resources throughout the migration process. Recently they came up with requirements mentioned below.
+
+Create an IAM group named iamgroup_kirsty_t2q2 using terraform.
+
+The Terraform working directory is /home/bob/terraform/t2q2. Create the main.tf file (do not create a different .tf file) to accomplish this task.
+Ans:
+
+resource "aws_iam_group" "kirsty_group" {
+  name = "iamgroup_kirsty_t2q2"
+}
+
+Q4:
+When establishing infrastructure on the AWS cloud, Identity and Access Management (IAM) is among the first and most critical services to configure. IAM facilitates the creation and management of user accounts, groups, roles, policies, and other access controls. The Nautilus DevOps team is currently in the process of configuring these resources and has outlined the following requirements:
+
+For this task, create an IAM user named iamuser_kirsty_t2q1 using terraform. The Terraform working directory is /home/bob/terraform/t2q1. Create the main.tf file (do not create a different .tf file) to accomplish this task.
+
+Ans:
+resource "aws_iam_user" "kirsty_user" {
+  name = "iamuser_kirsty_t2q1"
+}
+
+Q5:
+The Nautilus DevOps team needs to store sensitive data securely using AWS Secrets Manager. They need to create a secret with the following specifications:
+
+1) The secret name should be nautilus-secret-t3q3.
+
+2) The secret value should contain a key-value pair with username: admin and password: Namin123.
+
+3) Use Terraform to create the secret in AWS Secrets Manager.
+
+The Terraform working directory is /home/bob/terraform/t3q3. Create the main.tf file (do not create a different .tf file) to accomplish this task.
+
+Ans:
+resource "aws_secretsmanager_secret" "nautilus_secret" {
+  name = "nautilus-secret-t3q3"
+}
+
+resource "aws_secretsmanager_secret_version" "nautilus_secret_version" {
+  secret_id = aws_secretsmanager_secret.nautilus_secret.id
+  secret_string = jsonencode({
+    username = "admin"
+    password = "Namin123"
+  })
+}
+
+Q6:
+The Nautilus DevOps team needs to set up a DynamoDB table for storing user data. They need to create a DynamoDB table with the following specifications:
+
+1) The table name should be nautilus-users-t3q1.
+
+2) The primary key should be nautilus_id_t3q1 (String).
+
+3) The table should use PAY_PER_REQUEST billing mode.
+
+Use Terraform to create this DynamoDB table. The Terraform working directory is /home/bob/terraform/t3q1. Create the main.tf file (do not create a different .tf file) to create the DynamoDB table.
+
+Ans:
+resource "aws_dynamodb_table" "nautilus_users" {
+  name         = "nautilus-users-t3q1"
+  billing_mode = "PAY_PER_REQUEST"
+
+  hash_key     = "nautilus_id_t3q1"
+
+  attribute {
+    name = "nautilus_id_t3q1"
+    type = "S"
+  }
+
+  tags = {
+    Environment = "Dev"
+    Project     = "Nautilus"
+  }
+}
+
+Q7:
+As part of the data migration process, the Nautilus DevOps team is actively creating several S3 buckets on AWS. They plan to utilize both private and public S3 buckets to store the relevant data. Given the ongoing migration of other infrastructure to AWS, it is logical to consolidate data storage within the AWS environment as well.
+
+Create a public S3 bucket named nautilus-s3-15424-t4q2 using Terraform.
+
+Ensure the bucket is accessible publicly once created by setting the proper ACL.
+
+The Terraform working directory is /home/bob/terraform/t4q2. Create the main.tf file (do not create a different .tf file) to accomplish this task.
+
+Ans:
+resource "aws_s3_bucket" "public_bucket" {
+  bucket = "nautilus-s3-15424-t4q2"
+
+  tags = {
+    Name        = "Public Nautilus Bucket"
+    Environment = "Dev"
+  }
+}
+
+resource "aws_s3_bucket_public_access_block" "public_access" {
+  bucket = aws_s3_bucket.public_bucket.id
+
+  block_public_acls       = false
+  block_public_policy     = false
+  ignore_public_acls      = false
+  restrict_public_buckets = false
+}
+
+resource "aws_s3_bucket_acl" "public_acl" {
+  bucket = aws_s3_bucket.public_bucket.id
+  acl    = "public-read"
+
+}
+
+Q8:
+As part of the data migration process, the Nautilus DevOps team is actively creating several S3 buckets on AWS using Terraform. They plan to utilize both private and public S3 buckets to store the relevant data. Given the ongoing migration of other infrastructure to AWS, it is logical to consolidate data storage within the AWS environment as well.
+
+Create an S3 bucket using Terraform with the following details:
+
+1) The name of the S3 bucket must be nautilus-s3-15424-t4q1.
+
+2) The S3 bucket must block all public access, making it a private bucket.
+
+The Terraform working directory is /home/bob/terraform/t4q1. Create the main.tf file (do not create a different .tf file) to accomplish this task.
+
+Notes:
+
+Use Terraform to provision the S3 bucket.
+Right-click under the EXPLORER section in VS Code and select Open in Integrated Terminal to launch the terminal.
+Ensure the resources are created in the us-east-1 region.
+The bucket must have block public access enabled to restrict any public access.
+
+Ans:
+resource "aws_s3_bucket" "nautilus_bucket" {
+  bucket = "nautilus-s3-15424-t4q1"
+}
+
+resource "aws_s3_bucket_acl" "nautilus_bucket_acl" {
+  bucket = aws_s3_bucket.nautilus_bucket.id
+  acl    = "private"
+}
+
+resource "aws_s3_bucket_public_access_block" "nautilus_bucket_block" {
+  bucket = aws_s3_bucket.nautilus_bucket.id
+
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}
+
+Q9:
+The Nautilus DevOps team is strategizing the migration of a portion of their infrastructure to the AWS cloud. Recognizing the scale of this undertaking, they have opted to approach the migration in incremental steps rather than as a single massive transition. To achieve this, they have segmented large tasks into smaller, more manageable units. This granular approach enables the team to execute the migration in gradual phases, ensuring smoother implementation and minimizing disruption to ongoing operations. By breaking down the migration into smaller tasks, the Nautilus DevOps team can systematically progress through each stage, allowing for better control, risk mitigation, and optimization of resources throughout the migration process.
+
+Create a VPC named nautilus-vpc-t5q1 in region us-east-1 with any IPv4 CIDR block through terraform.
+
+The Terraform working directory is /home/bob/terraform/t5q1. Create the main.tf file (do not create a different .tf file) to accomplish this task.
+Ans:
+resource "aws_vpc" "nautilus_vpc" {
+  cidr_block = "10.0.0.0/16"
+  tags = {
+    Name = "nautilus-vpc-t5q1"
+  }
+}
+
+Q10:
+The Nautilus DevOps team is strategically planning the migration of a portion of their infrastructure to the AWS cloud. Acknowledging the magnitude of this endeavor, they have chosen to tackle the migration incrementally rather than as a single, massive transition. Their approach involves creating Virtual Private Clouds (VPCs) as the initial step, as they will be provisioning various services under different VPCs.
+
+For this task, create a VPC named nautilus-vpc-t5q3 in the us-east-1 region with the Amazon-provided IPv6 CIDR block using terraform.
+
+The Terraform working directory is /home/bob/terraform/t5q3. Create the main.tf file (do not create a different .tf file) to accomplish this task.
+Ans:
+resource "aws_vpc" "nautilus_vpc" {
+  cidr_block = "10.0.0.0/16"
+  assign_generated_ipv6_cidr_block = true
+
+  tags = {
+    Name = "nautilus-vpc-t5q3"
+  }
+}

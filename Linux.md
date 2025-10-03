@@ -187,7 +187,7 @@ Let me know if you'd like to automate this with a script or cronjob.
 
 
 # Q9 Script Execution Permissions
-In a bid to automate backup processes, the xFusionCorp Industries sysadmin team has developed a new bash script named xfusioncorp.sh. While the script has been distributed to all necessary servers, it lacks executable permissions on App Server 2 within the Stratos Datacenter.
+In a bid to automate backup processes, the xFusionCorp Industries sysadmin team has developed a new  script named xfusioncorp.sh. While the script has been distributed to all necessary servers, it lacks executable permissions on App Server 2 within the Stratos Datacenter.
 
 Your task is to grant executable permissions to the /tmp/xfusioncorp.sh script on App Server 2. Additionally, ensure that all users have the capability to execute it.
 Ans:
@@ -261,8 +261,75 @@ You can check that the replacements were successful using:
 sudo grep 'Marine' /root/nautilus.xml
 sudo grep 'Random' /root/nautilus.xml
 # Q12 Secure Data Transfer
+A Nautilus developer has stored confidential data on the jump host within Stratos DC. To ensure security and compliance, this data must be transferred to one of the app servers. Given developers lack direct access to these servers, the system admin team has been enlisted for assistance.
 
+Copy /tmp/nautilus.txt.gpg file from jump server to App Server 1 placing it in the directory /home/opt.
+Ans:
+sudo scp /tmp/nautilus.txt.gpg tony@stapp01:/home/opt/
 # Q13 Restrict Cron Access
+In alignment with security compliance standards, the Nautilus project team has opted to impose restrictions on crontab access. Specifically, only designated users will be permitted to create or update cron jobs.
+
+Configure crontab access on App Server 1 as follows: Allow crontab access to ammar user while denying access to the garrett user.
+Ans:
+To configure **crontab access** on **App Server 1** so that:
+
+* ✅ User `ammar` **can** use `crontab`
+* ❌ User `garrett` **cannot** use `crontab`
+
+you'll need to manage two special files:
+
+* `/etc/cron.allow` – users **listed here are allowed**
+* `/etc/cron.deny` – users **listed here are denied**
+
+> 💡 If `cron.allow` exists, **only users in that file are allowed** to use `crontab`. `cron.deny` will be ignored in that case.
+
+### ✅ Step-by-step Instructions
+
+1. **SSH into App Server 1:**
+
+ssh <your-user>@<app-server-1>
+
+2. **Create or update `/etc/cron.allow` to include `ammar`:**
+
+echo "ammar" | sudo tee /etc/cron.allow
+
+This restricts crontab access **only to users listed**, i.e., `ammar`.
+
+> ⚠️ If this file exists already, make sure you **append** the user rather than overwrite (unless overwrite is desired):
+
+echo "ammar" | sudo tee -a /etc/cron.allow
+
+3. **Ensure `garrett` is *not* in `/etc/cron.allow`:**
+
+If `cron.allow` exists, any user not listed there is automatically denied — so no need to explicitly deny `garrett`.
+
+You can confirm:
+
+sudo grep garrett /etc/cron.allow
+
+If it returns nothing, you’re good.
+
+4. **(Optional) Remove or ignore `/etc/cron.deny`:**
+
+Since `/etc/cron.allow` exists, the `cron.deny` file is ignored, but to keep things clean:
+
+sudo rm -f /etc/cron.deny
+
+Or ensure `garrett` is listed there **only if** you’re not using `cron.allow`.
+
+### ✅ Verification
+
+* **Test for `ammar`:**
+sudo -u ammar crontab -l
+
+If allowed, this should show the current crontab (or an empty one).
+
+* **Test for `garrett`:**
+sudo -u garrett crontab -l
+
+Expected output:
+
+You (garrett) are not allowed to use this program (crontab)
 
 # Q14 Default GUI Boot Configuration
 
@@ -293,7 +360,7 @@ sudo grep 'Random' /root/nautilus.xml
 # Q16 Install and Configure HaProxy LBR
 # Q17 Haproxy LBR Troubleshooting
 # Q18 MariaDB Troubleshooting
-# Q19 Linux Bash Scripts
+# Q19 Linux  Scripts
 # Q20 Add Response Headers in Apache
 # Q21 Apache Troubleshooting
 # Q22 Linux GPG Encryption
@@ -316,7 +383,7 @@ sudo grep 'Random' /root/nautilus.xml
 # Q1 Install and Configure Nginx as an LBR
 # Q2 LEMP Troubleshooting
 # Q3 Install and Configure PostgreSQL
-# Q4 Bash scripts if/else statements
+# Q4  scripts if/else statements
 # Q5 Configure LAMP server
 # Q6 Install and Configure DB Server
 # Q7 Install and Configure Web Application
