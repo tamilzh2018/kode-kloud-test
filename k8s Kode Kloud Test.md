@@ -1774,23 +1774,16 @@ Here's a step-by-step guide to complete the task as described. This includes:
 * Creating a Kubernetes secret from the file `/opt/news.txt`
 * Creating a pod with an Ubuntu container that mounts this secret into a specified path.
 
----
-
 ### ✅ Step 1: Create the Kubernetes Secret
 
 You already have the file `/opt/news.txt` containing the secret (`5ecur3`). To create the secret named `news`:
 
-
 kubectl create secret generic news --from-file=/opt/news.txt
-
 
 > This will create a secret named `news`, and the key will be `news.txt`.
 
 You can verify it with:
-
-
 kubectl describe secret news
-
 
 ---
 
@@ -1816,49 +1809,99 @@ spec:
     - name: secret-volume
       secret:
         secretName: news
-
-
 ---
 
 ### ✅ Step 3: Deploy the Pod
 
 Apply the YAML:
 
-
 kubectl apply -f secret-pod.yaml
-
 
 Wait for the pod to be in **Running** state:
 
-
 kubectl get pods
-
-
 ---
 
 ### ✅ Step 4: Verify the Secret is Mounted
 
 Exec into the container:
 
-
 kubectl exec -it secret-xfusion -- bash
-
 
 Inside the container, check the content:
 
-
 cat /opt/apps/news.txt
-
 
 You should see:
 
-
 5ecur3
 
-
-
-
 # Day 6 Environment Variables in Kubernetes
+There are a number of parameters that are used by the applications. We need to define these as environment variables, so that we can use them as needed within different configs. Below is a scenario which needs to be configured on Kubernetes cluster. Please find below more details about the same.
+
+Create a pod named envars.
+
+Container name should be fieldref-container, use image httpd preferable latest tag, use command 'sh', '-c' and args should be
+
+'while true; do
+      echo -en '/n';
+                                  printenv NODE_NAME POD_NAME;
+                                  printenv POD_IP POD_SERVICE_ACCOUNT;
+              sleep 10;
+         done;'
+
+(Note: please take care of indentations)
+
+Define Four environment variables as mentioned below:
+a.) The first env should be named as NODE_NAME, set valueFrom fieldref and fieldPath should be spec.nodeName.
+
+b.) The second env should be named as POD_NAME, set valueFrom fieldref and fieldPath should be metadata.name.
+
+c.) The third env should be named as POD_IP, set valueFrom fieldref and fieldPath should be status.podIP.
+
+d.) The fourth env should be named as POD_SERVICE_ACCOUNT, set valueFrom fieldref and fieldPath shoulbe be spec.serviceAccountName.
+
+Set restart policy to Never.
+
+To check the output, exec into the pod and use printenv command.
+Ans:
+apiVersion: v1
+kind: Pod
+metadata:
+  name: envars
+spec:
+  restartPolicy: Never
+  containers:
+    - name: fieldref-container
+      image: httpd:latest
+      command: ["sh", "-c"]
+      args:
+        - |
+          while true; do
+            echo -en '\n';
+            printenv NODE_NAME POD_NAME;
+            printenv POD_IP POD_SERVICE_ACCOUNT;
+            sleep 10;
+          done;
+      env:
+        - name: NODE_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: POD_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        - name: POD_SERVICE_ACCOUNT
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.serviceAccountName
+**Verify** kubectl exec -it envars -- printenv
+
 # Day 7 Kubernetes LEMP Setup
 # Day 8 Kubernetes Troubleshooting
 # Day 9 Deploy Iron Gallery App on Kubernetes

@@ -870,7 +870,7 @@ A S3 bucket named devops-bck-27254 already exists.
 
 2) Delete the S3 bucket devops-bck-27254.
 
-3) Use the AWS CLI through Terraform to accomplish this task—for example, by running AWS CLI commands within Terraform. The Terraform working directory is /home/bob/terraform. Update the main.tf file (do not create a separate .tf file) to accomplish this task.
+3) Use the AWS CLI through Terraform to accomplish this task—for datacenter_logs, by running AWS CLI commands within Terraform. The Terraform working directory is /home/bob/terraform. Update the main.tf file (do not create a separate .tf file) to accomplish this task.
 
 Ans:
 # Step 1: Use the local-exec provisioner to run AWS CLI commands and copy S3 bucket contents to the local filesystem
@@ -1805,7 +1805,7 @@ resource "aws_cloudwatch_metric_alarm" "xfusion_kinesis_alarm" {
   treat_missing_data = "notBreaching"
 
   # Optional: Add notification actions here, e.g., SNS topic ARN
-  # alarm_actions = [aws_sns_topic.example.arn]
+  # alarm_actions = [aws_sns_topic.datacenter_logs.arn]
 }
 
 output "kke_kinesis_stream_name" {
@@ -1940,6 +1940,130 @@ output "s3_bucket_name" {
 }
 
 # Q10 Grant EC2 Access to S3 Bucket Using Terraform
+The Nautilus DevOps team wants to set up EC2 instances that securely upload application logs to S3 using IAM roles.
+
+Create an EC2 instance named datacenter-ec2 that can access an S3 bucket securely.
+
+Create an S3 bucket named datacenter-logs-26906.
+
+Create an IAM role named datacenter-role with a policy named datacenter-access-policy allowing S3 PutObject on the above bucket.
+
+Attach the IAM role to the EC2 instance to allow it to upload logs to the bucket.
+
+Create the main.tf (do not create a separate .tf file) to provision the EC2, s3, role and policy.
+
+Create the variables.tffile to declare the following:
+
+KKE_BUCKET_NAME: name of the bucket.
+KKE_POLICY_NAME: name of the policy.
+KKE_ROLE_NAME: name of the role.
+Create the terraform.tfvars file to assign values to variables.
+Create a data.tf file to fetch the latest Amazon Linux 2 AMI.
+Ans:
+**varaiable.tf**
+variable "KKE_BUCKET_NAME" {
+  description = "Name of the S3 bucket"
+  type        = string
+}
+
+variable "KKE_POLICY_NAME" {
+  description = "Name of the IAM policy"
+  type        = string
+}
+
+variable "KKE_ROLE_NAME" {
+  description = "Name of the IAM role"
+  type        = string
+}
+
+**terraform.tfvars:** 
+KKE_BUCKET_NAME = "datacenter-logs-26906"
+KKE_POLICY_NAME = "datacenter-access-policy"
+KKE_ROLE_NAME   = "datacenter-role"
+
+**data.tf**
+data "aws_ami" "amazon_linux" {
+  most_recent = true
+
+  filter {
+    name   = "name"
+    values = ["amzn2-ami-hvm-*-x86_64-gp2"]
+  }
+
+  filter {
+    name   = "owner-alias"
+    values = ["amazon"]
+  }
+
+  owners = ["amazon"]
+}
+**main.tf**
+
+resource "aws_s3_bucket" "datacenter_logs" {
+  bucket = var.KKE_BUCKET_NAME
+}
+
+resource "aws_s3_bucket_acl" "datacenter_logs" {
+  bucket = aws_s3_bucket.datacenter_logs.id
+  acl    = "private"
+}
+
+resource "aws_s3_bucket_versioning" "versioning_datacenter_logs" {
+  bucket = aws_s3_bucket.datacenter_logs.id
+  versioning_configuration {
+    status = "Enabled"
+  }
+}
+
+resource "aws_iam_role" "datacenter_role" {
+  name = var.KKE_ROLE_NAME
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect = "Allow"
+      Principal = {
+        Service = "ec2.amazonaws.com"
+      }
+      Action = "sts:AssumeRole"
+    }]
+  })
+}
+
+resource "aws_iam_policy" "datacenter_access_policy" {
+  name        = var.KKE_POLICY_NAME
+  description = "Allow PutObject to the datacenter logs bucket"
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect = "Allow"
+      Action = ["s3:PutObject"]
+      Resource = "${aws_s3_bucket.datacenter_logs.arn}/*"
+    }]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "attach_policy" {
+  role       = aws_iam_role.datacenter_role.name
+  policy_arn = aws_iam_policy.datacenter_access_policy.arn
+}
+
+resource "aws_iam_instance_profile" "datacenter_instance_profile" {
+  name = "${var.KKE_ROLE_NAME}-instance-profile"
+  role = aws_iam_role.datacenter_role.name
+}
+
+resource "aws_instance" "datacenter_ec2" {
+  ami           = data.aws_ami.amazon_linux.id
+  instance_type = "t3.micro"
+  iam_instance_profile = aws_iam_instance_profile.datacenter_instance_profile.name
+
+  tags = {
+    Name = "datacenter-ec2"
+  }
+}
+
 # Q11 Implement S3 Lifecycle Management Policy Using Terraform
 # Q12 Integrate SNS with SQS for Messaging Using Terraform
 # Q13 Attach IAM Role with Inline Policy Using Terraform

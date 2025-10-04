@@ -419,9 +419,7 @@ Ans:
     6  echo "ServerName localhost" > /etc/apache2/conf-available/servername.conf
     7  a2enconf servername
     8  service apache2 restart 
-    9  netstat -tuln | grep 3004
-   10  ss -tuln | grep 3004
-   11  apt install netstat
+    9  netstat -tuln | grep 3004 or ss -tuln | grep 3004
    12  apt install -y net-tools
    13  netstat -tuln | grep 3004
 # Q5: Write a Docker File
@@ -539,6 +537,28 @@ Ans:
 docker run -d --name beta -p 8088:80 nginx:stable
 
 # Q4 Save, Load and Transfer Docker Image
+One of the DevOps team members was working on to create a new custom docker image on App Server 1 in Stratos DC. He is done with his changes and image is saved on same server with name blog:datacenter. Recently a requirement has been raised by a team to use that image for testing, but the team wants to test the same on App Server 3. So we need to provide them that image on App Server 3 in Stratos DC.
+
+a. On App Server 1 save the image blog:datacenter in an archive.
+
+b. Transfer the image archive to App Server 3.
+
+c. Load that image archive on App Server 3 with same name and tag which was used on App Server 1.
+
+Note: Docker is already installed on both servers; however, if its service is down please make sure to start it.
+Ans:
+**On Server1:**
+1 docker images
+# Save the Docker image to a tar archive
+2 docker save -o blog_datacenter_image.tar blog:datacenter
+# Transfer the archive from App Server 1 to App Server 3 
+3 scp blog_datacenter_image.tar banner@stapp03:/home/banner/
+**On Server3:**
+# Load the Docker image from the archive
+1  docker load -i /home/banner/blog_datacenter_image.tar 
+# Verify the image is loaded with the correct tag
+2  docker images | grep blog
+
 # Q5 Write a Docker Compose File
 
 **Level 4**

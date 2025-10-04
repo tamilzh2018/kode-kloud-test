@@ -332,10 +332,76 @@ Expected output:
 You (garrett) are not allowed to use this program (crontab)
 
 # Q14 Default GUI Boot Configuration
+With the installation of new tools on the app servers within the Stratos Datacenter, certain functionalities now necessitate graphical user interface (GUI) access.
+
+Adjust the default runlevel on all App servers in Stratos Datacenter to enable GUI booting by default. It's imperative not to initiate a server reboot after completing this task.
+Ans:
+To adjust the default runlevel to enable GUI booting (i.e., set the system to boot into **graphical.target** by default) **without rebooting** on all App servers in the **Stratos Datacenter**, follow these steps:
+
+### ✅ **Step-by-step Instructions**
+
+1. **SSH into each App server** in the Stratos Datacenter.
+
+   (Assuming you have SSH access like this:
+   `ssh user@app-server-x.stratos.local`)
+
+2. **Check the current default target**:
+  
+   systemctl get-default
+  
+   If it returns `multi-user.target`, it means the system is booting into CLI (non-GUI) mode.
+
+3. **Set the default target to graphical**:
+  
+   sudo systemctl set-default graphical.target
+
+   This sets GUI mode as the default boot target **without restarting the system**.
+
+4. **Confirm the change**:
+  
+   systemctl get-default
+
+   It should now show:
+ 
+   graphical.target
+
+### ⚠️ Do **Not** Reboot
+
+* This change modifies the default target for future boots only.
+* It will not start the GUI on the current session or reboot the system.
+* You are explicitly instructed **not to reboot** any servers after making this change.
+
+### 🧠 Optional: Verify target file (for learning purposes)
+
+You can also verify the symlink created:
+
+ls -l /etc/systemd/system/default.target
+
+Should point to:
+
+/usr/lib/systemd/system/graphical.target
 
 # Q15 Timezone Alignment
+In the daily standup, it was noted that the timezone settings across the Nautilus Application Servers in the Stratos Datacenter are inconsistent with the local datacenter's timezone, currently set to Pacific/Enderbury.
 
+Synchronize the timezone settings to match the local datacenter's timezone (Pacific/Enderbury).
+Ans:
+Set Timezone:
+sudo timedatectl set-timezone Pacific/Enderbury
+Verify: timedatectl
 # Q16 Firewall Configuration
+The Nautilus system admins team has rolled out a web UI application for their backup utility on the Nautilus backup server within the Stratos Datacenter. This application operates on port 8084, and firewalld is active on the server. To meet operational needs, the following requirements have been identified:
+
+Allow all incoming connections on port 8084/tcp. Ensure the zone is set to public.
+Ans:
+ssh backupserver
+## ✅ Step-by-Step Instructions
+| Task                | Command                                                           |
+| ------------------- | ----------------------------------------------------------------- |
+| Confirm active zone | `sudo firewall-cmd --get-active-zones`                            |
+| Allow port 8084/tcp | `sudo firewall-cmd --zone=public --add-port=8084/tcp --permanent` |
+| Reload firewall     | `sudo firewall-cmd --reload`                                      |
+| Verify              | `sudo firewall-cmd --zone=public --list-ports`                    |
 
 # Q17 Process Limit Adjustment
 
