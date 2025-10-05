@@ -7,7 +7,7 @@ To deploy **Qwen** (the large language model from Tongyi Lab) in your **Kubernet
 
 Here's a step-by-step guide based on the assumption that you are using a GPU-enabled Kubernetes cluster.
 
----
+
 
 ## ✅ Prerequisites
 
@@ -16,7 +16,7 @@ Here's a step-by-step guide based on the assumption that you are using a GPU-ena
 - GPU support if using GPU acceleration (e.g. NVIDIA devices and NVIDIA's Kubernetes device plugin)
 - Python 3.8+ and CUDA (if training or inference uses GPU)
 
----
+
 
 ## 🔧 Step 1: Build or Pull Qwen Docker Image
 
@@ -27,7 +27,6 @@ You can find the Qwen model (Tongyi Chat, Qwen, etc.) on [Qwen's GitHub reposito
 Check if there's a publicly available Docker image for Qwen (e.g. on Docker Hub or Harbor):
 
 docker pull qwen/qwen:latest
-
 
 ### Option B: Build Your Own Image
 
@@ -43,24 +42,19 @@ docker build -t qwen-app:latest .
 
 > Note: You may need to include `cu118`, `nvidia/cuda`, or other CUDA versions in your Dockerfile if GPU is involved.
 
----
+
 
 ## 📦 Step 2: Push Image to Registry
 
 If you're using a private registry or Docker Hub (recommended for Kubernetes use):
 
-
 docker tag qwen-app:latest your-registry/qwen-app:latest
 docker push your-registry/qwen-app:latest
-
-
----
 
 ## 🚀 Step 3: Deploy to Kubernetes
 
 Create a `deployment.yaml` file (adjust it for your environment):
 
-yaml
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -113,7 +107,7 @@ kubectl apply -f deployment.yaml
 kubectl apply -f service.yaml
 
 
----
+
 
 ## 🔄 Step 4: Access the Model
 
@@ -130,7 +124,7 @@ curl -X POST http://<ip>:80/generate \
 
 Make sure your Qwen implementation includes a REST or HTTP-based endpoint like this.
 
----
+
 
 ## 🧠 Optional: GPU Configuration
 
@@ -139,7 +133,7 @@ If using NVIDIA GPUs:
 - Install [NVIDIA Kubernetes device plugin](https://github.com/NVIDIA/k8s-device-plugin).
 - Ensure your worker nodes have NVIDIA drivers and `nvidia-docker` set up properly.
 
----
+
 
 ## 🔐 Security and Best Practices
 
@@ -147,7 +141,7 @@ If using NVIDIA GPUs:
 - Ensure access to your model is secured.
 - Consider using Ingress with TLS if exposing publicly.
 
----
+
 
 ## 📚 References
 
@@ -155,7 +149,7 @@ If using NVIDIA GPUs:
 - [NVIDIA Kubernetes GPU Setup](https://github.com/NVIDIA/k8s-device-plugin)
 - [Kubernetes Deployment Guide](https://kubernetes.io/docs/concepts/workloads/controllers/deployment/)
 
----
+
 
 ## 🛠 Need Help with Specific Version or Setup?
 
@@ -891,7 +885,7 @@ Create a NodePort type service named nginx-service. The nodePort should be 30011
 
 Note: The kubectl utility on jump_host has been configured to work with the kubernetes cluster.
 Ans:
----
+
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -913,7 +907,7 @@ spec:
         image: nginx:latest
         ports:
         - containerPort: 80
----
+
 apiVersion: v1
 kind: Service 
 metadata:
@@ -1032,7 +1026,7 @@ spec:
         image: httpd:2.4.28
         ports:
         - containerPort: 80
----
+
 apiVersion: v1
 kind: Service 
 metadata:
@@ -1075,7 +1069,7 @@ kubectl apply -f your-config.yaml
 
 - **View History:**
   kubectl rollout history deployment/httpd-deploy -n nautilus
----
+
 # Day 6: Deploy Jenkins on Kubernetes
 The Nautilus DevOps team is planning to set up a Jenkins CI server to create/manage some deployment pipelines for some of the projects. They want to set up the Jenkins server on Kubernetes cluster. Below you can find more details about the task:
 
@@ -1091,7 +1085,7 @@ Ans:
 ### ✅ **Step 1: Create a Namespace `jenkins`**
 
 kubectl create namespace jenkins
----
+
 ### ✅ **Step 2: Create a NodePort Service for Jenkins and Jenkins Deployment***
 
 Create a YAML file called `jenkins.yaml` with the following content:
@@ -1109,7 +1103,7 @@ spec:
     - port: 8080
       targetPort: 8080
       nodePort: 30008
----
+
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -1185,7 +1179,7 @@ spec:
         ports:
         - containerPort: 3000
 
----
+
 apiVersion: v1
 kind: Service
 metadata:
@@ -1231,7 +1225,7 @@ spec:
     targetPort: 8080
     nodePort: 32227
 
----
+
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -1289,7 +1283,7 @@ spec:
           image: gcr.io/kodekloud/centos-ssh-enabled:node
           ports:
             - containerPort: 8080
----
+
 apiVersion: v1
 kind: Service
 metadata:
@@ -1316,7 +1310,7 @@ Ans:
  Check is there typo on image or volume attachemnet or configmap or secret resolve that
 Thanks for sharing part of the deployment YAML snippet! I can see the `volumeMounts` section where the `config` volume is mounted at `/redis-master`. This corresponds to the volume named `config`, which tries to use a ConfigMap (likely the `redis-cofig` typo you mentioned earlier).
 
----
+
 
 ### Here’s what you should do:
 
@@ -1338,7 +1332,7 @@ volumes:
       name: redis-config   # <-- Corrected ConfigMap name
 
 
----
+
 
 ### Full example snippet:
 
@@ -1367,7 +1361,7 @@ spec:
     emptyDir: {}
 
 
----
+
 
 ### Next steps:
 
@@ -1463,7 +1457,7 @@ spec:
         image: httpd:latest
         ports:
         - containerPort: 80
----
+
 
 apiVersion: v1
 kind: Service 
@@ -1509,7 +1503,7 @@ You're very close to completion — based on your logs and actions, the PHP-Apac
 
 Let’s walk through a few **important checks** and steps to **finalize** everything based on your recent output and command (`kubectl edit secret mysql-secret`).
 
----
+
 
 ## ✅ Your Current Status
 
@@ -1518,7 +1512,7 @@ Let’s walk through a few **important checks** and steps to **finalize** everyt
 * ✔️ HTTP requests are returning **HTTP 200**, which means Apache is serving **some content**.
 * ✔️ You're editing the **`mysql-secret`**, which means you're likely fine-tuning the database credentials.
 
----
+
 
 ## 🧪 What You Need to Check/Do Next
 
@@ -1542,7 +1536,7 @@ Example:
 kubectl cp /tmp/index.php lamp-wp-7946b4684c-h8t8c:/app/index.php -c httpd-php-container
 
 
----
+
 
 ### 2. ✅ **Ensure `index.php` uses environment variables**
 
@@ -1569,7 +1563,7 @@ You can verify it was copied correctly:
 kubectl exec -it <pod> -c httpd-php-container -- cat /app/index.php
 
 
----
+
 
 ### 3. ✅ **Ensure MySQL is initialized and ready**
 
@@ -1599,7 +1593,7 @@ echo -n "wpdb" | base64
 
 Paste that into the secret YAML under the correct key.
 
----
+
 
 ### 4. ✅ **Test the Application**
 
@@ -1697,7 +1691,7 @@ spec:
     - ReadWriteOnce
   hostPath:
     path: /mnt/devops
----
+
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -1709,7 +1703,7 @@ spec:
   resources:
     requests:
       storage: 1Gi
----
+
 apiVersion: v1
 kind: Pod
 metadata:
@@ -1738,7 +1732,7 @@ spec:
         - name: devops-storage
           mountPath: /usr/share/nginx/html
 
----
+
 apiVersion: v1
 kind: Service
 metadata:
@@ -1785,7 +1779,7 @@ kubectl create secret generic news --from-file=/opt/news.txt
 You can verify it with:
 kubectl describe secret news
 
----
+
 
 ### ✅ Step 2: Create a Pod Spec YAML
 
@@ -1809,7 +1803,7 @@ spec:
     - name: secret-volume
       secret:
         secretName: news
----
+
 
 ### ✅ Step 3: Deploy the Pod
 
@@ -1820,7 +1814,7 @@ kubectl apply -f secret-pod.yaml
 Wait for the pod to be in **Running** state:
 
 kubectl get pods
----
+
 
 ### ✅ Step 4: Verify the Secret is Mounted
 
@@ -1903,6 +1897,222 @@ spec:
 **Verify** kubectl exec -it envars -- printenv
 
 # Day 7 Kubernetes LEMP Setup
+The Nautilus DevOps team want to deploy a static website on Kubernetes cluster. They are going to use Nginx, phpfpm and MySQL for the database. The team had already gathered the requirements and now they want to make this website live. Below you can find more details:
+
+Create some secrets for MySQL.
+
+Create a secret named mysql-root-pass wih key/value pairs as below:
+
+name: password
+value: R00t
+
+Create a secret named mysql-user-pass with key/value pairs as below:
+
+name: username
+value: kodekloud_rin
+
+name: password
+value: GyQkFRVNr3
+
+Create a secret named mysql-db-url with key/value pairs as below:
+
+name: database
+value: kodekloud_db4
+
+Create a secret named mysql-host with key/value pairs as below:
+
+name: host
+value: mysql-service
+
+Create a config map php-config for php.ini with variables_order = "EGPCS" data.
+
+Create a deployment named lemp-wp.
+
+Create two containers under it. First container must be nginx-php-container using image webdevops/php-nginx:alpine-3-php7 and second container must be mysql-container from image mysql:5.6. Mount php-config configmap in nginx container at /opt/docker/etc/php/php.ini location.
+
+5) Add some environment variables for both containers:
+
+MYSQL_ROOT_PASSWORD, MYSQL_DATABASE, MYSQL_USER, MYSQL_PASSWORD and MYSQL_HOST. Take their values from the secrets you created. Please make sure to use env field (do not use envFrom) to define the name-value pair of environment variables.
+
+6) Create a node port type service lemp-service to expose the web application, nodePort must be 30008.
+
+7) Create a service for mysql named mysql-service and its port must be 3306.
+
+We already have a /tmp/index.php file on jump_host server.
+
+Copy this file into the nginx container under document root i.e /app and replace the dummy values for mysql related variables with the environment variables you have set for mysql related parameters. Please make sure you do not hard code the mysql related details in this file, you must use the environment variables to fetch those values.
+
+Once done, you must be able to access this website using Website button on the top bar, please note that you should see Connected successfully message while accessing this page.
+Ans:
+Here’s a complete guide to help the Nautilus DevOps team deploy the static website on Kubernetes using Nginx, PHP-FPM, and MySQL:
+
+
+
+### 🔐 Step 1: Create MySQL Secrets
+
+
+kubectl create secret generic mysql-root-pass \
+  --from-literal=password=R00t
+
+kubectl create secret generic mysql-user-pass \
+  --from-literal=username=kodekloud_rin \
+  --from-literal=password=GyQkFRVNr3
+
+kubectl create secret generic mysql-db-url \
+  --from-literal=database=kodekloud_db4
+
+kubectl create secret generic mysql-host \
+  --from-literal=host=mysql-service
+
+
+### ⚙️ Step 2: Create ConfigMap for PHP
+kubectl create configmap php-config \
+  --from-literal=variables_order="EGPCS"
+
+
+### 🚀 Step 3: Create Deployment `lemp-wp`
+
+Here’s the YAML for the deployment:
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: lemp-wp
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: lemp-wp
+  template:
+    metadata:
+      labels:
+        app: lemp-wp
+    spec:
+      containers:
+      - name: nginx-php-container
+        image: webdevops/php-nginx:alpine-3-php7
+        volumeMounts:
+        - name: php-config-volume
+          mountPath: /opt/docker/etc/php/php.ini
+          subPath: php.ini
+        env:
+        - name: MYSQL_ROOT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: mysql-root-pass
+              key: password
+        - name: MYSQL_DATABASE
+          valueFrom:
+            secretKeyRef:
+              name: mysql-db-url
+              key: database
+        - name: MYSQL_USER
+          valueFrom:
+            secretKeyRef:
+              name: mysql-user-pass
+              key: username
+        - name: MYSQL_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: mysql-user-pass
+              key: password
+        - name: MYSQL_HOST
+          valueFrom:
+            secretKeyRef:
+              name: mysql-host
+              key: host
+
+      - name: mysql-container
+        image: mysql:5.6
+        env:
+        - name: MYSQL_ROOT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: mysql-root-pass
+              key: password
+        - name: MYSQL_DATABASE
+          valueFrom:
+            secretKeyRef:
+              name: mysql-db-url
+              key: database
+        - name: MYSQL_USER
+          valueFrom:
+            secretKeyRef:
+              name: mysql-user-pass
+              key: username
+        - name: MYSQL_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: mysql-user-pass
+              key: password
+        - name: MYSQL_HOST
+          valueFrom:
+            secretKeyRef:
+              name: mysql-host
+              key: host
+
+      volumes:
+      - name: php-config-volume
+        configMap:
+          name: php-config
+          items:
+          - key: variables_order
+            path: php.ini
+
+### 🌐 Step 4: Create NodePort Service for Web App
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: lemp-service
+spec:
+  type: NodePort
+  selector:
+    app: lemp-wp
+  ports:
+  - port: 80
+    targetPort: 80
+    nodePort: 30008
+
+### 🛢️ Step 5: Create MySQL Service
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: mysql-service
+spec:
+  selector:
+    app: lemp-wp
+  ports:
+  - port: 3306
+    targetPort: 3306
+
+### 📁 Step 6: Copy `index.php` to Nginx Container
+
+Assuming you're on the jump_host and the pod is running:
+
+# Get the pod name
+POD_NAME=$(kubectl get pods -l app=lemp-wp -o jsonpath="{.items[0].metadata.name}")
+
+# Copy index.php into the container
+kubectl cp /tmp/index.php $POD_NAME:/app -c nginx-php-container
+
+Make sure `index.php` uses environment variables like:
+
+php
+<?php
+$host = getenv('MYSQL_HOST');
+$db = getenv('MYSQL_DATABASE');
+$user = getenv('MYSQL_USER');
+$pass = getenv('MYSQL_PASSWORD');
+
+$conn = new mysqli($host, $user, $pass, $db);
+if ($conn->connect_error) {
+    die("Connection failed: " . $conn->connect_error);
+}
+echo "Connected successfully";
+?>
+
 # Day 8 Kubernetes Troubleshooting
 # Day 9 Deploy Iron Gallery App on Kubernetes
 # Day 10 Fix Python App Deployed on Kubernetes Cluster

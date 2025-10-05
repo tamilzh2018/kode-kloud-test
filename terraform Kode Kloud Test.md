@@ -2065,6 +2065,60 @@ resource "aws_instance" "datacenter_ec2" {
 }
 
 # Q11 Implement S3 Lifecycle Management Policy Using Terraform
+The Nautilus DevOps team is implementing lifecycle policies to manage object storage efficiently in AWS. They want to create an S3 bucket with a specific lifecycle rule that transitions objects to infrequent access (IA) storage after 30 days and deletes them after 365 days.
+
+Create an S3 bucket named xfusion-lifecycle-298.
+
+Enable the S3 Versioning on the bucket.
+
+Add a lifecycle rule named xfusion-lifecycle-rule with:
+
+Transition to STANDARD_IA storage class after 30 days.
+Expiration of objects after 365 days.
+Use the main.tf file (do not create a separate .tf file) to provision the S3 bucket.
+
+Use the variable name KKE_bucket_name in the outputs.tf file to output the created bucket name.
+Ans:
+#main.tf
+resource "aws_s3_bucket" "xfusion_lifecycle" {
+  bucket = "xfusion-lifecycle-298"
+}
+
+resource "aws_s3_bucket_versioning" "versioning" {
+  bucket = aws_s3_bucket.xfusion_lifecycle.id
+
+  versioning_configuration {
+    status = "Enabled"
+  }
+}
+
+resource "aws_s3_bucket_lifecycle_configuration" "lifecycle" {
+  bucket = aws_s3_bucket.xfusion_lifecycle.id
+
+  rule {
+    id     = "xfusion-lifecycle-rule"
+    status = "Enabled"
+
+    filter {
+      prefix = ""
+    }
+
+    transition {
+      days          = 30
+      storage_class = "STANDARD_IA"
+    }
+
+    expiration {
+      days = 365
+    }
+  }
+}
+
+#Output.tf
+output "KKE_bucket_name" {
+  value = aws_s3_bucket.xfusion_lifecycle.bucket
+}
+
 # Q12 Integrate SNS with SQS for Messaging Using Terraform
 # Q13 Attach IAM Role with Inline Policy Using Terraform
 # Q14 Provision IAM User with Terraform

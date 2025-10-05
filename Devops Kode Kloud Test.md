@@ -83,8 +83,6 @@ Day 5: **SElinux Installation and Configuration**
 
 Following a security audit, the xFusionCorp Industries security team has opted to enhance application and server security with SELinux. To initiate testing, the following requirements have been established for App server 2 in the Stratos Datacenter:
 
-
-
 Install the required SELinux packages.
 
 Permanently disable SELinux for the time being; it will be re-enabled after necessary configuration changes.
@@ -178,8 +176,6 @@ sudo chown mysql:mysql /run/mariadb
 Day 10: **Linux  Scripts**
 The production support team of xFusionCorp Industries is working on developing some bash scripts to automate different day to day tasks. One is to create a bash script for taking websites backup. They have a static website running on App Server 2 in Stratos Datacenter, and they need to create a bash script named beta_backup.sh which should accomplish the following tasks. (Also remember to place the script under /scripts directory on App Server 2).
 
-
-
 a. Create a zip archive named xfusioncorp_beta.zip of /var/www/html/beta directory.
 
 b. Save the archive in /backup/ on App Server 2. This is a temporary storage, as backups from this location will be clean on weekly basis. Therefore, we also need to save this backup archive on Nautilus Backup Server.
@@ -238,7 +234,7 @@ Make the script executable by the intended user (tony in this case):
  ssh-copy-id clint@stbkp01.stratos.xfusioncorp.com
 Test it:
  ssh clint@stbkp01.stratos.xfusioncorp.com
-
+# install zip on appserver 1
  sudo yum install zip -y 
 Run the script manually to test:
  sh /scripts/ecommerce_backup.sh
@@ -246,10 +242,6 @@ Run the script manually to test:
  
 ssh clint@stbkp01.stratos.xfusioncorp.com
 ls /backup/
-
-
-
-
 
 Day 11: **Install and Configure Tomcat Server**
 The Nautilus application development team recently finished the beta version of one of their Java-based applications, which they are planning to deploy on one of the app servers in Stratos DC. After an internal team meeting, they have decided to use the tomcat application server. Based on the requirements mentioned below complete the task:
@@ -1920,7 +1912,31 @@ Ans:
     8  apt install -y net-tools
     9  netstat -plant | grep 6100
 Day 41: **Write a Docker File**
+As per recent requirements shared by the Nautilus application development team, they need custom images created for one of their projects. Several of the initial testing requirements are already been shared with DevOps team. Therefore, create a docker file /opt/docker/Dockerfile (please keep D capital of Dockerfile) on App server 2 in Stratos DC and configure to build an image with the following requirements:
 
+a. Use ubuntu:24.04 as the base image.
+
+b. Install apache2 and configure it to work on 8085 port. (do not update any other Apache configuration settings like document root etc).
+Ans:
+# Use Ubuntu 24.04 base image
+FROM ubuntu:24.04
+
+# Prevent interactive prompts during package installation
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Updates package lists, installs Apache2, and cleans up cached files to reduce image size.
+RUN apt-get update && \
+    apt-get install -y apache2 && \
+    apt-get clean
+
+# Modifies Apache’s configuration to listen on port 8085 instead of 80.
+RUN sed -i 's/^Listen 80$/Listen 8085/' /etc/apache2/ports.conf
+
+# Declares that the container will listen on port 8085.
+EXPOSE 8085
+
+# Starts Apache in the foreground so the container stays alive.
+CMD ["/usr/sbin/apache2ctl", "-D", "FOREGROUND"]
 Day 42: **Create a Docker Network**
 
 Day 43: **Docker Ports Mapping**

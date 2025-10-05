@@ -397,21 +397,157 @@ Ans:
 ssh backupserver
 ## ✅ Step-by-Step Instructions
 | Task                | Command                                                           |
-| ------------------- | ----------------------------------------------------------------- |
+| - | -- |
 | Confirm active zone | `sudo firewall-cmd --get-active-zones`                            |
 | Allow port 8084/tcp | `sudo firewall-cmd --zone=public --add-port=8084/tcp --permanent` |
 | Reload firewall     | `sudo firewall-cmd --reload`                                      |
 | Verify              | `sudo firewall-cmd --zone=public --list-ports`                    |
 
 # Q17 Process Limit Adjustment
+In the Stratos Datacenter, our Storage server is encountering performance degradation due to excessive processes held by the nfsuser user. To mitigate this issue, we need to enforce limitations on its maximum processes. Please set the maximum process limits as specified below:
+
+a. Set the soft limit to 1027
+
+b. Set the hard limit to 2027
+Ans:
+# Open the limits configuration file and Add the following lines at the end of the file::
+sudo nano /etc/security/limits.conf
+nfsuser    soft    nproc    1025
+nfsuser    hard    nproc    2025
 
 # Q18 SElinux Installation and Configuration
+Following a security audit, the xFusionCorp Industries security team has opted to enhance application and server security with SELinux. To initiate testing, the following requirements have been established for App server 2 in the Stratos Datacenter:
 
+Install the required SELinux packages.
+
+Permanently disable SELinux for the time being; it will be re-enabled after necessary configuration changes.
+
+No need to reboot the server, as a scheduled maintenance reboot is already planned for tonight.
+
+Disregard the current status of SELinux via the command line; the final status after the reboot should be disabled.
+
+Ans:
+sudo yum install selinux-policy selinux-policy-targeted -y
+sudo vi /etc/selinux/config
+
+Change it to: SELINUX=enforcing
+SELINUX=disabled
+Verify Configuration: 
+grep SELINUX= /etc/selinux/config
+
+or sudo sed -i 's/^SELINUX=enforcing/SELINUX=disabled/' /etc/selinux/config
 **Level 2**
 # Q1 Create a Cron Job
 # Q2 Linux Banner
+During the monthly compliance meeting, it was pointed out that several servers in the Stratos DC do not have a valid banner. The security team has provided serveral approved templates which should be applied to the servers to maintain compliance. These will be displayed to the user upon a successful login.
+
+Update the message of the day on all application and db servers for Nautilus. Make use of the approved template located at /home/thor/nautilus_banner on jump host
+Ans:
+ssh-keygen -t rsa -b 2048en -t rsa -b 2048
+ssh-copy-id tony@stapp01
+ssh-copy-id steve@stapp01
+ssh-copy-id banner@stapp03
+ssh-copy-id peter@stdb01
+
+| Server  | User   | Hostname     |
+| - |  |  |
+| stapp01 | tony   | App Server 1 |
+| stapp02 | steve  | App Server 2 |
+| stapp03 | banner | App Server 3 |
+| stdb01  | peter  | DB Server 1  |
+
+Now, let's complete the task of **updating the Message of the Day (MOTD)** using the banner located at `/home/thor/nautilus_banner`.
+
+### ✅ Final Steps – Apply MOTD on All Servers
+Run the following **one-liner SSH commands** from the **jump host** (`thor@jumphost`) for each server:
+
+#### 🚀 1. **stapp01 (App Server 1)**
+scp /home/thor/nautilus_banner tony@stapp01:/tmp/
+ssh tony@stapp01 "sudo mv /tmp/nautilus_banner /etc/motd && sudo chmod 644 /etc/motd"
+
+#### 🚀 2. **stapp02 (App Server 2)**
+scp /home/thor/nautilus_banner steve@stapp02:/tmp/
+ssh -t steve@stapp02 "sudo mv /tmp/nautilus_banner /etc/motd && sudo chmod 644 /etc/motd"
+#### 🚀 3. **stapp03 (App Server 3)**
+scp /home/thor/nautilus_banner banner@stapp03:/tmp/
+ssh -t banner@stapp03 "sudo mv /tmp/nautilus_banner /etc/motd && sudo chmod 644 /etc/motd"
+
+#### 🚀 4. **stdb01 (DB Server 1)**
+
+scp /home/thor/nautilus_banner peter@stdb01:/tmp/
+ssh -t peter@stdb01 "sudo mv /tmp/nautilus_banner /etc/motd && sudo chmod 644 /etc/motd"
+
+### 🧪 Verify Banner Display
+
+After updating each server, log into them to confirm the banner appears:
+
+ssh tony@stapp01     # or other users/servers
+
+You should see the ASCII art and the warning message displayed immediately after login.
+
 # Q3 Linux Collaborative Directories
+The Nautilus team doesn't want its data to be accessed by any of the other groups/teams due to security reasons and want their data to be strictly accessed by the dbadmin group of the team.
+
+Setup a collaborative directory /dbadmin/data on app server 3 in Stratos Datacenter.
+
+The directory should be group owned by the group dbadmin and the group should own the files inside the directory. The directory should be read/write/execute to the user and group owners, and others should not have any access.
+
+Ans:
+To set up the collaborative directory `/dbadmin/data` on **App Server 3** in the **Stratos Datacenter** with the specified security and group ownership requirements, follow these steps:
+
+## ✅ **Objective**
+
+Create `/dbadmin/data` on **App Server 3** with:
+
+* Group ownership: `dbadmin`
+* Permissions: `rwx` for user and group, no access for others (`770`)
+* All files created inside should be owned by the group `dbadmin`
+
+#### 1. **Login to App Server 3**
+ssh banner@stapp03
+Use the appropriate credentials if you're accessing it in a lab environment.
+#### 2. **Create the directory structure**
+sudo mkdir -p /dbadmin/data
+#### 3. **Create the group (if it doesn't exist)**
+getent group dbadmin || sudo groupadd dbadmin
+#### 4. **Change group ownership to `dbadmin`**
+sudo chown :dbadmin /dbadmin/data
+
+#### 5. **Set directory permissions**
+sudo chmod 770 /dbadmin/data
+> This gives:
+>
+> * User: Read, write, execute
+> * Group: Read, write, execute
+> * Others: No access
+
+#### 6. **Set the setgid bit**
+
+This ensures new files/directories inherit the group `dbadmin`:
+
+sudo chmod g+s /dbadmin/data
+
+You can verify it with `ls -ld /dbadmin/data`, which should show something like:
+
+drwxrws 2 root dbadmin 4096 Oct  5 10:00 /dbadmin/data
+
+Note the `s` in the group permissions (`rws`).
+
 # Q4 Linux String Substitute (sed)
+There is some data on Nautilus App Server 2 in Stratos DC. Data needs to be altered in several of the files. On Nautilus App Server 2, alter the /home/BSD.txt file as per details given below:
+
+a. Delete all lines containing word copyright and save results in /home/BSD_DELETE.txt file. (Please be aware of case sensitivity)
+
+b. Replace all occurrence of word from to is and save results in /home/BSD_REPLACE.txt file.
+
+Note: Let's say you are asked to replace word to with from. In that case, make sure not to alter any words containing the string itself; for example upto, contributor etc.
+Ans:
+# Task a
+grep -v 'copyright' /home/BSD.txt > /home/BSD_DELETE.txt
+
+# Task b
+sed 's/\bfrom\b/is/g' /home/BSD.txt > /home/BSD_REPLACE.txt
+
 # Q5 Linux SSH Authentication
 # Q6 Linux Find Command
 # Q7 Install a package
