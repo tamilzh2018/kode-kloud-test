@@ -172,10 +172,7 @@ spec:
             command: ["echo", "Welcome to xfusioncorp!"]
           restartPolicy: OnFailure
 ---
-Gross:166666.66
-Hand:123466.66
-Pf:43200.00
----
+
 apiVersion: batch/v1
 kind: Job
 metadata:

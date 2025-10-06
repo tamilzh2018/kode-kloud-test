@@ -438,6 +438,26 @@ grep SELINUX= /etc/selinux/config
 or sudo sed -i 's/^SELINUX=enforcing/SELINUX=disabled/' /etc/selinux/config
 **Level 2**
 # Q1 Create a Cron Job
+The Nautilus system admins team has prepared scripts to automate several day-to-day tasks. They want them to be deployed on all app servers in Stratos DC on a set schedule. Before that they need to test similar functionality with a sample cron job. Therefore, perform the steps below:
+
+a. Install cronie package on all Nautilus app servers and start crond service.
+
+b. Add a cron */5 * * * * echo hello > /tmp/cron_text for root user.
+Ans:
+ssh into stapp01 stapp02 stapp03
+
+change to root user: sudo su -
+Verify crond is running: systemctl status crond
+  if not avail 
+  yum install -y cronie
+  systemctl enable crond
+  systemctl start crond
+Add the Cron Job for Root User: crontab -e
+
+Add the following line at the bottom: */5 * * * * echo hello > /tmp/cron_text
+
+After 5 minutes, check if the file was created and contains the text: cat /tmp/cron_text
+You should see: hello
 # Q2 Linux Banner
 During the monthly compliance meeting, it was pointed out that several servers in the Stratos DC do not have a valid banner. The security team has provided serveral approved templates which should be applied to the servers to maintain compliance. These will be displayed to the user upon a successful login.
 

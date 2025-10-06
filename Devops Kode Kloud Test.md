@@ -125,8 +125,6 @@ Add the following line at the bottom: */5 * * * * echo hello > /tmp/cron_text
 After 5 minutes, check if the file was created and contains the text: cat /tmp/cron_text
 You should see: hello
 
-
-
 Day 7: **Linux SSH Authentication**
 The system admins team of xFusionCorp Industries has set up some scripts on jump host that run on regular intervals and perform operations on all app servers in Stratos Datacenter. To make these scripts work properly we need to make sure the thor user on jump host has password-less SSH access to all app servers through their respective sudo users (i.e tony for app server 1). Based on the requirements, perform the following:
 
@@ -340,7 +338,6 @@ sudo vi /etc/systemd/system/tomcat.service
 
 Paste the following:
 
-ini
 [Unit]
 Description=Apache Tomcat Web Application Container
 After=network.target
@@ -1938,6 +1935,30 @@ EXPOSE 8085
 # Starts Apache in the foreground so the container stays alive.
 CMD ["/usr/sbin/apache2ctl", "-D", "FOREGROUND"]
 Day 42: **Create a Docker Network**
+The Nautilus DevOps team needs to set up several docker environments for different applications. One of the team members has been assigned a ticket where he has been asked to create some docker networks to be used later. Complete the task based on the following ticket description:
+
+a. Create a docker network named as news on App Server 1 in Stratos DC.
+
+b. Configure it to use macvlan drivers.
+
+c. Set it to use subnet 192.168.30.0/24 and iprange 192.168.30.0/24.
+Ans:
+# Interface (eth0): You must confirm the actual name of the physical interface on App Server 1. Use:
+ip link show
+ex: default primary interface : eth0
+# Docker Command to Create the news macvlan Network:
+docker network create \
+  -d macvlan \
+  --subnet=192.168.30.0/24 \
+  --ip-range=192.168.30.0/24 \
+  --gateway=192.168.30.1 \
+  -o parent=eth0 \
+  news
+
+# Test:After running the command, confirm that the network has been created:
+docker network ls
+docker network inspect news
+
 
 Day 43: **Docker Ports Mapping**
 

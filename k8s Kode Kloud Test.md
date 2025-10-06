@@ -1946,10 +1946,7 @@ Once done, you must be able to access this website using Website button on the t
 Ans:
 Here’s a complete guide to help the Nautilus DevOps team deploy the static website on Kubernetes using Nginx, PHP-FPM, and MySQL:
 
-
-
 ### 🔐 Step 1: Create MySQL Secrets
-
 
 kubectl create secret generic mysql-root-pass \
   --from-literal=password=R00t
@@ -1968,7 +1965,6 @@ kubectl create secret generic mysql-host \
 ### ⚙️ Step 2: Create ConfigMap for PHP
 kubectl create configmap php-config \
   --from-literal=variables_order="EGPCS"
-
 
 ### 🚀 Step 3: Create Deployment `lemp-wp`
 
@@ -2114,8 +2110,325 @@ echo "Connected successfully";
 ?>
 
 # Day 8 Kubernetes Troubleshooting
+One of the Nautilus DevOps team members was working on to update an existing Kubernetes template. Somehow, he made some mistakes in the template and it is failing while applying. We need to fix this as soon as possible, so take a look into it and make sure you are able to apply it without any issues. Also, do not remove any component from the template like pods/deployments/volumes etc.
+
+/home/thor/mysql_deployment.yml is the template that needs to be fixed.
+Ans:
+# Isuse with ApiVersion and Indentation is fixed:
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: mysql-pv
+  labels:
+    type: local
+spec:
+  storageClassName: standard
+  capacity:
+    storage: 250Mi
+  accessModes:
+    - ReadWriteOnce
+  hostPath:
+    path: "/mnt/data"
+  persistentVolumeReclaimPolicy: Retain
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mysql-pv-claim
+  labels:
+    app: mysql-app
+spec:
+  storageClassName: standard
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 250Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mysql
+  labels:
+    app: mysql-app
+spec:
+  type: NodePort
+  ports:
+    - port: 3306
+      targetPort: 3306
+      nodePort: 30011
+  selector:
+    app: mysql-app
+    tier: mysql
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mysql-deployment
+  labels:
+    app: mysql-app
+spec:
+  selector:
+    matchLabels:
+      app: mysql-app
+      tier: mysql
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: mysql-app
+        tier: mysql
+    spec:
+      containers:
+        - name: mysql
+          image: mysql:5.6
+          env:
+            - name: MYSQL_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mysql-root-pass
+                  key: password
+            - name: MYSQL_DATABASE
+              valueFrom:
+                secretKeyRef:
+                  name: mysql-db-url
+                  key: database
+            - name: MYSQL_USER
+              valueFrom:
+                secretKeyRef:
+                  name: mysql-user-pass
+                  key: username
+            - name: MYSQL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mysql-user-pass
+                  key: password
+          ports:
+            - containerPort: 3306
+              name: mysql
+          volumeMounts:
+            - name: mysql-persistent-storage
+              mountPath: /var/lib/mysql
+      volumes:
+        - name: mysql-persistent-storage
+          persistentVolumeClaim:
+            claimName: mysql-pv-claim
+
 # Day 9 Deploy Iron Gallery App on Kubernetes
+There is an iron gallery app that the Nautilus DevOps team was developing. They have recently customized the app and are going to deploy the same on the Kubernetes cluster. Below you can find more details:
+
+Create a namespace iron-namespace-nautilus
+
+Create a deployment iron-gallery-deployment-nautilus for iron gallery under the same namespace you created.
+
+:- Labels run should be iron-gallery.
+
+:- Replicas count should be 1.
+
+:- Selector's matchLabels run should be iron-gallery.
+
+:- Template labels run should be iron-gallery under metadata.
+
+:- The container should be named as iron-gallery-container-nautilus, use kodekloud/irongallery:2.0 image ( use exact image name / tag ).
+
+:- Resources limits for memory should be 100Mi and for CPU should be 50m.
+
+:- First volumeMount name should be config, its mountPath should be /usr/share/nginx/html/data.
+
+:- Second volumeMount name should be images, its mountPath should be /usr/share/nginx/html/uploads.
+
+:- First volume name should be config and give it emptyDir and second volume name should be images, also give it emptyDir.
+
+Create a deployment iron-db-deployment-nautilus for iron db under the same namespace.
+
+:- Labels db should be mariadb.
+
+:- Replicas count should be 1.
+
+:- Selector's matchLabels db should be mariadb.
+
+:- Template labels db should be mariadb under metadata.
+
+:- The container name should be iron-db-container-nautilus, use kodekloud/irondb:2.0 image ( use exact image name / tag ).
+
+:- Define environment, set MYSQL_DATABASE its value should be database_blog, set MYSQL_ROOT_PASSWORD and MYSQL_PASSWORD value should be with some complex passwords for DB connections, and MYSQL_USER value should be any custom user ( except root ).
+
+:- Volume mount name should be db and its mountPath should be /var/lib/mysql. Volume name should be db and give it an emptyDir.
+
+Create a service for iron db which should be named iron-db-service-nautilus under the same namespace. Configure spec as selector's db should be mariadb. Protocol should be TCP, port and targetPort should be 3306 and its type should be ClusterIP.
+
+Create a service for iron gallery which should be named iron-gallery-service-nautilus under the same namespace. Configure spec as selector's run should be iron-gallery. Protocol should be TCP, port and targetPort should be 80, nodePort should be 32678 and its type should be NodePort.
+
+
+Note:
+
+We don't need to make connection b/w database and front-end now, if the installation page is coming up it should be enough for now.
+
+The kubectl on jump_host has been configured to work with the kubernetes cluster.
+Ans:
+### ✅ 1. **Namespace**
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: iron-namespace-nautilus
+### ✅ 2. **iron-gallery Deployment**
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: iron-gallery-deployment-nautilus
+  namespace: iron-namespace-nautilus
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      run: iron-gallery
+  template:
+    metadata:
+      labels:
+        run: iron-gallery
+    spec:
+      containers:
+      - name: iron-gallery-container-nautilus
+        image: kodekloud/irongallery:2.0
+        resources:
+          limits:
+            memory: "100Mi"
+            cpu: "50m"
+        volumeMounts:
+        - name: config
+          mountPath: /usr/share/nginx/html/data
+        - name: images
+          mountPath: /usr/share/nginx/html/uploads
+      volumes:
+      - name: config
+        emptyDir: {}
+      - name: images
+        emptyDir: {}
+
+### ✅ 3. **iron-db Deployment**
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: iron-db-deployment-nautilus
+  namespace: iron-namespace-nautilus
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      db: mariadb
+  template:
+    metadata:
+      labels:
+        db: mariadb
+    spec:
+      containers:
+      - name: iron-db-container-nautilus
+        image: kodekloud/irondb:2.0
+        env:
+            - name: MYSQL_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mysql-secret
+                  key: mysql-root-password
+            - name: MYSQL_DATABASE
+              valueFrom:
+                secretKeyRef:
+                  name: mysql-secret
+                  key: mysql-database
+            - name: MYSQL_USER
+              valueFrom:
+                secretKeyRef:
+                  name: mysql-secret
+                  key: mysql-user
+            - name: MYSQL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mysql-secret
+                  key: mysql-password
+        volumeMounts:
+        - name: db
+          mountPath: /var/lib/mysql
+      volumes:
+      - name: db
+        emptyDir: {}
+### **Secret**
+apiVersion: v1
+kind: Secret
+metadata:
+  name: mysql-secret
+type: Opaque
+data:
+  # Base64-encoded values:
+  mysql-root-password: cm9vdHBhc3N3b3Jk   
+  mysql-database: d3BiZGI=               
+  mysql-user: d3B1c2Vy                   
+  mysql-password: c3VwZXJzcXJ0  
+### ✅ 4. **iron-db Service**
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: iron-db-service-nautilus
+  namespace: iron-namespace-nautilus
+spec:
+  selector:
+    db: mariadb
+  ports:
+  - protocol: TCP
+    port: 3306
+    targetPort: 3306
+  type: ClusterIP
+
+### ✅ 5. **iron-gallery Service**
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: iron-gallery-service-nautilus
+  namespace: iron-namespace-nautilus
+spec:
+  selector:
+    run: iron-gallery
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: 80
+    nodePort: 32678
+  type: NodePort
+
+### 🧪 How to Apply All:
+
+If you save all the above into a single file (e.g. `iron-gallery-deployment.yaml`), run:
+
+kubectl apply -f iron-gallery-deployment.yaml
+
+Or split them into separate files and apply one by one:
+
+kubectl apply -f namespace.yaml
+kubectl apply -f iron-gallery-deployment.yaml
+kubectl apply -f iron-db-deployment.yaml
+kubectl apply -f iron-db-service.yaml
+kubectl apply -f iron-gallery-service.yaml
+
+### ✅ Final Checks:
+
+* Run `kubectl get all -n iron-namespace-nautilus` to verify Pods, Deployments, and Services are up and running.
+* Access the **NodePort service** via any Kubernetes node IP and port `32678`.
+
+Let me know if you'd like to create and apply them directly using a script.
+
 # Day 10 Fix Python App Deployed on Kubernetes Cluster
+One of the DevOps engineers was trying to deploy a python app on Kubernetes cluster. Unfortunately, due to some mis-configuration, the application is not coming up. Please take a look into it and fix the issues. Application should be accessible on the specified nodePort.
+
+The deployment name is python-deployment-xfusion, its using poroko/flask-demo-app image. The deployment and service of this app is already deployed.
+
+nodePort should be 32345 and targetPort should be python flask app's default port.
+Ans:
+issue with contianer port(instead 5000 was 8080) and image(instead of poroko/flask-demo-app was poroko/flask-demo)
+
 **Level 4**
 # Day 1 Deploy Redis Deployment on Kubernetes
 # Day 2 Deploy MySQL on Kubernetes
