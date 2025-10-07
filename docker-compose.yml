@@ -1,0 +1,30 @@
+version: '3.8'
+services:
+  web:
+    container_name: php_web
+    image: php:8.2-apache
+    ports:
+      - "6400:80"
+    volumes:
+      - /var/www/html:/var/www/html
+    networks:
+      - webnet
+
+  db:
+    container_name: mysql_web
+    image: mariadb:latest
+    ports:
+      - "3306:3306"
+    environment:
+      - MYSQL_USER=myuser
+      - MYSQL_PASSWORD=mypassword
+      - MYSQL_DATABASE=database_web
+      - MYSQL_ROOT_PASSWORD=RootP@ss123!
+    volumes:
+      - /var/lib/mysql:/var/lib/mysql
+    networks:
+      - webnet
+
+networks:
+  webnet:
+    driver: bridge

@@ -437,7 +437,7 @@ sudo yum install -y net-tools
 If nothing shows, Apache is not configured to listen on port 8089.
 
 ### 4. 🛠️ Configure Apache to Listen on Port 8089
-
+grep -i "Listen" /etc/httpd/conf/httpd.conf or 
 Edit the Apache port config:
 
 sudo vi /etc/httpd/conf/httpd.conf
@@ -456,6 +456,7 @@ Save and exit.
 
 ### 5. 🔁 Restart Apache
 sudo systemctl restart httpd
+sudo tail -n 50 /var/log/httpd/error_log
 
 ### 6. 🔥 Check Firewall Rules
 
@@ -479,6 +480,7 @@ If needed, you can temporarily allow port 8089:
 If 8089 is **not** listed, add it:
 
 sudo iptables -I INPUT -p tcp --dport 8089 -j ACCEPT
+sudo service iptables save
 **Check Apache Configuration Syntax**
 sudo apachectl configtest
 
@@ -495,7 +497,7 @@ Permission denied
 
 Syntax error
 **Check if Port 8089 is Already in Use**
-sudo netstat -tuln | grep 8089
+sudo netstat -tulnp | grep 8089
 This will show you which process is already using port 8089, like this:
 tcp  0  0 0.0.0.0:8089  0.0.0.0:*  LISTEN  1234/someprocess
 
@@ -1959,9 +1961,14 @@ docker network create \
 docker network ls
 docker network inspect news
 
-
 Day 43: **Docker Ports Mapping**
+The Nautilus DevOps team is planning to host an application on a nginx-based container. There are number of tickets already been created for similar tasks. One of the tickets has been assigned to set up a nginx container on Application Server 1 in Stratos Datacenter. Please perform the task as per details mentioned below:
 
+a. Pull nginx:stable docker image on Application Server 1.
+b. Create a container named ecommerce using the image you pulled.
+c. Map host port 8088 to container port 80. Please keep the container in running state.
+Ans:
+docker run -itd --name ecommerce -p 8088:80 nginx:stable
 Day 44: **Write a Docker Compose File**
 
 Day 45: **Resolve Dockerfile Issues**

@@ -2190,6 +2190,96 @@ output "kke_sqs_queue_url" {
 
 
 # Q13 Attach IAM Role with Inline Policy Using Terraform
+The Nautilus DevOps team is setting up IAM-based access control for internal AWS resources. They need to create an IAM Role and an IAM Policy using Terraform and attach the policy to the role.
+
+Create an IAM Role named nautilus-role.
+
+Create an IAM Policy named nautilus-policy that allows listing EC2 instances.
+
+Attach the policy to the role
+
+Create the main.tf file (do not create a separate .tf file) to provision a Role, policy and attach it.
+
+Use the variables.tf file with the following:
+
+KKE_ROLE_NAME: name of the role.
+KKE_POLICY_NAME: name of the policy.
+Use terraform.tfvarsfile to input the role and policy names.
+
+Use outputs.tf file to output the following:
+
+kke_iam_role_name: name of the role created.
+kke_iam_policy_name: name of the policy ceated.
+Ans:
+# main.tf
+resource "aws_iam_role" "nautilus_role" {
+  name = var.KKE_ROLE_NAME
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        Action = "sts:AssumeRole",
+        Effect = "Allow",
+        Sid    = "",
+        Principal = {
+          Service = "ec2.amazonaws.com"
+        }
+      }
+    ]
+  })
+
+  tags = {
+    tag-key = var.KKE_ROLE_NAME
+  }
+}
+
+resource "aws_iam_policy" "nautilus_policy" {
+  name        = var.KKE_POLICY_NAME
+  description = "A test policy"
+
+  policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        Effect = "Allow",
+        Action = [
+          "ec2:DescribeInstances"
+        ],
+        Resource = "*"
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "nautilus_policy-attach" {
+  role       = aws_iam_role.nautilus_role.name
+  policy_arn = aws_iam_policy.nautilus_policy.arn
+}
+# vaiable.tf
+variable "KKE_ROLE_NAME" {
+  description = "Name of the IAM Role"
+  type        = string
+}
+
+variable "KKE_POLICY_NAME" {
+  description = "Name of the IAM Policy"
+  type        = string
+}
+# outputs.tf
+output "kke_iam_role_name" {
+  description = "Name of the IAM Role created"
+  value       = aws_iam_role.nautilus_role.name
+}
+
+output "kke_iam_policy_name" {
+  description = "Name of the IAM Policy created"
+  value       = aws_iam_policy.nautilus_policy.name
+}
+# tfvars
+KKE_ROLE_NAME   = "nautilus-role"
+KKE_POLICY_NAME = "nautilus-policy"
+
 # Q14 Provision IAM User with Terraform
 # Q15 Attach IAM Policy for DynamoDB Access Using Terraform
 # Q16 Send Notifications from IAM Events to SNS Using Terraform

@@ -411,7 +411,7 @@ a. Set the soft limit to 1027
 b. Set the hard limit to 2027
 Ans:
 # Open the limits configuration file and Add the following lines at the end of the file::
-sudo nano /etc/security/limits.conf
+sudo vi /etc/security/limits.conf
 nfsuser    soft    nproc    1025
 nfsuser    hard    nproc    2025
 
@@ -569,9 +569,97 @@ grep -v 'copyright' /home/BSD.txt > /home/BSD_DELETE.txt
 sed 's/\bfrom\b/is/g' /home/BSD.txt > /home/BSD_REPLACE.txt
 
 # Q5 Linux SSH Authentication
+The system admins team of xFusionCorp Industries has set up some scripts on jump host that run on regular intervals and perform operations on all app servers in Stratos Datacenter. To make these scripts work properly we need to make sure the thor user on jump host has password-less SSH access to all app servers through their respective sudo users (i.e tony for app server 1). Based on the requirements, perform the following:
+
+Set up a password-less authentication from user thor on jump host to all app servers through their respective sudo users.
+Ans:
+To set up password-less SSH authentication from the `thor` user on the **jump host** to all **app servers** via their respective **sudo users** (e.g., `tony` for app server 1), follow these steps:
+
+---
+
+### 🛠️ Step-by-Step Setup
+
+#### 1. **Generate SSH Key on Jump Host (as `thor`)**
+
+ssh-keygen -t rsa -b 2048
+
+- Press Enter to accept default file location (`~/.ssh/id_rsa`)
+- Leave passphrase empty for password-less access
+
+#### 2. **Copy Public Key to App Servers via Sudo Users**
+
+Assuming:
+- App Server 1: `tony@<app_server_1_ip>`
+- App Server 2: `steve@<app_server_2_ip>`
+- App Server 3: `banner@<app_server_3_ip>`
+
+Run the following **from the jump host as `thor`**:
+
+
+ssh-copy-id tony@<app_server_1_ip>
+ssh-copy-id steve@<app_server_2_ip>
+ssh-copy-id banner@<app_server_3_ip>
+
+
+> This command appends `thor`'s public key to the `~/.ssh/authorized_keys` file of each sudo user on the respective app server.
+
+#### 3. **Verify Password-less SSH Access**
+
+Test the connection from jump host:
+
+ssh tony@<app_server_1_ip>
+ssh steve@<app_server_2_ip>
+ssh banner@<app_server_3_ip>
+
 # Q6 Linux Find Command
+During a routine security audit, the team identified an issue on the Nautilus App Server. Some malicious content was identified within the website code. After digging into the issue they found that there might be more infected files. Before doing a cleanup they would like to find all similar files and copy them to a safe location for further investigation. Accomplish the task as per the following requirements:
+
+a. On App Server 1 at location /var/www/html/news find out all files (not directories) having .css extension.
+b. Copy all those files along with their parent directory structure to location /news on same server.
+c. Please make sure not to copy the entire /var/www/html/news directory content.
+Ans:
+### 🧩 a. Find all `.css` files (excluding directories)
+
+Run the following command:
+
+find /var/www/html/news -type f -name "*.css"
+
+- `-type f`: ensures only files are selected
+- `-name "*.css"`: filters for `.css` extension
+
+### 📦 b. Copy those files **with parent directory structure** to `/news`
+
+Use `find` with `cp --parents`:
+
+mkdir -p /news
+find /var/www/html/news -type f -name "*.css" -exec cp --parents {} /news \;
+
+- `--parents`: preserves the full directory structure relative to root
+- `{} /news`: copies each matched file into `/news` with its path
+
+### ✅ c. Ensure only `.css` files are copied, not the entire directory
+
+This method **only copies matched `.css` files** and their paths — not other content from `/var/www/html/news`.
+find /news -type f -name "*.css"
+
 # Q7 Install a package
+As per new application requirements shared by the Nautilus project development team, serveral new packages need to be installed on all app servers in Stratos Datacenter. Most of them are completed except for telnet.
+
+Therefore, install the telnet package on all app-servers.
+Ans:
+Install telnet: sudo yum install -y telnet
+Verify installation: telnet
 # Q8 Install Ansible
+During the weekly meeting, the Nautilus DevOps team discussed about the automation and configuration management solutions that they want to implement. While considering several options, the team has decided to go with Ansible for now due to its simple setup and minimal pre-requisites. The team wanted to start testing using Ansible, so they have decided to use jump host as an Ansible controller to test different kind of tasks on rest of the servers.
+
+Install ansible version 4.10.0 on Jump host using pip3 only. Make sure Ansible binary is available globally on this system, i.e all users on this system are able to run Ansible commands.
+
+Ans:
+Ensure Python 3 and pip3 are installed: python3 --version and pip3 --version
+
+Install Ansible version 4.10.0 via pip3 to a system-wide location: sudo pip3 install ansible==4.10.0
+
+ansible --version  : ansible [core 2.11.x]   config file = ... Note: Ansible 4.x uses ansible-core 2.11.x internally. That is expected.
 # Q9 Configure Local Yum repos
 # Q10 Linux Services
 # Q11 Linux Configure sudo
@@ -611,3 +699,123 @@ sed 's/\bfrom\b/is/g' /home/BSD.txt > /home/BSD_REPLACE.txt
 # Q7 Install and Configure Web Application
 # Q8 Install and Configure PHP-FPM
 # Q9 Configure Nginx + PHP-FPM Using Unix Sock
+
+**Certification Test**
+Q1:
+One of the developers at Nautilus has stored sensitive data on the jump host in Stratos DC. This data needs to be transferred to an app server. As developers lack access to the app servers, they've requested the system admin team to complete this task.
+
+Please copy the file /tmp/nautilus.txt.gpg from the jump server to App Server 3 at the following location: /home/appdata.
+Ans:
+sudo scp /tmp/nautilus.txt.gpg banner@stapp03:/home/appdata/
+
+Q2:
+After conducting comprehensive security audits on its servers, xFusionCorp Industries security team has instituted several new security measures. Among these measures is the discontinuation of direct root login through SSH.
+
+Disable direct SSH root login across all application servers located in the Stratos Datacenter
+Ans:
+Disable Root Access: sudo sed -i 's/^PermitRootLogin yes/PermitRootLogin no/' /etc/ssh/sshd_config
+Reboot sshd Service: sudo systemctl restart sshd
+Verify: sudo sshd -T | grep permitrootlogin
+
+Q3:
+There is a cron job that needs to be added to the Nautilus storage server in Stratos DC.The cron details is as below:
+
+a. Install cronie package and start crond service.
+
+b. Add this command to the crontab of root user:
+
+/usr/bin/touch test_passed
+
+Make it run every day at 21:30 (use 30 21 format in the expression).
+
+Ans:
+Add the cron job to the root user's crontab: 
+sudo crontab -e
+30 21 * * * /usr/bin/touch /test_passed
+You can verify it with: sudo crontab -l
+
+Q4:
+The application development team needs some directories created on one of the app servers in Stratos Datacenter. They will use these directories to store some data. They have shared below requirements with us:
+
+Create some directories as below under /opt directory on App server 3 in Stratos Datacenter.
+
+/opt/app/backup/latest
+Ans:
+Create the required directory structure: mkdir -p /opt/app/backup/latest
+Verify the directory: ls -ld /opt/app/backup/latest
+
+Q5:
+The Nautilus security team performed an audit on all servers present in Stratos DC. During the audit some critical data/files were identified which were having the wrong permissions as per security standards. Once the report was shared with the production support team, they started fixing the issues one by one. It has been identified that one of the files named /etc/resolv.conf on Nautilus App 3 server has wrong permissions, so that needs to be fixed and the correct ACLs needs to be applied.
+
+a. User virat must not have any permission on this file.
+
+b. User vivek should have read only permission on this file. Further, devops group should have read/write permissions on this file.
+Ans:
+Double-check: Do users and group exist?:
+id virat
+id vivek
+getent group devops
+
+If not avail:
+Create the devops group: sudo groupadd devops
+Create users virat and vivek: sudo useradd virat and sudo useradd vivek
+Permission removal or ading
+sudo setfacl -m u:virat:--- /etc/resolv.conf
+sudo setfacl -m u:vivek:r-- /etc/resolv.conf
+sudo setfacl -m g:devops:rw- /etc/resolv.conf
+verify:
+getfacl /etc/resolv.conf
+
+Q6:
+The development team requires specific logs stored within the Nautilus storage server situated in the Stratos DC. Access the designated location on the server to retrieve the necessary logs. Further, perform below actions:
+
+Create a tar archive named logs.tar (under natasha's home) of /var/log/ directory.
+Now, create a compressed tar archive as well named logs.tar.gz (under natasha's home) of /var/log/ directory.
+
+Ans:
+Create logs.tar in natasha's home directory: sudo tar -cvf /home/natasha/logs.tar /var/log/
+Create compressed archive logs.tar.gz in the same directory: sudo tar -czvf /home/natasha/logs.tar.gz /var/log/
+Verify: ls -lh /home/natasha/logs.tar*
+
+Q7:
+There is some data on Nautilus App Server 3 in Stratos DC. Data needs to be altered in some of the files. On Nautilus App Server 3, alter the /home/BSD.txt file as per details given below.
+
+a. Delete all lines containing the word code and save the results in /home/BSD_DELETE.txt file. (Please be aware of case sensitivity)
+
+b. Replace all occurrences of the word the (look for the exact match) with is and save the results in /home/BSD_REPLACE.txt file.
+
+Note: Let's say you are asked to replace the word to with from. In that case, make sure not to alter any words containing the string itself, for example; upto, contributor etc.
+Ans:
+Delete all lines that contain the word code (case-sensitive): grep -v 'code' /home/BSD.txt > /home/BSD_DELETE.txt
+Replace exact match of the word the with is: sed 's/\bthe\b/is/g' /home/BSD.txt > /home/BSD_REPLACE.txt
+
+Q8:
+Some new requirements have been shared by the Nautilus application development team, a new package need to be installed on all app servers in Stratos Datacenter.
+
+Install the bind package on all app servers in Stratos Datacenter and start/enable its service.
+Ans:
+Install bind package: sudo yum install -y bind
+Enable and start the named service: 
+sudo systemctl enable named
+sudo systemctl start named
+Verify: sudo systemctl status named
+
+Q9:
+On our Storage server in Stratos Datacenter we are having some issues where the nfsuser user is holding hundreds of processes, which is degrading the performance of the server. Therefore, we have a requirement to limit its maximum processes. Please set its maximum process limits as below:
+
+a. soft limit = 1025
+
+b. hard_limit = 2026
+Ans:
+Check User Avail: id nfsuser
+Modify soft and hard value: sudo vi /etc/security/limits.conf
+nfsuser soft nproc 1025
+nfsuser hard nproc 2026
+
+Q10:
+During recent servers audit, its was observed that some cleanup is needed on all app servers in Stratos Datacenter. Find below more details:
+
+Remove logrotate package from all app servers in Stratos Datacenter.
+Ans:
+Remove logrotate package: yum remove logrotate -y
+Verify removal: rpm -q logrotate
