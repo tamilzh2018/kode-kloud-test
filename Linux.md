@@ -661,7 +661,145 @@ Install Ansible version 4.10.0 via pip3 to a system-wide location: sudo pip3 ins
 
 ansible --version  : ansible [core 2.11.x]   config file = ... Note: Ansible 4.x uses ansible-core 2.11.x internally. That is expected.
 # Q9 Configure Local Yum repos
+The Nautilus production support team and security team had a meeting last month in which they decided to use local yum repositories for maintaing packages needed for their servers. For now they have decided to configure a local yum repo on Nautilus Backup Server. This is one of the pending items from last month, so please configure a local yum repository on Nautilus Backup Server as per details given below.
+
+a. We have some packages already present at location /packages/downloaded_rpms/ on Nautilus Backup Server.
+b. Create a yum repo named epel_local and make sure to set Repository ID to epel_local. Configure it to use package's location /packages/downloaded_rpms/.
+c. Install package samba from this newly created repo.
+Ans:
+To set up a local `yum` repository on the Nautilus Backup Server, follow the steps below:
+
+### Step 1: Create the Local Yum Repository
+
+1. **Create the Repository Directory**:
+   Ensure the `/packages/downloaded_rpms/` directory exists and contains the RPM packages.
+
+   If it's not already created:
+
+   
+   sudo mkdir -p /packages/downloaded_rpms
+   
+
+2. **Install the `createrepo` Tool** (if not already installed):
+   The `createrepo` tool will be used to create the repository metadata. You can install it using `yum` (or `dnf` depending on your distro):
+
+      sudo yum install createrepo -y
+    if error throws like Error: There are no enabled repositories in "/etc/yum.repos.d", "/etc/yum/repos.d", "/etc/distro.repos.d".
+    # Ensure that the epel_local.repo file is correctly created and placed in the /etc/yum.repos.d/ directory.
+    sudo vi /etc/yum.repos.d/epel_local.repo
+It looks like the `/etc/yum.repos.d/` directory is empty, which is likely the cause of the issue. `yum` requires repository configuration files in this directory to function properly.
+
+### Let's fix this by creating the `epel_local.repo` file manually in the `/etc/yum.repos.d/` directory.
+
+### Step 2: Create the Repository Configuration File
+
+1. **Create the `epel_local.repo` file**:
+
+   Run the following command to create the `.repo` file:
+
+   
+   sudo vi /etc/yum.repos.d/epel_local.repo
+   
+
+2. **Add the repository configuration**:
+
+   In the editor, add the following content to the file:
+
+   ini
+   [epel_local]
+   name=EPEL Local Repository
+   baseurl=file:///packages/downloaded_rpms/
+   enabled=1
+   gpgcheck=0
+   repo_gpgcheck=0
+   
+
+   Explanation of the fields:
+
+   * **name**: The name of the repository (you can change it if you wish).
+   * **baseurl**: The path to the local RPM package directory. Since this is a local directory, the URL starts with `file:///`.
+   * **enabled**: Set to `1` to enable the repository.
+   * **gpgcheck**: Set to `0` as we are not using GPG keys for the local repository.
+   * **repo_gpgcheck**: Set to `0` for the same reason.
+
+3. **Save and exit** the editor (`:wq` in `vi`).
+
+### Step 3: Verify the File Permissions
+
+Ensure that the `.repo` file has the correct permissions for `yum` to read it:
+
+sudo chmod 644 /etc/yum.repos.d/epel_local.repo
+
+### Step 4: Create the Repository Metadata
+
+If you haven't already done so, you will need to create repository metadata for the RPM packages located in `/packages/downloaded_rpms/`. This is done using the `createrepo` tool.
+
+1. **Install `createrepo` if it's not already installed**:
+   
+   sudo yum install createrepo -y
+
+2. **Run `createrepo` to generate the metadata**:
+  
+   sudo createrepo /packages/downloaded_rpms/
+   
+### Step 5: Clean the Yum Cache
+
+To ensure `yum` picks up the new repository, clear the cache:
+
+sudo yum clean all
+
+### Step 6: Test the Repository
+
+Check if `yum` can now find the new repository:
+
+sudo yum repolist
+
+You should see the `epel_local` repository listed.
+
+### Step 7: Install the `samba` Package
+
+Now that the local repository is configured correctly, you should be able to install the `samba` package:
+
+sudo yum install samba --disablerepo="*" --enablerepo="epel_local"
+
+### Step 5: Verify the Installation
+
+Once the package is installed, verify that `samba` was successfully installed:
+
+samba --version
+
 # Q10 Linux Services
+As per details shared by the development team, the new application release has some dependencies on the back end. There are some packages/services that need to be installed on all app servers under Stratos Datacenter. As per requirements please perform the following steps:
+
+a. Install squid package on all the application servers.
+
+b. Once installed, make sure it is enabled to start during boot.
+Ans:
+### **For CentOS/Red Hat-based Servers:**
+
+1. **Login to the Server(s):**
+   SSH into each application server.
+
+2. **Install Squid:**
+   Run the following command to install the squid package:
+ 
+   sudo yum install squid -y 
+
+3. **Enable Squid to Start on Boot:**
+   After the installation, ensure that Squid is enabled to start on boot with the following command:
+   
+   sudo systemctl enable squid
+   
+4. **Start the Squid Service:**
+   Once Squid is installed, you can start the service using:
+   
+   sudo systemctl start squid
+
+5. **Verify Squid is Running:**
+   To verify that Squid is running, use:
+   
+   sudo systemctl status squid
+
 # Q11 Linux Configure sudo
 # Q12 DNS Troubleshooting
 # Q13 Linux Firewalld Setup

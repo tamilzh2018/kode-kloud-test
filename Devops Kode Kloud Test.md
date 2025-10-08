@@ -573,7 +573,7 @@ sudo iptables -A INPUT -i lo -j ACCEPT
 sudo iptables -A INPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
 
 # Allow LBR host to access port 8083
-sudo iptables -A INPUT -p tcp -s 192.168.1.10 --dport 8083 -j ACCEPT
+sudo iptables -A INPUT -p tcp -s 172.16.238.14 --dport 8083 -j ACCEPT
 
 # Block everyone else from port 8083
 sudo iptables -A INPUT -p tcp --dport 8083 -j DROP
@@ -1969,8 +1969,27 @@ b. Create a container named ecommerce using the image you pulled.
 c. Map host port 8088 to container port 80. Please keep the container in running state.
 Ans:
 docker run -itd --name ecommerce -p 8088:80 nginx:stable
-Day 44: **Write a Docker Compose File**
 
+Day 44: **Write a Docker Compose File**
+The Nautilus application development team shared static website content that needs to be hosted on the httpd web server using a containerised platform. The team has shared details with the DevOps team, and we need to set up an environment according to those guidelines. Below are the details:
+
+a. On App Server 3 in Stratos DC create a container named httpd using a docker compose file /opt/docker/docker-compose.yml (please use the exact name for file).
+b. Use httpd (preferably latest tag) image for container and make sure container is named as httpd; you can use any name for service.
+c. Map 80 number port of container with port 5001 of docker host.
+d. Map container's /usr/local/apache2/htdocs volume with /opt/data volume of docker host which is already there. (please do not modify any data within these locations).
+Ans:
+version: '3.8'
+services:
+  httpd_service:
+    image: httpd:latest
+    container_name: httpd
+    ports:
+      - "5001:80"  # Maps port 80 of the container to port 5001 of the host
+    volumes:
+      - /opt/data:/usr/local/apache2/htdocs  # Maps /opt/data on host to container's /usr/local/apache2/htdocs
+    restart: always  # Ensure the container restarts automatically if it fails
+    networks:
+      - webnet
 Day 45: **Resolve Dockerfile Issues**
 
 Day 46: **Deploy an App on Docker Containers**

@@ -753,4 +753,95 @@ networks:
 docker compose -f /opt/itadmin/docker-compose.yml up -d
 curl stapp02:6400
 # Q4 Docker Node App
+There is a requirement to Dockerize a Node app and to deploy the same on App Server 1. Under /node_app directory on App Server 1, we have already placed a package.json file that describes the app dependencies and server.js file that defines a web app framework.
+
+Create a Dockerfile (name is case sensitive) under /node_app directory:
+
+Use any node image as the base image.
+Install the dependencies using package.json file.
+Use server.js in the CMD.
+Expose port 6100.
+
+The build image should be named as nautilus/node-web-app.
+
+Now run a container named nodeapp_nautilus using this image.
+
+Map the container port 6100 with the host port 8091.
+
+. Once deployed, you can test the app using a curl command on App Server 1:
+
+curl http://localhost:8091
+Ans:
+Here's how you can fulfill this requirement step-by-step:
+
+### 1. **Create the Dockerfile**
+
+First, create the Dockerfile under the `/node_app` directory. This will be responsible for building the Docker image for your Node.js app.
+
+Dockerfile
+# Use the official Node.js image as the base image
+FROM node:14
+
+# Set the working directory inside the container to /app
+WORKDIR /app
+
+# Copy the package.json file into the container
+COPY package.json /app
+
+# Install the dependencies
+RUN npm install
+
+# Copy the server.js file into the container
+COPY server.js /app
+
+# Expose port 6100
+EXPOSE 6100
+
+# Define the command to run the server.js when the container starts
+CMD ["node", "server.js"]
+
+
+### Explanation of each line:
+
+* `FROM node:14`: Uses the official Node.js 14 image as the base for the container. You can choose another Node.js version if needed.
+* `WORKDIR /app`: Sets `/app` as the working directory for the container.
+* `COPY package.json /app`: Copies the `package.json` file into the container.
+* `RUN npm install`: Installs all the dependencies listed in `package.json`.
+* `COPY server.js /app`: Copies the `server.js` file into the container.
+* `EXPOSE 6100`: Exposes port 6100 so that it can be accessed from outside the container.
+* `CMD ["node", "server.js"]`: Defines the command to run when the container starts. In this case, it's `node server.js`, which will launch the Node.js web app.
+
+### 2. **Build the Docker Image**
+
+Now that you have the Dockerfile in place, go ahead and build the image with the specified name `nautilus/node-web-app`.
+
+Run this command in the `/node_app` directory on App Server 1:
+
+docker build -t nautilus/node-web-app .
+
+This will build the Docker image based on the Dockerfile and tag it as `nautilus/node-web-app`.
+
+### 3. **Run the Docker Container**
+
+Once the image is built, you can run a container from that image and map the container's port 6100 to the host's port 8091.
+
+Use the following command:
+
+docker run -d --name nodeapp_nautilus -p 8091:6100 nautilus/node-web-app
+
+Explanation of the command:
+
+* `-d`: Runs the container in detached mode (in the background).
+* `--name nodeapp_nautilus`: Names the container `nodeapp_nautilus`.
+* `-p 8091:6100`: Maps port 6100 in the container to port 8091 on the host.
+* `nautilus/node-web-app`: Specifies the image to run.
+
+### 4. **Test the Application**
+
+Finally, you can test if the application is running by using `curl` to hit the exposed endpoint:
+
+
+curl http://localhost:8091
+You should see output : Welcome to xFusionCorp Industries!
+
 # Q5 Docker Python App

@@ -2281,6 +2281,60 @@ KKE_ROLE_NAME   = "nautilus-role"
 KKE_POLICY_NAME = "nautilus-policy"
 
 # Q14 Provision IAM User with Terraform
+The Nautilus DevOps team is experimenting with Terraform provisioners. Your task is to create an IAM user and use a local-exec provisioner to log a confirmation message.
+
+Create an IAM user named iamuser_ammar.
+
+Use a local-exec provisioner with the IAM user resource to log the message KKE iamuser_ammar has been created successfully! to a file called KKE_user_created.log under home/bob/terraform.
+
+Create the main.tf file (do not create a separate .tf file) to provision an IAM user.
+
+Use variables.tf file with the following:
+
+KKE_USER_NAME: name of the IAM user.
+Use terraform.tfvars to input the name of the IAM user.
+
+Use outputs.tf file with the following:
+
+kke_iam_user_name: name of the IAM user.
+
+Ans:
+**main.tf**
+resource "aws_iam_user" "iamuser_ammar" {
+  name = var.KKE_USER_NAME
+}
+
+resource "null_resource" "log_user_creation" {
+  depends_on = [aws_iam_user.iamuser_ammar]
+
+  provisioner "local-exec" {
+    command = "echo 'KKE iamuser_${var.KKE_USER_NAME} has been created successfully!' > /home/bob/terraform/KKE_user_created.log"
+  }
+}
+
+or 
+
+resource "aws_iam_user" "iamuser_ammar" {
+  name = var.KKE_USER_NAME
+
+  provisioner "local-exec" {
+    command = "echo 'KKE ${var.KKE_USER_NAME} has been created successfully!' > /home/bob/terraform/KKE_user_created.log"
+  }
+}
+**variables.tf**
+variable "KKE_USER_NAME" {
+  description = "The name of the IAM user to be created"
+  type        = string
+}
+
+**terraform.tfvars**
+KKE_USER_NAME = "iamuser_ammar"
+
+**outputs.tf**
+output "kke_iam_user_name" {
+  description = "The IAM user name"
+  value       = aws_iam_user.iamuser_ammar.name
+}
 # Q15 Attach IAM Policy for DynamoDB Access Using Terraform
 # Q16 Send Notifications from IAM Events to SNS Using Terraform
 # Q17 Access Secrets Manager with IAM Role Using Terraform

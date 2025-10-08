@@ -28,3 +28,17 @@ services:
 networks:
   webnet:
     driver: bridge
+---
+version: '3.8'
+services:
+  httpd_service:
+    image: httpd:latest
+    container_name: httpd
+    ports:
+      - "5001:80"  # Maps port 80 of the container to port 5001 of the host
+    volumes:
+      - /opt/data:/usr/local/apache2/htdocs  # Maps /opt/data on host to container's /usr/local/apache2/htdocs
+    restart: always  # Ensure the container restarts automatically if it fails
+    networks:
+      - webnet
+      
