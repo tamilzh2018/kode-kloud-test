@@ -2336,7 +2336,213 @@ output "kke_iam_user_name" {
   value       = aws_iam_user.iamuser_ammar.name
 }
 # Q15 Attach IAM Policy for DynamoDB Access Using Terraform
+The DevOps team has been tasked with creating a secure DynamoDB table and enforcing fine-grained access control using IAM. This setup will allow secure and restricted access to the table from trusted AWS services only.
+
+As a member of the Nautilus DevOps Team, your task is to perform the following using Terraform:
+
+Create a DynamoDB Table: Create a table named xfusion-table with minimal configuration.
+
+Create an IAM Role: Create an IAM role named xfusion-role that will be allowed to access the table.
+
+Create an IAM Policy: Create a policy named xfusion-readonly-policy that should grant read-only access (GetItem, Scan, Query) to the specific DynamoDB table and attach it to the role.
+
+Create the main.tf file (do not create a separate .tf file) to provision the table, role, and policy.
+
+Create the variables.tf file with the following variables:
+
+KKE_TABLE_NAME: name of the DynamoDB table
+KKE_ROLE_NAME: name of the IAM role
+KKE_POLICY_NAME: name of the IAM policy
+Create the outputs.tf file with the following outputs:
+
+kke_dynamodb_table: name of the DynamoDB table
+kke_iam_role_name: name of the IAM role
+kke_iam_policy_name: name of the IAM policy
+Define the actual values for these variables in the terraform.tfvars file.
+
+Ensure that the IAM policy allows only read access and restricts it to the specific DynamoDB table created.
+Ans:
+**main.tf**
+resource "aws_dynamodb_table" "xfusion_table" {
+  name           = var.KKE_TABLE_NAME
+  billing_mode   = "PAY_PER_REQUEST"
+  hash_key       = "id"
+
+  attribute {
+    name = "id"
+    type = "S"
+  }
+}
+
+resource "aws_iam_role" "xfusion_role" {
+  name = var.KKE_ROLE_NAME
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        Effect = "Allow",
+        Principal = {
+          Service = "dynamodb.amazonaws.com"
+        },
+        Action = "sts:AssumeRole"
+      }
+    ]
+  })
+}
+
+resource "aws_iam_policy" "xfusion_readonly_policy" {
+  name        = var.KKE_POLICY_NAME
+  description = "Read-only access to xfusion-table"
+
+  policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        Effect = "Allow",
+        Action = [
+          "dynamodb:GetItem",
+          "dynamodb:Scan",
+          "dynamodb:Query"
+        ],
+        Resource = aws_dynamodb_table.xfusion_table.arn
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "xfusion_policy_attachment" {
+  role       = aws_iam_role.xfusion_role.name
+  policy_arn = aws_iam_policy.xfusion_readonly_policy.arn
+}
+**variables.tf**
+variable "KKE_TABLE_NAME" {
+  description = "Name of the DynamoDB table"
+  type        = string
+}
+
+variable "KKE_ROLE_NAME" {
+  description = "Name of the IAM role"
+  type        = string
+}
+
+variable "KKE_POLICY_NAME" {
+  description = "Name of the IAM policy"
+  type        = string
+}
+
+**terraform.tfvars**
+KKE_TABLE_NAME  = "xfusion-table"
+KKE_ROLE_NAME   = "xfusion-role"
+KKE_POLICY_NAME = "xfusion-readonly-policy"
+
+**outputs.tf**
+output "kke_dynamodb_table" {
+  description = "Name of the DynamoDB table"
+  value       = aws_dynamodb_table.xfusion_table.name
+}
+
+output "kke_iam_role_name" {
+  description = "Name of the IAM role"
+  value       = aws_iam_role.xfusion_role.name
+}
+
+output "kke_iam_policy_name" {
+  description = "Name of the IAM policy"
+  value       = aws_iam_policy.xfusion_readonly_policy.name
+}
+
 # Q16 Send Notifications from IAM Events to SNS Using Terraform
+To enable secure inter-service communication, the DevOps team needs to configure access to an SNS topic using IAM roles and policies. The objective is to allow EC2 instances to publish messages to the topic using proper permissions and role assumptions. Please complete the following tasks:
+
+Create an SNS topic named devops-sns-topic.
+
+Create an IAM role named devops-sns-role with EC2 as the trusted entity.
+
+Attach an IAM policy named devops-sns-policy that grants permission to publish messages to the SNS topic.
+
+Use the main.tf file (do not create a separate .tf file) to provision the sns-topic, role and policy.
+
+Create the locals.tf with the following names:
+
+KKE_SNS_TOPIC_NAME:name of the sns topic created.
+KKE_ROLE_NAME: name of the role created.
+KKE_POLICY_NAME: name of the policy created.
+Create the outputs.tf file to the output the following:
+
+The name of the SNS topic using the output variable kke_sns_topic_name.
+
+The name of the role using the output variable kke_role_name.
+
+The name of the policy using the output variable kke_policy_name.
+Ans:
+**main.tf**
+# SNS Topic
+resource "aws_sns_topic" "devops_sns_topic" {
+  name = local.KKE_SNS_TOPIC_NAME
+}
+
+# IAM Role for EC2 to assume
+resource "aws_iam_role" "devops_sns_role" {
+  name = local.KKE_ROLE_NAME
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect = "Allow"
+      Principal = {
+        Service = "ec2.amazonaws.com"
+      }
+      Action = "sts:AssumeRole"
+    }]
+  })
+}
+
+# IAM Policy for publishing to the SNS topic
+resource "aws_iam_policy" "devops_sns_policy" {
+  name        = local.KKE_POLICY_NAME
+  description = "Allow EC2 to publish to SNS topic"
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = "sns:Publish"
+        Resource = aws_sns_topic.devops_sns_topic.arn
+      }
+    ]
+  })
+}
+
+# Attach policy to role
+resource "aws_iam_role_policy_attachment" "devops_sns_policy_attachment" {
+  role       = aws_iam_role.devops_sns_role.name
+  policy_arn = aws_iam_policy.devops_sns_policy.arn
+}
+**local.tf**
+locals {
+  KKE_SNS_TOPIC_NAME = "devops-sns-topic"
+  KKE_ROLE_NAME      = "devops-sns-role"
+  KKE_POLICY_NAME    = "devops-sns-policy"
+}
+**outputs.tf**
+output "kke_sns_topic_name" {
+  description = "The name of the SNS topic"
+  value       = aws_sns_topic.devops_sns_topic.name
+}
+
+output "kke_role_name" {
+  description = "The name of the IAM role"
+  value       = aws_iam_role.devops_sns_role.name
+}
+
+output "kke_policy_name" {
+  description = "The name of the IAM policy"
+  value       = aws_iam_policy.devops_sns_policy.name
+}
+
+
 # Q17 Access Secrets Manager with IAM Role Using Terraform
 # Q18 Create and Configure Alarm Using CloudWatch Using Terraform
 # Q19 Configure CloudWatch to Trigger SNS Alerts Using Terraform

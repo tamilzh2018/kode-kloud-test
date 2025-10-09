@@ -1,0 +1,97 @@
+name: Build and Deploy Spring Boot to EKS
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    # Cache Maven dependencies Uses actions/cache to store Maven repo (~/.m2/repository) keyed by pom.xml hash.
+    - name: Cache Maven packages
+      uses: actions/cache@v3
+      with:
+        path: ~/.m2/repository
+        key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+        restore-keys: |
+          ${{ runner.os }}-maven-
+
+    - name: Set up JDK
+      uses: actions/setup-java@v3
+      with:
+        distribution: 'temurin'
+        java-version: '17'
+
+    - name: Build with Maven
+      run: mvn clean package -DskipTests
+
+    - name: Run tests
+      run: mvn test
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v2
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ secrets.AWS_REGION }}
+
+    - name: Login to Amazon ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v1
+
+    - name: Get current image from deployment (for rollback)
+      id: get-current-image
+      run: |
+        CURRENT_IMAGE=$(kubectl get deployment my-app-deployment -o=jsonpath='{$.spec.template.spec.containers[0].image}')
+        echo "CURRENT_IMAGE=$CURRENT_IMAGE" >> $GITHUB_ENV
+
+    - name: Build Docker image
+      run: |
+        IMAGE_URI="${{ steps.login-ecr.outputs.registry }}/${{ secrets.ECR_REPOSITORY }}:${{ github.sha }}"
+        docker build -t $IMAGE_URI .
+        echo "IMAGE_URI=$IMAGE_URI" >> $GITHUB_ENV
+
+    - name: Push Docker image to ECR
+      run: docker push $IMAGE_URI
+
+    - name: Update kubeconfig for EKS
+      run: aws eks update-kubeconfig --region ${{ secrets.AWS_REGION }} --name ${{ secrets.EKS_CLUSTER_NAME }}
+
+    - name: Deploy to EKS
+      id: deploy
+      run: |
+        kubectl set image deployment/my-app-deployment my-app-container=$IMAGE_URI
+
+    # Rollback if deployment fails: Before deployment, it captures the current image deployed.If the deployment step fails (if: failure()), it sets the deployment image back to the previous image and exits with failure.
+    - name: Rollback if deployment fails
+      if: failure()
+      run: |
+        echo "Deployment failed, rolling back to previous image $CURRENT_IMAGE"
+        kubectl set image deployment/my-app-deployment my-app-container=$CURRENT_IMAGE
+        exit 1
+
+    - name: Notify Slack
+      run: |
+        curl -X POST -H 'Content-type: application/json' \
+        --data "{\"text\":\"✅ CI Passed for $GITHUB_REPOSITORY on $GITHUB_REF\"}" \
+        ${{ secrets.SLACK_WEBHOOK_URL }}
+
+    #- name: Run Node.js tests
+    #  run: npm run test:ci
+
+    - name: Upload test results to TestRail
+      run: |
+        curl -u "username:${{ secrets.TESTRAIL_API_KEY }}" \
+        -H "Content-Type: application/json" \
+        -d '{"status_id":1,"comment":"Tests passed"}' \
+        "https://yourcompany.testrail.io/index.php?/api/v2/add_result/123"
+
+    - name: Run Snyk to check for vulnerabilities
+      uses: snyk/actions/node@v1
+      env:
+        SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}

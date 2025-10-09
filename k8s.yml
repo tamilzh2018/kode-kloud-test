@@ -440,3 +440,81 @@ metadata:
 type: Opaque
 data:
   database: a29kZWtsb3VkX2RiMQ== # "kodekloud_db1" encoded in base64
+---
+# Nginx Config File: nginx.conf
+worker_processes 1;
+
+events { worker_connections 1024; }
+
+http {
+    server {
+        listen 8095;
+        server_name localhost;
+
+        root /var/www/html;
+        index index.html index.htm index.php;
+
+        location / {
+            try_files $uri $uri/ =404;
+        }
+
+        location ~ \.php$ {
+            include fastcgi_params;
+            fastcgi_pass 127.0.0.1:9000;
+            fastcgi_index index.php;
+            fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+        }
+    }
+}
+---
+kubectl create configmap nginx-config --from-file=nginx.conf
+---
+#nginx-phpfpm-pod.yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nginx-phpfpm
+  labels:
+    app: php-nginx
+spec:
+  volumes:
+    - name: shared-files
+      emptyDir: {}
+    - name: nginx-config-volume
+      configMap:
+        name: nginx-config
+  containers:
+    - name: nginx-container
+      image: nginx:latest
+      ports:
+        - containerPort: 8095
+      volumeMounts:
+        - name: shared-files
+          mountPath: /var/www/html
+        - name: nginx-config-volume
+          mountPath: /etc/nginx/nginx.conf
+          subPath: nginx.conf
+    - name: php-fpm-container
+      image: php:8.3-fpm-alpine
+      volumeMounts:
+        - name: shared-files
+          mountPath: /var/www/html
+---
+# nginx-service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx-service
+spec:
+  selector:
+    app: php-nginx
+  type: NodePort
+  ports:
+    - protocol: TCP
+      port: 8095
+      targetPort: 8095
+      nodePort: 30012
+---
+#Copy /opt/index.php to container
+kubectl cp /opt/index.php nginx-phpfpm:/var/www/html/index.php -c nginx-container
+---

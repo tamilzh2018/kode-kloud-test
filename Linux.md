@@ -575,7 +575,7 @@ Set up a password-less authentication from user thor on jump host to all app ser
 Ans:
 To set up password-less SSH authentication from the `thor` user on the **jump host** to all **app servers** via their respective **sudo users** (e.g., `tony` for app server 1), follow these steps:
 
----
+
 
 ### 🛠️ Step-by-Step Setup
 
@@ -801,7 +801,79 @@ Ans:
    sudo systemctl status squid
 
 # Q11 Linux Configure sudo
+We have some users on all app servers in Stratos Datacenter. Some of them have been assigned some new roles and responsibilities, therefore their users need to be upgraded with sudo access so that they can perform admin level tasks.
+
+a. Provide sudo access to user javed on all app servers.
+
+b. Make sure you have set up password-less sudo for the user.
+Ans:
+To grant **sudo access** and enable **password-less sudo** for user `javed` on all app servers in the Stratos Datacenter, follow these steps on each server:
+
+### 🛠️ Step A: Provide Sudo Access to `javed`
+
+1. **Log in to each app server** as root or a user with sudo privileges.
+2. **Add `javed` to the `sudo` group**:
+   
+   usermod -aG sudo javed or usermod -aG wheel javed
+   
+   > This assumes your system uses the `sudo` group for sudo privileges. On some systems (like CentOS/RHEL), it might be `wheel`.
+
+### 🔐 Step B: Enable Password-less Sudo for `javed`
+
+1. **Create a custom sudoers file** for `javed`:
+   
+   echo 'javed ALL=(ALL) NOPASSWD:ALL' | sudo tee /etc/sudoers.d/javed
+   
+2. **Set correct permissions**:
+   
+   sudo chmod 440 /etc/sudoers.d/javed
+   
+### ✅ Verification
+
+After completing the steps on each server, verify with:
+
+sudo -l -U javed or sudo -l
+
+You should see:
+
+User javed may run the following commands on this host:
+    (ALL) NOPASSWD: ALL
+
 # Q12 DNS Troubleshooting
+The system admins team of xFusionCorp Industries has noticed intermittent issues with DNS resolution in several apps . App Server 3 in Stratos Datacenter is having some DNS resolution issues, so we want to add some additional DNS nameservers on this server.
+
+As a temporary fix we have decided to go with Google public DNS (ipv4). Please make appropriate changes on this server.
+Ans:
+To resolve DNS issues on App Server 3 in the Stratos Datacenter by adding Google Public DNS (IPv4), you can update the server's DNS configuration. Here's how to do it on a Linux system:
+
+### 🛠 Steps to Add Google Public DNS
+
+1. **Edit the resolv.conf file**:
+   Open the DNS configuration file using a text editor like `vi` or `nano`:
+      sudo vi /etc/resolv.conf
+   
+2. **Add Google DNS entries**:
+   Add the following lines at the top of the file:
+   
+   nameserver 8.8.8.8
+   nameserver 8.8.4.4
+
+3. **Save and exit**:
+   - In `vi`, press `Esc`, type `:wq`, and hit `Enter`.
+   - In `nano`, press `Ctrl+O` to write out, then `Ctrl+X` to exit.
+
+4. **Prevent overwriting (optional but recommended)**:
+   If your system uses a network manager or DHCP client that overwrites `/etc/resolv.conf`, you can make the changes persistent by:
+   - Editing the appropriate network configuration file (e.g., `/etc/network/interfaces`, `/etc/netplan/*.yaml`, or NetworkManager settings).
+   - Or by creating a custom `resolv.conf` and symlinking it:
+     
+     sudo chattr +i /etc/resolv.conf
+     
+     If Error comes like :chattr: command not found
+     sudo yum install e2fsprogs
+
+
+   > ⚠️ Use `chattr +i` with caution—it makes the file immutable.
 # Q13 Linux Firewalld Setup
 # Q14 Linux Postfix Mail Server
 # Q15 Linux Postfix Troubleshooting
@@ -898,7 +970,7 @@ If not avail:
 Create the devops group: sudo groupadd devops
 Create users virat and vivek: sudo useradd virat and sudo useradd vivek
 Permission removal or ading
-sudo setfacl -m u:virat:--- /etc/resolv.conf
+sudo setfacl -m u:virat: /etc/resolv.conf
 sudo setfacl -m u:vivek:r-- /etc/resolv.conf
 sudo setfacl -m g:devops:rw- /etc/resolv.conf
 verify:
