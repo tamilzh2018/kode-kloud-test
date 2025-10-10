@@ -18,3 +18,24 @@ EXPOSE 6100
 
 # Define the command to run the server.js when the container starts
 CMD ["node", "server.js"]
+
+---
+# Use a Python base image
+FROM python:3.10-slim
+
+# Set working directory
+WORKDIR /app
+
+# Copy requirements and source code
+COPY src/requirements.txt ./requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY src/ .
+
+# Expose port 3003
+EXPOSE 3003
+
+# Run the server
+CMD ["python", "server.py"]
+
+---

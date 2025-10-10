@@ -875,7 +875,174 @@ To resolve DNS issues on App Server 3 in the Stratos Datacenter by adding Google
 
    > ⚠️ Use `chattr +i` with caution—it makes the file immutable.
 # Q13 Linux Firewalld Setup
+To secure our Nautilus infrastructure in Stratos Datacenter we have decided to install and configure firewalld on all app servers. We have Apache and Nginx services running on these apps. Nginx is running as a reverse proxy server for Apache. We might have more robust firewall settings in the future, but for now we have decided to go with the given requirements listed below:
+
+a. Allow all incoming connections on Nginx port, i.e 80.
+
+b. Block all incoming connections on Apache port, i.e 8080.
+
+c. All rules must be permanent.
+
+d. Zone should be public.
+
+e. If Apache or Nginx services aren't running already, please make sure to start them.
+Ans:
+## ✅ **Requirements Recap:**
+
+1. **Allow** port **80 (Nginx)** — public zone, permanent.
+2. **Block** port **8080 (Apache)** — public zone, permanent.
+3. Ensure **Nginx and Apache are running**.
+4. Use **firewalld**, with rules set to **permanent** and in the **public** zone.
+## 🔧 Step-by-Step Instructions:
+
+### 1. **Install firewalld (if not installed)**
+sudo yum install firewalld -y  # For RHEL/CentOS
+# OR
+sudo apt install firewalld -y  # For Debian/Ubuntu
+### 2. **Enable and start firewalld**
+sudo systemctl enable firewalld
+sudo systemctl start firewalld
+### 3. **Set default zone to public (optional but recommended)**
+sudo firewall-cmd --set-default-zone=public
+### 4. **Allow Nginx (port 80) permanently**
+sudo firewall-cmd --zone=public --add-port=80/tcp --permanent
+
+### 5. **Remove/block Apache port (8080)** if previously allowed
+sudo firewall-cmd --zone=public --remove-port=8080/tcp --permanent
+> 💡 If it wasn't previously added, this command still ensures it's not allowed.
+### 6. **Reload firewalld to apply changes**
+sudo firewall-cmd --reload
+### 7. **Start Apache and Nginx services**
+sudo systemctl enable nginx
+sudo systemctl start nginx
+
+sudo systemctl enable httpd   # Apache is typically 'httpd' on RHEL-based systems
+sudo systemctl start httpd
+
+> 🔎 On Ubuntu/Debian, the Apache service is usually named `apache2`, so replace `httpd` with `apache2` if needed.
+
+### 8. **Verify firewall rules**
+
+sudo firewall-cmd --zone=public --list-ports
+
+✅ You should see:
+
+80/tcp
+
+🔴 You should **not** see:
+
+8080/tcp
+
 # Q14 Linux Postfix Mail Server
+xFusionCorp Industries has planned to set up a common email server in Stork DC. After several meetings and recommendations they have decided to use postfix as their mail transfer agent and dovecot as an IMAP/POP3 server. We would like you to perform the following steps:
+
+1. Install and configure postfix on Stork DC mail server.
+
+2. Create an email account siva@stratos.xfusioncorp.com identified by YchZHRcLkL.
+
+3. Set its mail directory to /home/siva/Maildir.
+
+4. Install and configure dovecot on the same server
+Ans:
+# 🛠️ Email Server Setup on CentOS using Postfix and Dovecot
+### ✅ **1. Install and Configure Postfix**
+
+#### 1.1 Install Postfix
+sudo yum install postfix -y
+#### 1.2 Enable and Start Postfix
+sudo systemctl enable postfix
+sudo systemctl start postfix
+
+#### 1.3 Configure Postfix
+Edit the Postfix config file:
+
+sudo vi /etc/postfix/main.cf
+
+**Make sure the following lines are added or edited:**
+
+myhostname = mail.stratos.xfusioncorp.com
+mydomain = stratos.xfusioncorp.com
+myorigin = $mydomain
+inet_interfaces = all
+inet_protocols = all
+mydestination = $myhostname, localhost.$mydomain, localhost, $mydomain
+home_mailbox = Maildir/
+
+**Then restart Postfix:**
+sudo systemctl restart postfix
+
+### ✅ **2. Create the Email Account `siva@stratos.xfusioncorp.com`**
+
+#### 2.1 Create a System User
+
+sudo useradd siva
+echo 'YchZHRcLkL' | sudo passwd --stdin siva
+
+#### 2.2 Set Up Maildir for the User
+
+sudo dnf install dovecot -y  # Dovecot provides maildirmake tool
+sudo maildirmake /home/siva/Maildir
+sudo chown -R siva:siva /home/siva/Maildir
+
+### ✅ **3. Install and Configure Dovecot**
+
+#### 3.1 Install Dovecot
+
+sudo yum install dovecot -y
+
+#### 3.2 Enable and Start Dovecot
+
+sudo systemctl enable dovecot
+sudo systemctl start dovecot
+
+### ✅ **4. Configure Dovecot**
+
+#### 4.1 Set Mail Location
+
+Edit `/etc/dovecot/conf.d/10-mail.conf`:
+
+mail_location = maildir:~/Maildir
+
+#### 4.2 Enable Login Mechanisms
+
+Edit `/etc/dovecot/conf.d/10-auth.conf`:
+
+disable_plaintext_auth = no
+auth_mechanisms = plain login
+!include auth-system.conf.ext
+
+#### 4.3 Enable IMAP and POP3 Protocols
+
+Edit `/etc/dovecot/dovecot.conf`:
+
+protocols = imap pop3
+
+#### 4.4 Restart Dovecot
+
+sudo systemctl restart dovecot
+
+### ✅ **5. Firewall Configuration (if enabled)**
+
+Allow required mail ports:
+
+sudo firewall-cmd --permanent --add-service=smtp
+sudo firewall-cmd --permanent --add-service=imap
+sudo firewall-cmd --permanent --add-service=pop3
+sudo firewall-cmd --reload
+
+### ✅ **6. Verify Services**
+
+* Check Postfix status:
+ 
+  systemctl status postfix
+  
+* Check Dovecot status:
+ 
+  systemctl status dovecot
+  
+* Confirm listening ports:
+ 
+  sudo netstat -tulnp | grep -E '110|143|25' or sudo ss -tulnp | grep -E '110|143|25'
 # Q15 Linux Postfix Troubleshooting
 # Q16 Install and Configure HaProxy LBR
 # Q17 Haproxy LBR Troubleshooting

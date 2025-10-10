@@ -1,12 +1,8 @@
 **Level 1**
 # Q1 Set Up Git Repository on Storage Server
-
 # Q2 Clone Git Repository on Storage Server
-
 # Q3 Fork a Git Repository
-
 # Q4 Update Git Repository with Sample HTML File
-
 # Q5 Delete Git Branch
 **Level 2**
 # Q1 Git Install and Create Repository

@@ -646,8 +646,6 @@ ssh thor@jump_host.stratos.xfusioncorp.com
 From the **jump host**, SSH into each app server using the provided credentials:
 
 #### A. Check `stapp01`
-
-
 ssh tony@stapp01
 # Password: Ir0nM@n
 
@@ -657,31 +655,19 @@ sudo systemctl status httpd
 # Check port
 sudo ss -tuln | grep 8088 or sudo ss -lptn 'sport = :5002'
 exit
-
-
 #### B. Check `stapp02`
-
-
 ssh steve@stapp02
 # Password: Am3ric@
-
 sudo systemctl status httpd
 sudo ss -tuln | grep 8088
 exit
-
-
 #### C. Check `stapp03`
-
-
 ssh banner@stapp03
 # Password: BigGr33n
-
 sudo systemctl status httpd
 sudo ss -tuln | grep 8088
 sudo netstat -tulpn | grep 8088
-
 exit
-
 
 > 🔎 One of these will show Apache is **inactive**, **not installed**, or **not running on port 8088**.
 
@@ -690,36 +676,25 @@ exit
 Let’s say, for example, `stapp02` is the faulty one (adjust based on what you find):
 
 ### A. Install Apache (if missing):
-
-
 sudo yum install httpd -y    # For RHEL/CentOS
-
 
 ### B. Configure Apache to Listen on Port `8088`
 
 Edit the config:
 
-
 sudo vi /etc/httpd/conf/httpd.conf
-
 
 Find the line:
 
-
 Listen 80
-
 
 Change it to:
 
-
 Listen 8088
-
 
 Also, update any `<VirtualHost *:80>` blocks to:
 
-
 <VirtualHost *:8088>
-
 
 Save and exit.
 
@@ -731,9 +706,7 @@ sudo systemctl enable httpd
 ### D. Confirm Apache is Running on Port 8088
 sudo ss -tuln | grep 8088
 
-
 You should see:
-
 
 LISTEN  0  128  *:8088  *:*
 
@@ -748,7 +721,6 @@ Ensure **each** `stapp0X` server has:
 ## ✅ FINAL CHECKLIST (Per Server)
 
 Run these:
-
 
 sudo systemctl is-active httpd      # should show 'active'
 sudo ss -tuln | grep 8088           # should show Apache listening
@@ -774,99 +746,54 @@ The system admins team of xFusionCorp Industries needs to deploy a new applicati
 4. For final testing try to access the App Server 3 link (either hostname or IP) from jump host using curl command. For example curl -Ik https://<app-server-ip>/.
 
 Ans:
+### ✅ 1. Install and Configure Nginx
 
-## ✅ Step-by-Step Instructions
-
-### 🔹 1. Install and Configure Nginx on App Server 3
-
-**Login to App Server 3**:
-From the **jump host**, SSH into App Server 3:
-
-ssh tony@appserver3
-**Install nginx**:
-sudo yum install -y nginx     # For RHEL/CentOS
-# or
-sudo apt update && sudo apt install -y nginx   # For Ubuntu/Debian
-
-**Enable and start nginx**:
+sudo yum install epel-release -y
+sudo yum install nginx -y
 sudo systemctl enable nginx
 sudo systemctl start nginx
-sudo systemctl status nginx
 
-### 🔹 2. Move SSL Certificate and Key to Appropriate Location and Configure Nginx
+### ✅ 2. Deploy SSL Certificate and Key
 
-**Move certificate and key**:
+Move the certificate and key to secure locations:
 
-sudo mkdir -p /etc/nginx/ssl
-sudo mv /tmp/nautilus.crt /etc/nginx/ssl/
-sudo mv /tmp/nautilus.key /etc/nginx/ssl/
-sudo chmod 600 /etc/nginx/ssl/nautilus.*
+sudo mv /tmp/nautilus.crt /etc/pki/tls/certs/nautilus.crt
+sudo mv /tmp/nautilus.key /etc/pki/tls/private/nautilus.key
 
-**Configure nginx for SSL**:
+Update the Nginx SSL configuration:
 
-Edit the default nginx config or create a new server block:
-
-sudo vi /etc/nginx/nginx.conf
-
-Add the following:
-
-nginx
+sudo tee /etc/nginx/conf.d/ssl.conf > /dev/null <<EOF
 server {
     listen 443 ssl;
     server_name localhost;
 
-    ssl_certificate /etc/nginx/ssl/nautilus.crt;
-    ssl_certificate_key /etc/nginx/ssl/nautilus.key;
+    ssl_certificate /etc/pki/tls/certs/nautilus.crt;
+    ssl_certificate_key /etc/pki/tls/private/nautilus.key;
+
+    root /usr/share/nginx/html;
+    index index.html;
 
     location / {
-        root /usr/share/nginx/html;
-        index index.html;
+        try_files \$uri \$uri/ =404;
     }
 }
+EOF
 
-Optional (to redirect HTTP to HTTPS):
-
-nginx
-server {
-    listen 80;
-    return 301 https://$host$request_uri;
-}
-
-**Test and reload nginx**:
-
+**Test and reload Nginx:**
 sudo nginx -t
 sudo systemctl reload nginx
 
-### 🔹 3. Create `index.html` with Content `Welcome!`
+### ✅ 3. Create `index.html` with Welcome Message
 
 echo "Welcome!" | sudo tee /usr/share/nginx/html/index.html
 
-### 🔹 4. Test From Jump Host
+### ✅ 4. Final Testing from Jump Host
 
-Go back to the **jump host** and run:
+From the jump host, run:
 
-curl -Ik https://<App-Server-3-IP>/
+curl -Ik https://<app-server-ip>/
 
-You should see a response with HTTP/1.1 200 OK and the certificate details, e.g.:
-
-
-HTTP/1.1 200 OK
-Server: nginx/1.x.x
-Date: ...
-Content-Type: text/html
-> Note: If you're using a self-signed cert, add `-k` to bypass certificate verification:
-
-curl -Ik https://<App-Server-3-IP>/
-
-## ✅ Summary of Key Paths
-
-| Component        | Path                          |
-| - | -- |
-| SSL Certificate  | `/etc/nginx/ssl/nautilus.crt` |
-| SSL Key          | `/etc/nginx/ssl/nautilus.key` |
-| Web Root         | `/usr/share/nginx/html/`      |
-| Nginx SSL Config | `/etc/nginx/conf.d/ssl.conf`  |
-
+Replace `<app-server-ip>` with the actual IP or hostname of App Server 3.
 
 Day 16: **Install and Configure Nginx as an LBR**
 Day by day traffic is increasing on one of the websites managed by the Nautilus production support team. Therefore, the team has observed a degradation in website performance. Following discussions about this issue, the team has decided to deploy this application on a high availability stack i.e on Nautilus infra in Stratos DC. They started the migration last month and it is almost done, as only the LBR server configuration is pending. Configure LBR server as per the information given below:
@@ -2055,6 +1982,67 @@ docker run -d -p 8080:8080 -p 443:443 --name webtest myhttpd
 **Test via browser or curl:**
 curl http://localhost:8080
 Day 46: **Deploy an App on Docker Containers**
+The Nautilus Application development team recently finished development of one of the apps that they want to deploy on a containerized platform. The Nautilus Application development and DevOps teams met to discuss some of the basic pre-requisites and requirements to complete the deployment. The team wants to test the deployment on one of the app servers before going live and set up a complete containerized stack using a docker compose fie. Below are the details of the task:
+
+On App Server 1 in Stratos Datacenter create a docker compose file /opt/data/docker-compose.yml (should be named exactly).
+
+The compose should deploy two services (web and DB), and each service should deploy a container as per details below:
+
+For web service:
+
+a. Container name must be php_apache.
+
+b. Use image php with any apache tag. Check here for more details.
+
+c. Map php_apache container's port 80 with host port 3001
+
+d. Map php_apache container's /var/www/html volume with host volume /var/www/html.
+
+For DB service:
+
+a. Container name must be mysql_apache.
+
+b. Use image mariadb with any tag (preferably latest). Check here for more details.
+
+c. Map mysql_apache container's port 3306 with host port 3306
+
+d. Map mysql_apache container's /var/lib/mysql volume with host volume /var/lib/mysql.
+
+e. Set MYSQL_DATABASE=database_apache and use any custom user ( except root ) with some complex password for DB connections.
+
+After running docker-compose up you can access the app with curl command curl <server-ip or hostname>:3001/
+
+For more details check here.
+
+Note: Once you click on FINISH button, all currently running/stopped containers will be destroyed and stack will be deployed again using your compose file.
+Ans:
+version: '3.8'
+services:
+  web:
+    container_name: php_apache
+    image: php:8.2-apache
+    ports:
+      - "3001:80"
+    volumes:
+      -  /var/www/html:/var/www/html
+
+  db:
+    container_name: mysql_apache
+    image: mariadb:latest
+    ports:
+      - "3306:3306"
+    environment:
+      - MYSQL_USER=myuser
+      - MYSQL_PASSWORD=mypassword
+      - MYSQL_DATABASE=database_apache
+      - MYSQL_ROOT_PASSWORD=RootP@ss123!
+    volumes:
+      - /var/lib/mysql:/var/lib/mysql
+
+# *To run the container***
+sudo docker compose up -d
+# *Verify**
+curl IP:port
 
 Day 47: **Docker Python App**
 

@@ -44,11 +44,3 @@ jump_host	Dynamic	        jump_host.stratos.xfusioncorp.com	thor	mjolnir123	Jump
 jenkins	    172.16.238.19	jenkins.stratos.xfusioncorp.com	    jenkins	j@rv!s	    Jenkins Server for CI/CD
 
 
-sudo useradd -s /usr/sbin/nologin rose
-getent passwd rose
-
-sudo useradd javed -e 2024-02-17 
-
-sudo chage -l --iso8601 javed
-
-

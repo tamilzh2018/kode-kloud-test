@@ -2544,7 +2544,176 @@ output "kke_policy_name" {
 
 
 # Q17 Access Secrets Manager with IAM Role Using Terraform
+To enable secure retrieval of secrets, the Nautilus DevOps team needs to configure access to a secret in AWS Secrets Manager using IAM roles and policies. The objective is to allow EC2 instances to retrieve secrets securely. Please complete the following tasks:
+
+Create a secret in AWS Secrets Manager named nautilus-app-secret with the following secret string:
+
+{"db_user":"admin","db_pass":"supersecret"}
+
+Create an IAM role named nautilus-app-role with EC2 as the trusted entity.
+
+Attach an inline IAM policy named nautilus-app-policy that grants permission to retrieve the secret from AWS Secrets Manager.
+
+Use the main.tf file (do not create a separate .tf file) to provision the IAM Role and IAM Policy.
+
+Create the variables.tf file, ensure the following variables are defined in variables.tf file:
+
+KKE_SECRET_NAME for the secret name.
+KKE_SECRET_VALUE for the secret value.
+KKE_ROLE_NAME for the IAM role name.
+KKE_POLICY_NAME for the IAM policy name.
+Create the outputs.tf file, and use the following:
+
+KKE_secret_name: The secret name
+KKE_role_name: The IAM role name
+KKE_policy_name: The IAM policy name
+
+Ans:
+
+**outputs.tf**
+output "KKE_secret_name" {
+  value = var.KKE_SECRET_NAME
+}
+
+output "KKE_role_name" {
+  value = var.KKE_ROLE_NAME
+}
+
+output "KKE_policy_name" {
+  value = var.KKE_POLICY_NAME
+}
+
+**main.tf**
+
+resource "aws_secretsmanager_secret" "nautilus_secret" {
+  name = var.KKE_SECRET_NAME
+}
+
+resource "aws_secretsmanager_secret_version" "nautilus_secret_version" {
+  secret_id     = aws_secretsmanager_secret.nautilus_secret.id
+  secret_string = var.KKE_SECRET_VALUE
+}
+
+resource "aws_iam_role" "nautilus_role" {
+  name = var.KKE_ROLE_NAME
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        Effect = "Allow",
+        Principal = {
+          Service = "ec2.amazonaws.com"
+        },
+        Action = "sts:AssumeRole"
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy" "nautilus_policy" {
+  name = var.KKE_POLICY_NAME
+  role = aws_iam_role.nautilus_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        Effect = "Allow",
+        Action = [
+          "secretsmanager:GetSecretValue"
+        ],
+        Resource = aws_secretsmanager_secret.nautilus_secret.arn
+      }
+    ]
+  })
+}
+
+**variables.tf**
+variable "KKE_SECRET_NAME" {
+  description = "Name of the secret in AWS Secrets Manager"
+  type        = string
+  default     = "nautilus-app-secret"
+}
+
+variable "KKE_SECRET_VALUE" {
+  description = "Secret string value"
+  type        = string
+  default     = "{\"db_user\":\"admin\",\"db_pass\":\"supersecret\"}"
+}
+
+variable "KKE_ROLE_NAME" {
+  description = "Name of the IAM role"
+  type        = string
+  default     = "nautilus-app-role"
+}
+
+variable "KKE_POLICY_NAME" {
+  description = "Name of the IAM policy"
+  type        = string
+  default     = "nautilus-app-policy"
+}
+
+
 # Q18 Create and Configure Alarm Using CloudWatch Using Terraform
+The Nautilus DevOps team has been tasked with setting up an EC2 instance for their application. To ensure the application performs optimally, they also need to create a CloudWatch alarm to monitor the instance's CPU utilization. The alarm should trigger if the CPU utilization exceeds 90% for one consecutive 5-minute period. To send notifications, use the SNS topic named devops-sns-topic, which is already created.
+
+Launch EC2 Instance: Create an EC2 instance named devops-ec2 using any appropriate Ubuntu AMI (you can use AMI ami-0c02fb55956c7d316).
+
+Create CloudWatch Alarm: Create a CloudWatch alarm named devops-alarm with the following specifications:
+
+Statistic: Average
+Metric: CPU Utilization
+Threshold: >= 90% for 1 consecutive 5-minute period
+Alarm Actions: Send a notification to the devops-sns-topic SNS topic.
+Update the main.tf file (do not create a separate .tf file) to create a EC2 Instance and CloudWatch Alarm.
+
+Create an outputs.tf file to output the following values:
+
+KKE_instance_name for the EC2 instance name.
+KKE_alarm_name for the CloudWatch alarm name.
+
+Ans:
+**outputs.tf**
+output KKE_instance_name {
+  value = ""
+}
+output KKE_alarm_name {
+  value = ""
+}
+
+**main.tf**
+resource "aws_sns_topic" "sns_topic" {
+  name = "nautilus-sns-topic"
+}
+
+resource "aws_instance" "nautilus_ec2" {
+  ami           = "ami-0c02fb55956c7d316"
+  instance_type = "t2.micro"
+  tags = {
+    Name = "nautilus-ec2"
+  }
+}
+
+resource "aws_cloudwatch_metric_alarm" "nautilus_alarm" {
+  alarm_name          = "nautilus-alarm"
+  comparison_operator = "GreaterThanOrEqualToThreshold"
+  evaluation_periods  = 1
+  metric_name         = "CPUUtilization"
+  namespace           = "AWS/EC2"
+  period              = 300
+  statistic           = "Average"
+  threshold           = 90
+  alarm_description   = "Alarm when CPU exceeds 90% for 5 minutes"
+  alarm_actions = [
+    "arn:aws:sns:us-east-1:123456789012:nautilus-sns-topic" // Replace with your actual SNS topic ARN
+  ]
+  dimensions = {
+    InstanceId = aws_instance.nautilus_ec2.id
+  }
+  depends_on = [aws_instance.nautilus_ec2]
+}
+
 # Q19 Configure CloudWatch to Trigger SNS Alerts Using Terraform
 # Q20 Create DynamoDB Table Using CloudFormation Using Terraform
 

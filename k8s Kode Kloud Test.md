@@ -2835,4 +2835,356 @@ Ensure the pod `nginx-phpfpm` is in `Running` state.
 * Test the service by accessing it on port **30012** (use App button or browser depending on your environment).
 
 # Day 4 Deploy Drupal App on Kubernetes
+We need to deploy a Drupal application on Kubernetes cluster. The Nautilus application development team want to setup a fresh Drupal as they will do the installation on their own. Below you can find the requirements, they have shared with us.
+
+1) Configure a persistent volume drupal-mysql-pv with hostPath = /drupal-mysql-data (/drupal-mysql-data directory already exists on the worker Node i.e jump host), 5Gi of storage and ReadWriteOnce access mode.
+
+2) Configure one PersistentVolumeClaim named drupal-mysql-pvc with storage request of 3Gi and ReadWriteOnce access mode.
+
+3) Create a deployment drupal-mysql with 1 replica, use mysql:5.7 image. Mount the claimed PVC at /var/lib/mysql.
+
+4) Create a deployment drupal with 1 replica and use drupal:8.6 image.
+
+5) Create a NodePort type service which should be named as drupal-service and nodePort should be 30095.
+
+6) Create a service drupal-mysql-service to expose mysql deployment on port 3306.
+
+7) Set rest of the configration for deployments, services, secrets etc as per your preferences. At the end you should be able to access the Drupal installation page by clicking on App button
+Ans:
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: drupal-mysql-pv
+spec:
+  capacity:
+    storage: 5Gi
+  accessModes:
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: manual
+  hostPath:
+    path: /drupal-mysql-data
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: drupal-mysql-pvc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 3Gi
+  storageClassName: manual
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: drupal-mysql
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: drupal-mysql
+  template:
+    metadata:
+      labels:
+        app: drupal-mysql
+    spec:
+      containers:
+        - name: mysql
+          image: mysql:5.7
+          env:
+            - name: MYSQL_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mysql-secret
+                  key: mysql-root-password
+            - name: MYSQL_DATABASE
+              valueFrom:
+                secretKeyRef:
+                  name: mysql-secret
+                  key: mysql-database
+            - name: MYSQL_USER
+              valueFrom:
+                secretKeyRef:
+                  name: mysql-secret
+                  key: mysql-user
+            - name: MYSQL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mysql-secret
+                  key: mysql-password
+          ports:
+            - containerPort: 3306
+          volumeMounts:
+            - mountPath: /var/lib/mysql
+              name: mysql-storage
+      volumes:
+        - name: mysql-storage
+          persistentVolumeClaim:
+            claimName: drupal-mysql-pvc
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: drupal
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: drupal
+  template:
+    metadata:
+      labels:
+        app: drupal
+    spec:
+      containers:
+        - name: drupal
+          image: drupal:8.6
+          ports:
+            - containerPort: 80
+          env:
+            - name: DRUPAL_DB_HOST
+              value: drupal-mysql-service
+            - name: DRUPAL_DB_NAME
+              valueFrom:
+                secretKeyRef:
+                  name: mysql-secret
+                  key: mysql-database
+            - name: DRUPAL_DB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: mysql-secret
+                  key: mysql-user
+            - name: DRUPAL_DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mysql-secret
+                  key: mysql-password      
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: drupal-service
+spec:
+  type: NodePort
+  selector:
+    app: drupal
+  ports:
+    - port: 80
+      targetPort: 80
+      nodePort: 30095
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: drupal-mysql-service
+spec:
+  selector:
+    app: drupal-mysql
+  ports:
+    - port: 3306
+      targetPort: 3306
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: mysql-secret
+type: Opaque
+data:
+  mysql-root-password: cGFzc3dvcmQ=          # 'password' (base64 encoded)
+  mysql-database: ZHJ1cGFs                   # 'drupal'
+  mysql-user: ZHJ1cHVzZXI=                   # 'drupuser'
+  mysql-password: ZHJ1cHBhc3M=               # 'druppass'
+
 # Day 5 Deploy Guest Book App on Kubernetes
+The Nautilus Application development team has finished development of one of the applications and it is ready for deployment. It is a guestbook application that will be used to manage entries for guests/visitors. As per discussion with the DevOps team, they have finalized the infrastructure that will be deployed on Kubernetes cluster. Below you can find more details about it.
+
+
+BACK-END TIER
+
+Create a deployment named redis-master for Redis master.
+
+a.) Replicas count should be 1.
+
+b.) Container name should be master-redis-datacenter and it should use image redis.
+
+c.) Request resources as CPU should be 100m and Memory should be 100Mi.
+
+d.) Container port should be redis default port i.e 6379.
+
+Create a service named redis-master for Redis master. Port and targetPort should be Redis default port i.e 6379.
+
+Create another deployment named redis-slave for Redis slave.
+
+a.) Replicas count should be 2.
+
+b.) Container name should be slave-redis-datacenter and it should use gcr.io/google_samples/gb-redisslave:v3 image.
+
+c.) Requests resources as CPU should be 100m and Memory should be 100Mi.
+
+d.) Define an environment variable named GET_HOSTS_FROM and its value should be dns.
+
+e.) Container port should be Redis default port i.e 6379.
+
+Create another service named redis-slave. It should use Redis default port i.e 6379.
+
+FRONT END TIER
+
+Create a deployment named frontend.
+
+a.) Replicas count should be 3.
+
+b.) Container name should be php-redis-datacenter and it should use gcr.io/google-samples/gb-frontend@sha256:a908df8486ff66f2c4daa0d3d8a2fa09846a1fc8efd65649c0109695c7c5cbff image.
+
+c.) Request resources as CPU should be 100m and Memory should be 100Mi.
+
+d.) Define an environment variable named as GET_HOSTS_FROM and its value should be dns.
+
+e.) Container port should be 80.
+
+Create a service named frontend. Its type should be NodePort, port should be 80 and its nodePort should be 30009.
+
+Finally, you can check the guestbook app by clicking on App button.
+
+
+You can use any labels as per your choice.
+Ans:
+#BACK-END TIER
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis-master
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: redis
+      tier: backend
+      role: master
+  template:
+    metadata:
+      labels:
+        app: redis
+        tier: backend
+        role: master
+    spec:
+      containers:
+      - name: master-redis-datacenter
+        image: redis:6.0.9-alpine
+        ports:
+        - containerPort: 6379
+        resources:
+          requests:
+            memory: "100Mi"
+            cpu: "100m"
+---
+#Back-end Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis-master
+spec:
+  selector:
+    app: redis
+    tier: backend
+    role: master
+  ports:
+    - port: 6379
+      targetPort: 6379
+---
+#BACK-END TIER-Slave
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis-slave
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: redis
+      tier: backend
+      role: slave
+  template:
+    metadata:
+      labels:
+        app: redis
+        tier: backend
+        role: slave
+    spec:
+      containers:
+      - name: slave-redis-datacenter
+        image: gcr.io/google_samples/gb-redisslave:v3
+        env:
+        - name: GET_HOSTS_FROM
+          value: "dns"
+        ports:
+        - containerPort: 6379
+        resources:
+          requests:
+            memory: "100Mi"
+            cpu: "100m"
+---
+#Slave Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis-slave
+spec:
+  selector:
+    app: redis
+    tier: backend
+    role: slave
+  ports:
+    - port: 6379
+      targetPort: 6379
+---
+#FRONT-END TIER
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: guestbook
+      tier: frontend
+  template:
+    metadata:
+      labels:
+        app: guestbook
+        tier: frontend
+    spec:
+      containers:
+      - name: php-redis-datacenter
+        image: gcr.io/google-samples/gb-frontend@sha256:a908df8486ff66f2c4daa0d3d8a2fa09846a1fc8efd65649c0109695c7c5cbff
+        env:
+        - name: GET_HOSTS_FROM
+          value: "dns"
+        ports:
+        - containerPort: 80
+        resources:
+          requests:
+            memory: "100Mi"
+            cpu: "100m"
+---
+#Front-end Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend
+spec:
+  type: NodePort
+  selector:
+    app: guestbook
+    tier: frontend
+  ports:
+    - port: 80
+      targetPort: 80
+      nodePort: 30009
+---
