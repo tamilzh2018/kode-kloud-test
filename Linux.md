@@ -1044,6 +1044,45 @@ sudo firewall-cmd --reload
  
   sudo netstat -tulnp | grep -E '110|143|25' or sudo ss -tulnp | grep -E '110|143|25'
 # Q15 Linux Postfix Troubleshooting
+Some users of the monitoring app have reported issues with xFusionCorp Industries mail server. They have a mail server in Stork DC where they are using postfix mail transfer agent. Postfix service seems to fail. Try to identify the root cause and fix it.
+Ans:
+Error: Msg:
+ct 11 08:13:48 stmail01.stratos.xfusioncorp.com postfix[778]: warning: /etc/postfix/main.cf, line 135: overriding earlier entry: inet_interfaces=all
+Oct 11 08:13:48 stmail01.stratos.xfusioncorp.com postfix[778]: fatal: parameter inet_interfaces: no local interface found for ::1
+Oct 11 08:13:49 stmail01.stratos.xfusioncorp.com systemd[1]: postfix.service: Child 778 belongs to postfix.service.
+Oct 11 08:13:49 stmail01.stratos.xfusioncorp.com systemd[1]: postfix.service: Control process exited, code=exited, status=1/FAILURE
+░░ Subject: Unit process exited
+░░ Defined-By: systemd
+░░ Support: https://access.redhat.com/support
+░░ 
+░░ An ExecStart= process belonging to unit postfix.service has exited.
+░░ 
+░░ The process' exit code is 'exited' and its exit status is 1.
+Oct 11 08:13:49 stmail01.stratos.xfusioncorp.com systemd[1]: postfix.service: Got final SIGCHLD for state start.
+Oct 11 08:13:49 stmail01.stratos.xfusioncorp.com systemd[1]: postfix.service: Failed with result 'exit-code'.
+░░ Subject: Unit failed
+░░ Defined-By: systemd
+░░ Support: https://access.redhat.com/support
+░░ 
+░░ The unit postfix.service has entered the 'failed' state with result 'exit-code'.
+Oct 11 08:13:49 stmail01.stratos.xfusioncorp.com systemd[1]: postfix.service: Service will not restart (restart setting)
+Oct 11 08:13:49 stmail01.stratos.xfusioncorp.com systemd[1]: postfix.service: Changed start -> failed
+Oct 11 08:13:49 stmail01.stratos.xfusioncorp.com systemd[1]: postfix.service: Job 36 postfix.service/start finished, result=failed
+Oct 11 08:13:49 stmail01.stratos.xfusioncorp.com systemd[1]: Failed to start Postfix Mail Transport Agent.
+░░ Subject: A start job for unit postfix.service has failed
+░░ Defined-By: systemd
+░░ Support: https://access.redhat.com/support
+░░ 
+░░ A start job for unit postfix.service has finished with a failure.
+░░ 
+░░ The job identifier is 36 and the job result is failed.
+Solution:
+**Edit configuration file**
+sudo vi /etc/postfix/main.cf
+inet_interfaces=all to inet_interfaces=localhost
+inet_protocols=all to inet_protocol=ipv4
+ **save the document**
+sudo systemctl start postfix
 # Q16 Install and Configure HaProxy LBR
 # Q17 Haproxy LBR Troubleshooting
 # Q18 MariaDB Troubleshooting

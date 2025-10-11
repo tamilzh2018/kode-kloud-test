@@ -44,3 +44,10 @@ jump_host	Dynamic	        jump_host.stratos.xfusioncorp.com	thor	mjolnir123	Jump
 jenkins	    172.16.238.19	jenkins.stratos.xfusioncorp.com	    jenkins	j@rv!s	    Jenkins Server for CI/CD
 
 
+Docker Execrcise completed
+Kubernetes Execrcise completed
+Ansible Execrcise completed
+Terraform is Pending
+Jenkins is Pending
+Git is Pending
+Linux is Pending
