@@ -841,25 +841,34 @@ Here's an example block you can place **within the `http` block** in `nginx.conf
 
 #### 🔧 Example `nginx.conf` additions:
 
-nginx
+ 
 http {
+    
     upstream backend {
-        server <App_Server_1_IP>:<Apache_Port>;
-        server <App_Server_2_IP>:<Apache_Port>;
-        # Add more if needed
-    }
-
+        server 172.16.238.10:port;
+        server 172.16.238.11:port;
+        server 172.16.238.12:port;
+        }
     server {
-        listen 80;
-        
+        listen       80;
+        listen       [::]:80;
+        server_name  _;
+        root         /usr/share/nginx/html;
         location / {
-            proxy_pass http://backend;
+                proxy_pass http://backend;
+                }
+        # Load configuration files for the default server block.
+        include /etc/nginx/default.d/*.conf;
+
+        error_page 404 /404.html;
+        location = /404.html {
+        }
+
+        error_page 500 502 503 504 /50x.html;
+        location = /50x.html {
         }
     }
-
-    # Keep other existing http block configs
 }
-
 ✅ Replace:
 
 * `<App_Server_1_IP>` and `<App_Server_2_IP>` with the real IP addresses of the app servers.
@@ -2045,7 +2054,40 @@ sudo docker compose up -d
 curl IP:port
 
 Day 47: **Docker Python App**
+A python app needed to be Dockerized, and then it needs to be deployed on App Server 2. We have already copied a requirements.txt file (having the app dependencies) under /python_app/src/ directory on App Server 2. Further complete this task as per details mentioned below:
 
+
+
+Create a Dockerfile under /python_app directory:
+
+Use any python image as the base image.
+Install the dependencies using requirements.txt file.
+Expose the port 6400.
+Run the server.py script using CMD.
+
+Build an image named nautilus/python-app using this Dockerfile.
+
+Once image is built, create a container named pythonapp_nautilus:
+
+Map port 6400 of the container to the host port 8097.
+
+Once deployed, you can test the app using curl command on App Server 2.
+Ans:
+FROM python:3.8-slim
+WORKDIR /app
+COPY src/requirements.txt ./requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
+COPY src/ .
+EXPOSE 6400
+CMD ["python", "server.py"]
+**Build the Docker Image**
+docker build -t nautilus/python-app .
+
+**Run the Docker Container**
+docker run -d --name pythonapp_nautilus -p 8099:3003 nautilus/python-app
+
+**Test the Deployment**
+curl http://localhost:8099/
 Day 48: **Deploy Pods in Kubernetes Cluster**
 
 Day 49: **Deploy Applications with Kubernetes Deployments**
