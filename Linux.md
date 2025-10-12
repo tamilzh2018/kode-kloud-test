@@ -1084,7 +1084,119 @@ inet_protocols=all to inet_protocol=ipv4
  **save the document**
 sudo systemctl start postfix
 # Q16 Install and Configure HaProxy LBR
+There is a static website running in Stratos Datacenter. They have already configured the app servers and code is already deployed there. To make it work properly, they need to configure LBR server. There are number of options for that, but team has decided to go with HAproxy. FYI, apache is running on port 8084 on all app servers. Complete this task as per below details.
+
+a. Install and configure HAproxy on LBR server using yum only and make sure all app servers are added to HAproxy load balancer. HAproxy must serve on default http port (Note: Please do not remove stats socket /var/lib/haproxy/stats entry from haproxy default config.).
+
+b. Once done, you can access the website using StaticApp button on the top bar.
+Ans:
+To complete the HAProxy setup on the LBR server as described, follow these steps:
+
+### 🛠️ Step A: Install and Configure HAProxy
+#### 1. **Install HAProxy using `yum`**
+
+sudo yum install haproxy -y
+
+#### 2. **Edit HAProxy Configuration**
+Open the HAProxy configuration file:
+
+sudo vi /etc/haproxy/haproxy.cfg
+
+Make sure the default `stats socket` line is **not removed**:
+
+stats socket /var/lib/haproxy/stats
+
+Then, update the configuration to include your app servers. Here's an example assuming three app servers (`app1`, `app2`, `app3`) running Apache on port `8084`:
+1. Update the frontend to listen on port 80
+Change:frontend main
+    bind *:5000
+ To:
+frontend http_front
+    bind *:80
+    default_backend http_back
+2. Update backend app server ports to 8084
+Change:
+backend app
+    balance     roundrobin
+    server  app1 127.0.0.1:5001 check
+    server  app2 127.0.0.1:5002 check
+    server  app3 127.0.0.1:5003 check
+    server  app4 127.0.0.1:5004 check
+To:
+
+backend http_back
+    balance roundrobin
+    server stapp01 172.16.238.10:8084 check
+    server stapp02 172.16.238.11:8084 check
+    server stapp03 172.16.238.12:8084 check
+
+
+Replace the IPs (`172.16.238.10`, etc.) with the actual IP addresses of your app servers.
+
+#### 3. **Enable and Start HAProxy**
+
+sudo systemctl enable haproxy
+sudo systemctl start haproxy
+
+### ✅ Step B: Verify Access
+
+Once HAProxy is running and properly configured, click the **StaticApp** button on the top bar to verify that the static website is accessible through the load balancer.
+
 # Q17 Haproxy LBR Troubleshooting
+xFusionCorp Industries has an application running on Nautlitus infrastructure in Stratos Datacenter. The monitoring tool recognised that there is an issue with the haproxy service on LBR server. That needs to fixed to make the application work properly.
+
+Troubleshoot and fix the issue, and make sure haproxy service is running on Nautilus LBR server. Once fixed, make sure you are able to access the website using StaticApp button on the top bar.
+Ans:
+
+To troubleshoot and fix the HAProxy service issue on the Nautilus LBR server, follow these steps:
+
+### 🛠️ Step-by-Step Troubleshooting Guide
+
+#### 1. **Access the LBR Server**
+Log into the Nautilus LBR server using SSH:
+
+ssh tony@lbr.stratos.xfusioncorp.com
+
+Use the appropriate credentials provided by your infrastructure team.
+
+#### 2. **Check HAProxy Service Status**
+Run:
+
+sudo systemctl status haproxy
+
+This will show whether the service is active, inactive, or failed.
+
+#### 3. **Inspect Logs for Errors**
+Check HAProxy logs for clues:
+
+sudo journalctl -u haproxy
+
+Or:
+
+sudo tail -n 50 /var/log/haproxy.log
+
+Look for configuration errors or port binding issues.
+
+#### 4. **Validate HAProxy Configuration**
+Run a syntax check:
+
+sudo haproxy -c -f /etc/haproxy/haproxy.cfg
+
+If there are errors, edit the config file:
+
+sudo vi /etc/haproxy/haproxy.cfg
+
+Ensure the frontend and backend sections are correctly defined and pointing to the right application servers.
+
+#### 5. **Restart HAProxy**
+Once the configuration is fixed:
+
+sudo systemctl restart haproxy
+
+Then verify it's running:
+
+sudo systemctl status haproxy
+
 # Q18 MariaDB Troubleshooting
 # Q19 Linux  Scripts
 # Q20 Add Response Headers in Apache

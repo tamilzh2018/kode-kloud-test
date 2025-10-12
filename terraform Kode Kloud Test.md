@@ -2778,6 +2778,84 @@ output "KKE_cloudwatch_alarm_name" {
 }
 
 # Q20 Create DynamoDB Table Using CloudFormation Using Terraform
+The Nautilus DevOps team wants to automate infrastructure provisioning using CloudFormation. As part of the stack setup, they need to create a DynamoDB table.
+
+Create a CloudFormation stack named devops-dynamodb-stack.
+
+The stack must create a DynamoDB table named devops-cf-dynamodb-table.
+
+Use the main.tf file (do not create a separate .tf file) to provision a CloudFormation stack and DynamoDB table. Make sure to add a lifecycle block in main.tf to ignore changes to the parameters attribute.
+
+Use the variables.tf file with the following variable names:
+
+KKE_DYNAMODB_TABLE_NAME: Dynamodb table name.
+The locals.tf file is already provided and includes the following:
+
+cf_template_body: A local variable that stores the CloudFormation template body.
+Use the outputs.tf file to output the following:
+
+KKE_stack_name: CloudFormation stack name
+
+**Existing locals.tf**
+locals {
+  cf_template_body = <<JSON
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Resources": {
+    "MyDynamoDBTable": {
+      "Type": "AWS::DynamoDB::Table",
+      "Properties": {
+        "TableName": "devops-cf-dynamodb-table",
+        "AttributeDefinitions": [
+          {
+            "AttributeName": "ID",
+            "AttributeType": "S"
+          }
+        ],
+        "KeySchema": [
+          {
+            "AttributeName": "ID",
+            "KeyType": "HASH"
+          }
+        ],
+        "ProvisionedThroughput": {
+          "ReadCapacityUnits": 5,
+          "WriteCapacityUnits": 5
+        }
+      }
+    }
+  }
+}
+JSON
+}
+**main.tf**
+resource "aws_cloudformation_stack" "devops_dynamodb_stack" {
+  name          = "devops-dynamodb-stack"
+  template_body = local.cf_template_body
+
+  parameters = {
+    KKE_DYNAMODB_TABLE_NAME = var.KKE_DYNAMODB_TABLE_NAME
+  }
+
+  lifecycle {
+    ignore_changes = [
+      parameters
+    ]
+  }
+}
+
+
+**outputs.tf**
+output "KKE_stack_name" {
+  description = "CloudFormation stack name"
+  value       = aws_cloudformation_stack.devops_dynamodb_stack.name
+}
+**variables.tf**
+variable "KKE_DYNAMODB_TABLE_NAME" {
+  description = "DynamoDB table name"
+  type        = string
+  default     = "devops-cf-dynamodb-table"
+}
 
 **Level 3**
 # Q1 Managing Scalable NoSQL Databases with Amazon DynamoDB Using Terraform
