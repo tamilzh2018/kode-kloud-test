@@ -2089,9 +2089,23 @@ docker run -d --name pythonapp_nautilus -p 8099:3003 nautilus/python-app
 **Test the Deployment**
 curl http://localhost:8099/
 Day 48: **Deploy Pods in Kubernetes Cluster**
+The Nautilus DevOps team is diving into Kubernetes for application management. One team member has a task to create a pod according to the details below:
+
+
+Create a pod named pod-nginx using the httpd image with the latest tag. Ensure to specify the tag as httpd:latest.
+
+Set the app label to nginx_app, and name the container as nginx-container.
+
+Note: The kubectl utility on jump_host is configured to operate with the Kubernetes cluster.
+Ans:
+kubectl run pod-nginx --image=nginx:latest --labels app=nginx_app --port=80 
 
 Day 49: **Deploy Applications with Kubernetes Deployments**
+The Nautilus DevOps team is delving into Kubernetes for app management. One team member needs to create a deployment following these details:
 
+Create a deployment named nginx to deploy the application nginx using the image nginx:latest (ensure to specify the tag)
+Ans:
+kubectl create deployment nginx-deployment --image=nginx:latest
 Day 50: **Set Resource Limits in Kubernetes Pods**
 
 Day 51: **Execute Rolling Updates in Kubernetes**

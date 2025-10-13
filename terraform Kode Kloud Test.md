@@ -2859,10 +2859,616 @@ variable "KKE_DYNAMODB_TABLE_NAME" {
 
 **Level 3**
 # Q1 Managing Scalable NoSQL Databases with Amazon DynamoDB Using Terraform
+The Nautilus DevOps team is developing a simple 'To-Do' application using DynamoDB to store and manage tasks efficiently. The team needs to create a DynamoDB table to hold tasks, each identified by a unique task ID. Each task will have a description and a status, which indicates the progress of the task (e.g., 'completed' or 'in-progress').
+
+Your task is to:
+
+Create a DynamoDB table named datacenter-tasks with a primary key called taskId (string).
+
+Insert the following tasks into the table:
+
+Task 1: taskId: 1, description: Learn DynamoDB, status: completed
+
+Task 2: taskId: 2, description: Build To-Do App, status: in-progress
+
+Verify that Task 1 has a status of completed and Task 2 has a status of in-progress.
+
+Create main.tf(do not create a separate .tf file) to provision a dynamo_db table and insert tasks.
+
+Create a variables.tf file with the following:
+
+KKE_TABLE_NAME: name of the dynamo_db table.
+Use terraform.tfvars file to input the name of the dynamo_db table.
+
+Use outputs.tf file for the following:
+
+kke_dynamodb_table_name: name of the dynamo_db table created.
+Ans:
+
+* Create a **DynamoDB table named `datacenter-tasks`**.
+* Insert two tasks.
+* Use proper variable and output files as requested.
+
+### ✅ File 1: `main.tf`
+
+
+provider "aws" {
+  region = "us-east-1" # Adjust as needed
+}
+
+resource "aws_dynamodb_table" "kke_tasks_table" {
+  name         = var.KKE_TABLE_NAME
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "taskId"
+
+  attribute {
+    name = "taskId"
+    type = "S"
+  }
+
+  tags = {
+    Environment = "dev"
+    Project     = "ToDoApp"
+  }
+}
+
+# Task 1
+resource "aws_dynamodb_table_item" "task1" {
+  table_name = aws_dynamodb_table.kke_tasks_table.name
+  hash_key   = "taskId"
+
+  item = jsonencode({
+    taskId      = "1"
+    description = "Learn DynamoDB"
+    status      = "completed"
+  })
+}
+
+# Task 2
+resource "aws_dynamodb_table_item" "task2" {
+  table_name = aws_dynamodb_table.kke_tasks_table.name
+  hash_key   = "taskId"
+
+  item = jsonencode({
+    taskId      = "2"
+    description = "Build To-Do App"
+    status      = "in-progress"
+  })
+}
+### ✅ File 2: `variables.tf`
+
+
+variable "KKE_TABLE_NAME" {
+  description = "Name of the DynamoDB table"
+  type        = string
+}
+
+### ✅ File 3: `terraform.tfvars`
+
+KKE_TABLE_NAME = "datacenter-tasks"
+
+### ✅ File 4: `outputs.tf`
+
+output "kke_dynamodb_table_name" {
+  description = "Name of the DynamoDB table created"
+  value       = aws_dynamodb_table.kke_tasks_table.name
+}
+
+### 🧪 How to Verify Tasks in DynamoDB
+
+After applying the Terraform config:
+
+terraform init
+terraform apply
+
+You can verify the items using the AWS CLI:
+
+aws dynamodb get-item \
+    --table-name datacenter-tasks \
+    --key '{"taskId": {"S": "1"}}'
+
+aws dynamodb get-item \
+    --table-name datacenter-tasks \
+    --key '{"taskId": {"S": "2"}}'
+
+Look for:
+
+* Task 1 → status: `completed`
+* Task 2 → status: `in-progress`
+
 # Q2 Building a Real-Time Data Ingestion Pipeline with Kinesis Firehose Using Terraform
+The DevOps team needs to create a data ingestion pipeline using AWS Kinesis Firehose to deliver streaming data into an S3 bucket. The Firehose delivery stream must assume an IAM role using STS, deliver data to an S3 bucket, and add a newline delimiter after each record. Buffering settings should be configured to deliver data either when the buffer reaches 5 MB or after 300 seconds, whichever comes first.
+
+You are required to complete this task using Terraform.
+
+Task Requirements:
+
+Create an S3 bucket named nautilus-stream-bucket-971 using Terraform.
+
+Create an IAM role named firehose-sts-role and policy that allows Kinesis Firehose to put objects into the S3 bucket.
+
+The Firehose delivery stream must use the IAM role via STS assume role.
+
+Use depends_on in the Firehose resource to ensure it waits for the IAM role policy attachment.
+
+Create a Firehose delivery stream named nautilus-firehose-stream to deliver data to the S3 bucket.
+
+Configure buffering with size 5 MB and interval 300 seconds.
+
+Enable record processing by setting the Delimiter parameter to \n to append a newline after each record.
+
+Create main.tf file to create a S3 bucket,IAM role and Firehose delivery stream.
+
+Use variables.tf file with the following variables:
+
+KKE_S3_BUCKET_NAME: name of the bucket.
+KKE_FIREHOSE_STREAM_NAME: name of the firehose stream.
+KKE_FIREHOSE_ROLE_NAME : name of the firehose role
+Use outputs.tf file to output the following:
+
+kke_firehose_stream_name: name of the firehose stream created.
+kke_s3_bucket_name: name of the bucket created.
+kke_firehose_role_arn: arn of the created firehose role.
+Send test data to the Firehose stream and verify that each record in the S3 files ends with a newline character.
+Ans:
+**main.tf**
+provider "aws" {
+  region = "us-east-1" # Change as needed
+}
+
+# Create S3 bucket
+resource "aws_s3_bucket" "kke_stream_bucket" {
+  bucket = var.KKE_S3_BUCKET_NAME
+}
+
+# IAM Role that Kinesis Firehose assumes
+resource "aws_iam_role" "firehose_role" {
+  name = var.KKE_FIREHOSE_ROLE_NAME
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [{
+      Effect = "Allow",
+      Principal = {
+        Service = "firehose.amazonaws.com"
+      },
+      Action = "sts:AssumeRole"
+    }]
+  })
+}
+
+# IAM Policy allowing write access to the S3 bucket
+resource "aws_iam_policy" "firehose_s3_policy" {
+  name        = "${var.KKE_FIREHOSE_ROLE_NAME}-s3-policy"
+  description = "Policy for Firehose to write to S3 bucket"
+
+  policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        Effect = "Allow",
+        Action = [
+          "s3:PutObject",
+          "s3:PutObjectAcl"
+        ],
+        Resource = "${aws_s3_bucket.kke_stream_bucket.arn}/*"
+      }
+    ]
+  })
+}
+
+# Attach the policy to the role
+resource "aws_iam_role_policy_attachment" "firehose_policy_attach" {
+  role       = aws_iam_role.firehose_role.name
+  policy_arn = aws_iam_policy.firehose_s3_policy.arn
+}
+
+# Kinesis Firehose Delivery Stream
+resource "aws_kinesis_firehose_delivery_stream" "kke_firehose_stream" {
+  name        = var.KKE_FIREHOSE_STREAM_NAME
+  destination = "extended_s3"
+
+  extended_s3_configuration {
+    role_arn           = aws_iam_role.firehose_role.arn
+    bucket_arn         = aws_s3_bucket.kke_stream_bucket.arn
+    buffering_size     = 5        # in MB
+    buffering_interval = 300      # in seconds
+    compression_format = "UNCOMPRESSED"
+
+    processing_configuration {
+      enabled = true
+
+      processors {
+        type = "AppendDelimiterToRecord"
+
+        parameters {
+          parameter_name  = "Delimiter"
+          parameter_value = "\n"
+        }
+      }
+    }
+  }
+
+  depends_on = [
+    aws_iam_role_policy_attachment.firehose_policy_attach
+  ]
+}
+
+**variables.tf**
+variable "KKE_S3_BUCKET_NAME" {
+  description = "Name of the S3 bucket"
+  type        = string
+  default     = "nautilus-stream-bucket-971"
+}
+
+variable "KKE_FIREHOSE_STREAM_NAME" {
+  description = "Name of the Kinesis Firehose stream"
+  type        = string
+  default     = "nautilus-firehose-stream"
+}
+
+variable "KKE_FIREHOSE_ROLE_NAME" {
+  description = "Name of the IAM role for Firehose"
+  type        = string
+  default     = "firehose-sts-role"
+}
+**outputs.tf**
+output "kke_firehose_stream_name" {
+  value = aws_kinesis_firehose_delivery_stream.kke_firehose_stream.name
+}
+
+output "kke_s3_bucket_name" {
+  value = aws_s3_bucket.kke_stream_bucket.bucket
+}
+
+output "kke_firehose_role_arn" {
+  value = aws_iam_role.firehose_role.arn
+}
+
+
 # Q3 Enforcing IAM Naming Standards and Permissions Using Terraform
+The Nautilus DevOps team is adopting strict naming conventions for all IAM resources using Terraform. They’ve asked for help enforcing lowercase, hyphenated names based on inputs like project and team.
+
+Your task as a DevOps engineer is to complete the following using Terraform:
+
+Create an IAM User The user name must be derived using the format project-team-user, all lowercase, and non-alphanumeric characters (except dashes) replaced with -.
+
+Create an IAM Role Use the same naming logic for the role name, ending in -role, and attach an assume role policy for EC2.
+
+Tagging: Both resources must be tagged with:
+
+Project: devops
+Team: dev-team
+ManagedBy: Terraform
+Env: dev
+Additionally, the IAM role should have:
+
+RoleType: EC2
+Use locals block within main.tf to:
+
+Derive sanitized project/team names
+Create the resource name prefix
+Define reusable common tags
+Create the main.tf file (do not create a separate .tf file) to provision the IAM Role & User as per the required values.
+
+Use variables.tffile with the following:
+
+KKE_PROJECT: name of the project(must be non-empty).
+KKE_TEAM: name of the team (only letters, digits, dashes or underscores)
+KKE_ENVIRONMENT: name of the environment
+Use terraform.tfvarsfile to input the values.
+
+Use outputs.tffile to output the following:
+
+kke_user_name: name of the created user.
+kke_role_name: name of the created role.
+kke_tags_applied: tags applied to the IAM User.
+Ans:
+**main.tf**
+
+# Local values for name sanitization and tagging
+locals {
+  # Sanitize project and team names: lowercase and replace invalid chars with "-"
+  sanitized_project = lower(replace(var.KKE_PROJECT, "[^a-zA-Z0-9-]", "-"))
+  sanitized_team    = lower(replace(var.KKE_TEAM, "[^a-zA-Z0-9-]", "-"))
+
+  name_prefix = "${local.sanitized_project}-${local.sanitized_team}"
+
+  # Common tags for IAM resources
+  common_tags = {
+    Project   = "nautilus"
+    Team      = "dev-team"
+    ManagedBy = "Terraform"
+    Env       = var.KKE_ENVIRONMENT
+  }
+
+  # Additional tags for IAM Role
+  role_tags = merge(local.common_tags, {
+    RoleType = "EC2"
+  })
+}
+
+# IAM User Resource
+resource "aws_iam_user" "kke_user" {
+  name = "${local.name_prefix}-user"
+  tags = local.common_tags
+}
+
+# IAM Role Resource
+resource "aws_iam_role" "kke_role" {
+  name = "${local.name_prefix}-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect = "Allow"
+      Principal = {
+        Service = "ec2.amazonaws.com"
+      }
+      Action = "sts:AssumeRole"
+    }]
+  })
+
+  tags = local.role_tags
+}
+**variables.tf**
+variable "KKE_PROJECT" {
+  description = "Name of the project (must be non-empty)"
+  type        = string
+  validation {
+    condition     = length(var.KKE_PROJECT) > 0
+    error_message = "KKE_PROJECT must be a non-empty string."
+  }
+}
+
+variable "KKE_TEAM" {
+  description = "Name of the team (only letters, digits, dashes, or underscores)"
+  type        = string
+  validation {
+    condition     = can(regex("^[a-zA-Z0-9_-]+$", var.KKE_TEAM))
+    error_message = "KKE_TEAM can only contain letters, digits, dashes, or underscores."
+  }
+}
+
+variable "KKE_ENVIRONMENT" {
+  description = "Name of the environment"
+  type        = string
+}
+**terraform.tfvars**
+KKE_PROJECT     = "nautilus"
+KKE_TEAM        = "dev-team"
+KKE_ENVIRONMENT = "dev"
+
+**outputs**
+output "kke_user_name" {
+  description = "Name of the created IAM user"
+  value       = aws_iam_user.kke_user.name
+}
+
+output "kke_role_name" {
+  description = "Name of the created IAM role"
+  value       = aws_iam_role.kke_role.name
+}
+
+output "kke_tags_applied" {
+  description = "Tags applied to the IAM user"
+  value       = aws_iam_user.kke_user.tags
+}
+
 # Q4 Streaming Secure Data with Kinesis, STS, and S3 Integration Using Terraform
+The Nautilus DevOps team is working on a secure cloud-native architecture using Terraform. As part of this, they need to provision streaming and storage infrastructure using only the allowed AWS services supported by LocalStack.
+
+Your task as a DevOps engineer is to complete the following:
+
+Create a Kinesis Stream: Provision a stream named datacenter-dev-stream with 1 shard and a 24-hour retention policy.
+
+Create an S3 Bucket: Create a bucket named datacenter-dev-3347.
+
+Use STS for Identity Check: Retrieve and print the current AWS Account ID using aws_caller_identity.
+
+Ensure that the resources kinesis stream and s3 bucket are tagged with following:
+
+Environment : dev (both the resources)
+
+Purpose : Stream ingestion (Kinesis Stream)
+
+Owner : datacenter (S3-bucket)
+
+Add local-exec provisioners to output the creation messages and save them under the /home/bob/terraform directory. Specifically:
+
+When creating the Kinesis stream, write the following message to a file named kinesis_creation.log:
+
+"Kinesis Stream datacenter-dev-stream created"
+
+When creating the S3 bucket, write the message to a file named s3_creation.log:
+
+"S3 Bucket datacenter-dev-3347 created"
+
+When retrieving the STS caller identity, write the following message to a file named account_identity.log:
+
+"Logged in as account ID:<AWS account ID>"
+
+Create main.tf file (do not create a separate .tf file) to provision the kinesis stream, s3-bucket and retrieve the Current AWS Account ID.
+
+Use variables.tf file with the following variables:
+
+KKE_ENVIRONMENT: dev
+
+KKE_KINESIS_STREAM_NAME: Name of the Kinesis Stream (non-empty)
+
+KKE_S3_BUCKET_NAME: Name of the S3 bucket.
+
+Use terraform.tfvars to input the variable values.
+
+Use outputs.tf to output the following:
+
+kke_caller_identity_account_id: current AWS account ID.
+
+kke_kinesis_stream_name: name of the stream created.
+
+kke_s3_bucket_name: name of the bucket created.
+
+Ans:
+**main.tf**
+resource "aws_kinesis_stream" "datacenter_stream" {
+  name             = var.KKE_KINESIS_STREAM_NAME
+  shard_count      = 1
+  retention_period = 24
+
+  tags = {
+    Environment = var.KKE_ENVIRONMENT
+    Purpose     = "Stream ingestion"
+  }
+
+  provisioner "local-exec" {
+    command = "echo \"Kinesis Stream ${var.KKE_KINESIS_STREAM_NAME} created\" > /home/bob/terraform/kinesis_creation.log"
+  }
+}
+
+resource "aws_s3_bucket" "datacenter_bucket" {
+  bucket = var.KKE_S3_BUCKET_NAME
+
+  tags = {
+    Environment = var.KKE_ENVIRONMENT
+    Owner       = "datacenter"
+  }
+
+  provisioner "local-exec" {
+    command = "echo \"S3 Bucket ${var.KKE_S3_BUCKET_NAME} created\" > /home/bob/terraform/s3_creation.log"
+  }
+}
+
+data "aws_caller_identity" "current" {}
+
+resource "null_resource" "account_identity_log" {
+  provisioner "local-exec" {
+    command = "echo \"Logged in as account ID:${data.aws_caller_identity.current.account_id}\" > /home/bob/terraform/account_identity.log"
+  }
+}
+
+**variables.tf**
+variable "KKE_ENVIRONMENT" {
+  description = "Environment tag for resources"
+  type        = string
+  default     = "dev"
+}
+
+variable "KKE_KINESIS_STREAM_NAME" {
+  description = "Name of the Kinesis Stream"
+  type        = string
+}
+
+variable "KKE_S3_BUCKET_NAME" {
+  description = "Name of the S3 bucket"
+  type        = string
+}
+**terraform.tfvars**
+KKE_KINESIS_STREAM_NAME = "datacenter-dev-stream"
+KKE_S3_BUCKET_NAME      = "datacenter-dev-3347"
+**outputs.tf**
+output "kke_caller_identity_account_id" {
+  value = data.aws_caller_identity.current.account_id
+}
+
+output "kke_kinesis_stream_name" {
+  value = aws_kinesis_stream.datacenter_stream.name
+}
+
+output "kke_s3_bucket_name" {
+  value = aws_s3_bucket.datacenter_bucket.bucket
+}
+
+
 # Q5 Implementing Encryption at Rest with AWS KMS Using Terraform
+The Nautilus DevOps team is focusing on improving their data security by using AWS KMS. Your task is to create a KMS key and manage the encryption and decryption of a pre-existing sensitive file using the KMS key.
+
+Specific Requirements:
+
+Create a symmetric KMS key named datacenter-kms-key to manage encryption and decryption.
+
+Encrypt the provided SensitiveData.txt file (located in /home/bob/terraform), base64 encode the ciphertext, and save the encrypted version as EncryptedData.bin in the /home/bob/terraform directory.
+
+Try to decrypt the same and verify that the decrypted data matches the original file.
+
+Create main.tf file (do not create a separate .tf file) to provision a KMS key, encrypt and decrypt the file.
+
+Create outputs.tf file to output the following:
+
+kke_kms_key_name: name of the key created.
+
+**Existing file SensitiveData.txt content**: 
+This is a sensitive file.
+**main.tf**
+resource "aws_kms_key" "datacenter-kms-key" {
+  description             = "KMS key for DevOps encryption"
+  deletion_window_in_days = 10
+  enable_key_rotation     = true
+}
+
+resource "aws_kms_alias" "datacenter_kms_alias" {
+  name          = "alias/datacenter-kms-key"
+  target_key_id = aws_kms_key.datacenter-kms-key.key_id
+}
+
+data "local_file" "sensitive_data" {
+  filename = "/home/bob/terraform/SensitiveData.txt"
+}
+
+resource "null_resource" "encrypt_file" {
+  provisioner "local-exec" {
+    command = <<EOT
+aws kms encrypt \
+  --key-id ${aws_kms_key.datacenter-kms-key.key_id} \
+  --plaintext fileb:///home/bob/terraform/SensitiveData.txt \
+  --output text \
+  --query CiphertextBlob | base64 --decode > /home/bob/terraform/EncryptedData.bin
+EOT
+  }
+
+  triggers = {
+    source_hash = data.local_file.sensitive_data.content_md5
+  }
+}
+
+data "local_file" "encrypted_data" {
+  filename   = "/home/bob/terraform/EncryptedData.bin"
+  depends_on = [null_resource.encrypt_file]
+}
+
+resource "null_resource" "decrypt_file" {
+  provisioner "local-exec" {
+    command = <<EOT
+aws kms decrypt \
+  --ciphertext-blob fileb:///home/bob/terraform/EncryptedData.bin \
+  --output text \
+  --query Plaintext | base64 --decode > /home/bob/terraform/DecryptedData.txt
+EOT
+  }
+  triggers = {
+    encrypted_hash = data.local_file.encrypted_data.content_md5
+  }
+}
+
+
+
+Tried with:
+output "kms_key_name" {
+  value = aws_kms_key.datacenter-kms-key.name
+}
+
+Tried with: 
+output "kms_key_name" {
+  value = aws_kms_key.datacenter-kms-key.key_id
+}
+
+Tried with:
+
+output "kms_key_name" {
+  value = aws_kms_alias.datacenter_kms_alias.name
+}
+
+
+
 # Q6 Deploying a Multi-Tier Architecture on AWS Using Terraform
 # Q7 Managing Multiple S3 Buckets with Fine-Grained Access Policies Using Terraform
 # Q8 Hosting a Static Website on Amazon S3 with Custom Configuration Using Terraform

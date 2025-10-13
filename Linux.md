@@ -1198,6 +1198,16 @@ Then verify it's running:
 sudo systemctl status haproxy
 
 # Q18 MariaDB Troubleshooting
+There is a critical issue going on with the Nautilus application in Stratos DC. The production support team identified that the application is unable to connect to the database. After digging into the issue, the team found that mariadb service is down on the database server.
+
+Look into the issue and fix the same.
+Ans:
+sudo systemctl status mariadb
+chown -R mysql:mysql /var/lib/mysql
+sudo systemctl start mariadb
+sudo cat /var/log/mariadb/mariadb.log | tail -30
+sudo mkdir -p /run/mariadb
+sudo chown mysql:mysql /run/mariadb
 # Q19 Linux  Scripts
 # Q20 Add Response Headers in Apache
 # Q21 Apache Troubleshooting
