@@ -186,7 +186,8 @@ e. Do not use sudo inside the script.
 
 Note:
 The zip package must be installed on given App Server before executing the script. This package is essential for creating the zip archive of the website files. Install it manually outside the script.
-Ans:
+Ans: 
+# SSH into App server2:
  mkdir -p /scripts
  ls /scripts/
  vi /scripts/ecommerce_backup.sh
@@ -960,6 +961,7 @@ CREATE USER kodekloud_cap WITH PASSWORD 'YchZHRcLkL';
 ### 🔹 Step 4: Create the database
 
 CREATE DATABASE kodekloud_db4;
+DROP DATABASE kodekloud_db4; # to delete DB
 
 ### 🔹 Step 5: Grant privileges
 
@@ -1063,7 +1065,9 @@ sudo systemctl start mariadb
 
 ### Run in MySQL shell on the DB server:
 
-mysql -u root or sudo mysql
+mysql -u root 
+or
+sudo mysql
 
 Then execute:
 
@@ -1144,7 +1148,7 @@ scp -r /home/thor/beta banner@stapp03:/tmp/
 sudo mv /tmp/beta /var/www/html/
 sudo mv /tmp/cluster /var/www/html/
 ls /var/www/html/
-    8  curl http://localhost:6100/beta/
+
     9  sudo systemctl enable httpd
    10  sudo systemctl start httpd
    13  curl http://localhost:6100/beta/
@@ -2107,7 +2111,30 @@ Create a deployment named nginx to deploy the application nginx using the image 
 Ans:
 kubectl create deployment nginx-deployment --image=nginx:latest
 Day 50: **Set Resource Limits in Kubernetes Pods**
+The Nautilus DevOps team has noticed performance issues in some Kubernetes-hosted applications due to resource constraints. To address this, they plan to set limits on resource utilization. Here are the details:
 
+
+Create a pod named httpd-pod with a container named httpd-container. Use the httpd image with the latest tag (specify as httpd:latest). Set the following resource limits:
+
+Requests: Memory: 15Mi, CPU: 100m
+
+Limits: Memory: 20Mi, CPU: 100m
+Ans: 
+apiVersion: v1
+kind: Pod
+metadata:
+    name: httpd-pod
+spec:
+    containers:
+      - name: httpd-container
+        image: httpd:latest
+        resources:
+          requests:
+            cpu: 100m
+            memory: 15Mi
+          limits:
+            cpu: 100m
+            memory: 20Mi
 Day 51: **Execute Rolling Updates in Kubernetes**
 
 Day 52: **Revert Deployment to Previous Version in Kubernetes**

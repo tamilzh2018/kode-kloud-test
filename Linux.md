@@ -1209,8 +1209,101 @@ sudo cat /var/log/mariadb/mariadb.log | tail -30
 sudo mkdir -p /run/mariadb
 sudo chown mysql:mysql /run/mariadb
 # Q19 Linux  Scripts
+
+
+
 # Q20 Add Response Headers in Apache
+We are working on hardening Apache web server on all app servers. As a part of this process we want to add some of the Apache response headers for security purpose. We are testing the settings one by one on all app servers. As per details mentioned below enable these headers for Apache:
+
+Install httpd package on App Server 2 using yum and configure it to run on 8086 port, make sure to start its service.
+
+Create an index.html file under Apache's default document root i.e /var/www/html and add below given content in it.
+
+Welcome to the xFusionCorp Industries!
+
+Configure Apache to enable below mentioned headers:
+
+X-XSS-Protection header with value 1; mode=block
+
+X-Frame-Options header with value SAMEORIGIN
+
+X-Content-Type-Options header with value nosniff
+
+Note: You can test using curl on the given app server as LBR URL will not work for this task.
+Ans:
+
+### 🧰 1. Install Apache and Configure Port
+sudo yum install httpd -y
+
+Edit the Apache configuration to listen on port `8086`:
+
+sudo sed -i 's/^Listen 80/Listen 8086/' /etc/httpd/conf/httpd.conf
+
+Also update the `<VirtualHost>` block (if present) to:
+
+<VirtualHost *:8086>
+    DocumentRoot "/var/www/html"
+    <Directory "/var/www/html">
+        Require all granted
+    </Directory>
+</VirtualHost>
+
+### 📂 2. Create `index.html`
+echo "Welcome to the xFusionCorp Industries!" | sudo tee /var/www/html/index.html
+### 🔐 3. Enable Security Headers
+
+Add the following lines to the Apache configuration file (`httpd.conf`) or create a separate config file under `/etc/httpd/conf.d/security.conf`:
+
+<IfModule mod_headers.c>
+    Header set X-XSS-Protection "1; mode=block"
+    Header set X-Frame-Options "SAMEORIGIN"
+    Header set X-Content-Type-Options "nosniff"
+</IfModule>
+
+Ensure the `mod_headers` module is enabled (usually it is by default on CentOS/RHEL).
+
+### ▶️ 4. Start and Enable Apache
+sudo systemctl start httpd
+sudo systemctl enable httpd
+
+### 🧪 5. Test with `curl`
+
+Run this from App Server 2:
+
+curl -I http://localhost:8086
+
+You should see headers like:
+
+X-XSS-Protection: 1; mode=block
+X-Frame-Options: SAMEORIGIN
+X-Content-Type-Options: nosniff
 # Q21 Apache Troubleshooting
+xFusionCorp Industries uses some monitoring tools to check the status of every service, application, etc running on the systems. Recently, the monitoring system identified that Apache service is not running on some of the Nautilus Application Servers in Stratos Datacenter.
+
+1. Identify the faulty Nautilus Application Server and fix the issue. Also, make sure Apache service is up and running on all Nautilus Application Servers. Do not try to stop any kind of firewall that is already running.
+
+2. Apache is running on 8089 port on all Nautilus Application Servers and its document root must be /var/www/html on all app servers.
+
+3. Finally you can test from jump host using curl command to access Apache on all app servers and it should be reachable and you should get some static page. E.g. curl http://172.16.238.10:8089/.
+
+Ans:
+udo systemctl start httpd
+
+We trust you have received the usual lecture from the local System
+Administrator. It usually boils down to these three things:
+
+    #1) Respect the privacy of others.
+    #2) Think before you type.
+    #3) With great power comes great responsibility.
+
+[sudo] password for banner: 
+Job for httpd.service failed because the control process exited with error code.
+See "systemctl status httpd.service" and "journalctl -xeu httpd.service" for details.
+[banner@stapp03 ~]$ journalctl -xeu httpd.service"
+AH00526: Syntax error on line 47 of /etc/httpd/conf/httpd.conf:
+Oct 14 13:03:10 stapp03.stratos.xfusioncorp.com httpd[2231]: Invalid command 'Listen 8089', perhaps misspelled or defined by a module not included in the server configuration
+Oct 14 13:03:10 stapp03.stratos.xfusioncorp.com systemd[1]: httpd.service: Got notification message from PID 2231 (RELOADING=1, STATUS=Reading configuration...)
+Oct 14 13:03:10 stapp03.stratos.xfusioncorp.com systemd[1]: httpd.service: Child 2231 belongs to httpd
 # Q22 Linux GPG Encryption
 # Q23 Linux LogRotate
 # Q24 Application Security

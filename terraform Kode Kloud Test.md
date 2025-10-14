@@ -3470,7 +3470,278 @@ output "kms_key_name" {
 
 
 # Q6 Deploying a Multi-Tier Architecture on AWS Using Terraform
+The DevOps team needs to build a secure, modular multi-tier AWS infrastructure to support a modern cloud-native application stack using Terraform. As part of this requirement, use only allowed AWS services and ensure secure variable usage.
+
+As a member of the Nautilus DevOps Team, your tasks are:
+
+Create a DynamoDB Table: Provision a table named xfusion-app-table with minimal configuration.
+
+Create an SNS Topic: Set up a topic named xfusion-app-topic for messaging and notifications.
+
+Create an SSM Parameter: Store a sensitive configuration value in AWS SSM Parameter Store under the name /xfusion/app/config.
+
+Create main.tf file (do not create a separate .tf file) to provision a dynamoDB table, sns-topic and ssm parameter.
+
+Use variables.tf file with the following:
+
+KKE_ENVIRONMENT: devEnvironment.
+
+KKE_DYNAMODB_TABLE_NAME: name of dynamodb table.
+
+KKE_SNS_TOPIC_NAME: name of the sns topic.
+
+KKE_SSM_PARAM_NAME: name of the SSM parameter.
+
+Create terraform.tfvars to input the name of the variables.
+
+Use outputs.tf file to output the following:
+
+kke_dynamodb_table_name: name of the dynamodb table.
+
+kke_sns_topic_arn: arn of the sns-topic created.
+
+kke_ssm_parameter_name: name of the ssm parameter created.
+Ans:
+**Main.tf**
+resource "aws_dynamodb_table" "xfusion_app_table" {
+  name         = var.KKE_DYNAMODB_TABLE_NAME
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "id"
+
+  attribute {
+    name = "id"
+    type = "S"
+  }
+
+  tags = {
+    Environment = var.KKE_ENVIRONMENT
+  }
+}
+
+resource "aws_sns_topic" "xfusion_app_topic" {
+  name = var.KKE_SNS_TOPIC_NAME
+
+  tags = {
+    Environment = var.KKE_ENVIRONMENT
+  }
+}
+
+resource "aws_ssm_parameter" "xfusion_app_config" {
+  name        = var.KKE_SSM_PARAM_NAME
+  type        = "SecureString"
+  value       = "sensitive-config-value"
+  description = "Sensitive configuration for xfusion app"
+  tags = {
+    Environment = var.KKE_ENVIRONMENT
+  }
+}
+**variables.tf**
+variable "KKE_ENVIRONMENT" {
+  description = "Deployment environment"
+  type        = string
+}
+
+variable "KKE_DYNAMODB_TABLE_NAME" {
+  description = "Name of the DynamoDB table"
+  type        = string
+}
+
+variable "KKE_SNS_TOPIC_NAME" {
+  description = "Name of the SNS topic"
+  type        = string
+}
+
+variable "KKE_SSM_PARAM_NAME" {
+  description = "Name of the SSM parameter"
+  type        = string
+}
+**terraform.tfvars**
+KKE_ENVIRONMENT         = "devEnvironment"
+KKE_DYNAMODB_TABLE_NAME = "xfusion-app-table"
+KKE_SNS_TOPIC_NAME      = "xfusion-app-topic"
+KKE_SSM_PARAM_NAME      = "/xfusion/app/config"
+**outputs.tf**
+output "kke_dynamodb_table_name" {
+  description = "Name of the DynamoDB table"
+  value       = aws_dynamodb_table.xfusion_app_table.name
+}
+
+output "kke_sns_topic_arn" {
+  description = "ARN of the SNS topic"
+  value       = aws_sns_topic.xfusion_app_topic.arn
+}
+
+output "kke_ssm_parameter_name" {
+  description = "Name of the SSM parameter"
+  value       = aws_ssm_parameter.xfusion_app_config.name
+}
+
 # Q7 Managing Multiple S3 Buckets with Fine-Grained Access Policies Using Terraform
+The Nautilus DevOps team needs to set up three S3 buckets for different environments with backup and policy configurations. Follow the steps below:
+
+Create three S3 buckets using for_each for environments: Dev, Staging, and Prod.
+
+Name the buckets using the following naming convention:
+
+datacenter-dev-bucket-14823
+datacenter-staging-bucket-14823
+datacenter-prod-bucket-14823
+Add the following tags to each bucket with the corresponding values:
+
+a.) For datacenter-dev-bucket-14823:
+
+Name = datacenter-dev-bucket-14823
+Environment = Dev
+Owner = Alice
+b.) For datacenter-staging-bucket-14823:
+
+Name = datacenter-staging-bucket-14823
+Environment = Staging
+Owner = Bob
+c.) For datacenter-prod-bucket-14823:
+
+Environment = Prod
+Owner = Carol
+For the staging and prod buckets, set Backup = true and add a lifecycle rule with ID MoveToGlacier to transition objects to Glacier after 30 days.
+
+Use the lifecycle block with ignore_changes to protect the tags.
+
+Create a bucket policy that allows public read access to all objects in the bucket.
+
+Use depends_on to ensure the policy is only applied after the bucket has been created.
+
+Implement the entire configuration in a single main.tf file (do not create a separate .tf file) to provision multiple S3 buckets with the specified configurations.
+
+Use variables.tf with the following variable:
+
+KKE_ENV_TAGS. KKE_ENV_TAGS is a map that holds environment-specific metadata such as bucket name, owner, and backup flag.
+Use outputs.tf file to output the following:
+
+kke_bucket_names: output the names of the bucket created.
+Ans:
+**main.tf**
+locals {
+  bucket_configs = {
+    Dev = {
+      name        = "datacenter-dev-bucket-14823"
+      owner       = "Alice"
+      backup      = false
+      environment = "Dev"
+    }
+    Staging = {
+      name        = "datacenter-staging-bucket-14823"
+      owner       = "Bob"
+      backup      = true
+      environment = "Staging"
+    }
+    Prod = {
+      name        = "datacenter-prod-bucket-14823"
+      owner       = "Carol"
+      backup      = true
+      environment = "Prod"
+    }
+  }
+}
+
+resource "aws_s3_bucket" "env_buckets" {
+  for_each = local.bucket_configs
+
+  bucket = each.value.name
+
+  tags = {
+    Name        = each.value.name
+    Environment = each.value.environment
+    Owner       = each.value.owner
+  }
+
+  lifecycle {
+    ignore_changes = [tags]
+  }
+}
+
+resource "aws_s3_bucket_lifecycle_configuration" "env_lifecycle" {
+  for_each = {
+    for key, value in local.bucket_configs : key => value
+    if value.backup
+  }
+
+  bucket = aws_s3_bucket.env_buckets[each.key].id
+
+  rule {
+    id     = "MoveToGlacier"
+    status = "Enabled"
+
+    transition {
+      days          = 30
+      storage_class = "GLACIER"
+    }
+
+    filter {
+        prefix = ""
+    }
+  }
+}
+
+resource "aws_s3_bucket_policy" "env_bucket_policy" {
+  for_each = local.bucket_configs
+
+  bucket = aws_s3_bucket.env_buckets[each.key].id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid       = "PublicReadGetObject"
+        Effect    = "Allow"
+        Principal = "*"
+        Action    = "s3:GetObject"
+        Resource  = "${aws_s3_bucket.env_buckets[each.key].arn}/*"
+      }
+    ]
+  })
+
+  depends_on = [aws_s3_bucket.env_buckets]
+}
+**variables.tf**
+  variable "KKE_ENV_TAGS" {
+  description = "Map of environment-specific metadata"
+  type = map(object({
+    name        = string
+    owner       = string
+    backup      = bool
+    environment = string
+  }))
+}
+**terraform.tfvars**
+KKE_ENV_TAGS = {
+  Dev = {
+    name        = "datacenter-dev-bucket-14823"
+    owner       = "Alice"
+    backup      = false
+    environment = "Dev"
+  }
+  Staging = {
+    name        = "datacenter-staging-bucket-14823"
+    owner       = "Bob"
+    backup      = true
+    environment = "Staging"
+  }
+  Prod = {
+    name        = "datacenter-prod-bucket-14823"
+    owner       = "Carol"
+    backup      = true
+    environment = "Prod"
+  }
+}
+**outputs.tf**
+output "kke_bucket_names" {
+  description = "Names of the S3 buckets created"
+  value = {
+    for env, bucket in aws_s3_bucket.env_buckets :  #for-expression that iterates over the aws_s3_bucket.env_buckets map.
+    env => bucket.bucket
+  }
+}
+
 # Q8 Hosting a Static Website on Amazon S3 with Custom Configuration Using Terraform
 # Q9 Storing and Accessing Sensitive Data Securely with AWS Secrets Manager Using Terraform
 # Q10 Managing Terraform Workspaces for Environment Isolation Using Terraform
@@ -3713,3 +3984,505 @@ resource "aws_vpc" "nautilus_vpc" {
     Name = "nautilus-vpc-t5q3"
   }
 }
+
+***Leve2 Test***
+Q1:
+The Nautilus DevOps team needs to create an AMI from an existing EC2 instance for backup and scaling purposes. The following steps are required:
+
+They have an existing EC2 instance named xfusion-ec2-t1q5.
+
+They need to create an AMI named xfusion-ec2-ami-t1q5 from this instance.
+
+Additionally, they need to launch a new EC2 instance named xfusion-ec2-new-t1q5 using this AMI.
+
+Update the main.tf file (do not create a different or separate.tf file) to provision an AMI and then launch an EC2 Instance from that AMI.
+
+Create an outputs.tf file to output the following values:
+
+KKE_ami_id for the AMI ID you created.
+KKE_new_instance_id for the EC2 instance ID you created.
+
+Ans:
+**Main.tf**
+# Exsiting EC2 instance
+resource "aws_instance" "ec2" {
+  ami           = "ami-0c101f26f147fa7fd"
+  instance_type = "t2.micro"
+  vpc_security_group_ids = [
+    "sg-42e7b0b78925b906a"
+  ]
+
+  tags = {
+    Name = "xfusion-ec2-t1q5"
+  }
+}
+
+# Create AMI from the existing EC2 instance
+resource "aws_ami_from_instance" "xfusion_ami" {
+  name               = "xfusion-ec2-ami-t1q5"
+  source_instance_id = aws_instance.ec2.id
+  depends_on         = [aws_instance.ec2]
+}
+
+# Launch new EC2 instance from the created AMI
+resource "aws_instance" "ec2_new" {
+  ami           = aws_ami_from_instance.xfusion_ami.id
+  instance_type = "t2.micro"
+  vpc_security_group_ids = [
+    "sg-42e7b0b78925b906a"
+  ]
+
+  tags = {
+    Name = "xfusion-ec2-new-t1q5"
+  }
+
+  depends_on = [aws_ami_from_instance.xfusion_ami]
+}
+**outputs.tf**
+output "KKE_ami_id" {
+  description = "AMI ID created from the original EC2 instance"
+  value       = aws_ami_from_instance.xfusion_ami.id
+}
+
+output "KKE_new_instance_id" {
+  description = "ID of the new EC2 instance launched from the AMI"
+  value       = aws_instance.ec2_new.id
+}
+
+Q2:
+The Nautilus DevOps team wants to automate infrastructure provisioning using CloudFormation. As part of the stack setup, they need to create a DynamoDB table.
+
+Create a CloudFormation stack named xfusion-dynamodb-stack-t1q1.
+
+The stack must create a DynamoDB table named xfusion-cf-dynamodb-table-t1q1.
+
+Use the main.tf file (do not create a separate .tf file) to provision a CloudFormation stack and DynamoDB table. Make sure to add a lifecycle block in main.tf to ignore changes to the parameters attribute.
+
+Use the variables.tf file with the following variable names:
+
+KKE_DYNAMODB_TABLE_NAME: Dynamodb table name.
+The locals.tf file is already provided and includes the following:
+
+cf_template_body: A local variable that stores the CloudFormation template body.
+Use the outputs.tf file to output the following:
+
+KKE_stack_name: CloudFormation stack name
+
+Ans:
+**exisiting local.tf**
+locals {
+  cf_template_body = <<JSON
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Resources": {
+    "MyDynamoDBTable": {
+      "Type": "AWS::DynamoDB::Table",
+      "Properties": {
+        "TableName": "xfusion-cf-dynamodb-table-t1q1",
+        "AttributeDefinitions": [
+          {
+            "AttributeName": "ID",
+            "AttributeType": "S"
+          }
+        ],
+        "KeySchema": [
+          {
+            "AttributeName": "ID",
+            "KeyType": "HASH"
+          }
+        ],
+        "ProvisionedThroughput": {
+          "ReadCapacityUnits": 5,
+          "WriteCapacityUnits": 5
+        }
+      }
+    }
+  }
+}
+JSON
+}
+**Main.tf**
+
+resource "aws_cloudformation_stack" "dynamodb_stack" {
+  name          = "xfusion-dynamodb-stack-t1q1"
+  template_body = local.cf_template_body
+
+  lifecycle {
+    ignore_changes = [parameters]
+  }
+}
+
+***outputs.tf**
+output "KKE_stack_name" {
+  description = "CloudFormation stack name"
+  value       = aws_cloudformation_stack.dynamodb_stack.name
+}
+**variables.tf**
+variable "KKE_DYNAMODB_TABLE_NAME" {
+  description = "DynamoDB table name"
+  type        = string
+  default     = "xfusion-cf-dynamodb-table-t1q1"
+}
+
+Q3:
+The Nautilus DevOps Team has received a new request from the Development Team to set up a new EC2 instance. This instance will be used to host a new application that requires a stable IP address. To ensure that the instance has a consistent public IP, an Elastic IP address needs to be associated with it. This setup will help the Development Team to have a reliable and consistent access point for their application.
+
+Create an EC2 instance named xfusion-ec2-t2q4 using any Linux AMI like Ubuntu.
+
+Instance type must be t2.micro and associate an Elastic IP address named xfusion-eip-t2q4 with this instance.
+
+Use the main.tf file (do not create a separate .tf file) to provision the EC2-Instance and Elastic IP.
+
+Use the outputs.tf file and output the instance name using variable KKE_instance_name and the Elastic IP name using variable KKE_eip_name.
+
+Ans:
+**main.tf**
+
+resource "aws_instance" "xfusion-ec2-t2q4" {
+  ami               = "ami-0c02fb55956c7d316"
+  availability_zone = "us-east-1a"
+  instance_type     = "t2.micro"
+
+  tags = {
+    Name = "xfusion-ec2-t2q4"
+  }
+}
+
+resource "aws_eip" "xfusion-eip-t2q4" {
+  domain = "vpc"
+
+  tags = {
+    Name = "xfusion-eip-t2q4"
+  }
+}
+
+resource "aws_eip_association" "eip_assoc" {
+  instance_id   = aws_instance.xfusion-ec2-t2q4.id
+  allocation_id = aws_eip.xfusion-eip-t2q4.id
+}
+**outputs.tf**
+output "KKE_instance_name" {
+  description = "EC2 instance name"
+  value       = aws_instance.xfusion-ec2-t2q4.tags["Name"]
+}
+
+output "KKE_eip_name" {
+  description = "Elastic IP name"
+  value       = aws_eip.xfusion-eip-t2q4.tags["Name"]
+}
+
+Q4:
+To test resilience and recreation behavior in Terraform, the DevOps team needs to demonstrate the use of the -replace option to forcefully recreate an EC2 instance without changing its configuration. Please complete the following tasks:
+
+Use the Terraform CLI -replace option to destroy and recreate the EC2 instance xfusion-ec2-t2q1, even though the configuration remains unchanged.
+
+Ensure that the instance is recreated successfully.
+
+**Exiting Details**
+resource "aws_instance" "web_server" {
+  ami           = var.ami_id
+  instance_type = var.instance_type
+
+  tags = {
+    Name = var.instance_name
+  }
+}
+output "instance_id" {
+  value = aws_instance.web_server.id
+}
+
+variable "ami_id" {
+  description = "AMI ID to use"
+  type        = string
+}
+
+variable "instance_type" {
+  description = "Instance type"
+  type        = string
+  default     = "t2.micro"
+}
+
+variable "instance_name" {
+  description = "EC2 instance name"
+  type        = string
+}
+
+Ans:
+
+1. **Navigate to your Terraform project directory**  
+   Make sure you're in the directory containing your Terraform configuration files.
+
+2. **Initialize Terraform (if not already done)**  
+   
+   terraform init
+   
+3. **Run the apply command with the `-replace` flag**  
+   Use the full resource address to target the EC2 instance:
+   
+   terraform apply -replace="aws_instance.web_server"
+   
+   This tells Terraform to destroy and recreate `aws_instance.web_server` even though its configuration hasn't changed.
+
+4. **Confirm the plan and apply**  
+   Terraform will show a plan indicating that the EC2 instance will be replaced. Type `yes` when prompted to proceed.
+
+
+Q5:
+The monitoring team wants to improve observability into the streaming infrastructure. Your task is to implement a solution using Amazon Kinesis and CloudWatch. The team wants to ensure that if write throughput exceeds provisioned limits, an alert is triggered immediately.
+
+As a member of the Nautilus DevOps Team, perform the following tasks using Terraform:
+
+Create a Kinesis Data Stream: Name the stream xfusion-kinesis-stream-t3q3 with a shard count of 1.
+
+Enable Monitoring: Enable shard-level metrics for the stream to track ingestion and throughput errors.
+
+Create a CloudWatch Alarm: Name the alarm xfusion-kinesis-alarm-t3q3 and monitor the WriteProvisionedThroughputExceeded metric. The alarm should trigger if the metric exceeds a threshold of 1.
+
+Ensure Alerting: Configure the CloudWatch alarm to detect write throughput issues exceeding provisioned limits.
+
+Create the main.tf file (do not create a separate .tf file) to provision the Kinesis stream, CloudWatch alarm, and ensure alerting.
+
+Create the outputs.tf file with the following variable names to output:
+
+kke_kinesis_stream_name for the Kinesis stream name.
+
+kke_kinesis_alarm_name for the CloudWatch alarm name.
+Ans:
+**Main.tf**
+provider "aws" {
+  region = "us-east-1" # Adjust as needed
+}
+
+# Create Kinesis Data Stream
+resource "aws_kinesis_stream" "xfusion_kinesis_stream" {
+  name             = "xfusion-kinesis-stream-t3q3"
+  shard_count      = 1
+  retention_period = 24
+
+  shard_level_metrics = [
+    "IncomingBytes",
+    "IncomingRecords",
+    "WriteProvisionedThroughputExceeded",
+    "ReadProvisionedThroughputExceeded",
+    "IteratorAgeMilliseconds"
+  ]
+
+  tags = {
+    Name = "xfusion-kinesis-stream-t3q3"
+  }
+}
+
+# Create CloudWatch Alarm
+resource "aws_cloudwatch_metric_alarm" "xfusion_kinesis_alarm" {
+  alarm_name          = "xfusion-kinesis-alarm-t3q3"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = 1
+  metric_name         = "WriteProvisionedThroughputExceeded"
+  namespace           = "AWS/Kinesis"
+  period              = 60
+  statistic           = "Sum"
+  threshold           = 1
+  alarm_description   = "Triggers when write throughput exceeds provisioned limits"
+  dimensions = {
+    StreamName = aws_kinesis_stream.xfusion_kinesis_stream.name
+  }
+
+  tags = {
+    Name = "xfusion-kinesis-alarm-t3q3"
+  }
+}
+**Outputs.tf**
+output "kke_kinesis_stream_name" {
+  description = "Kinesis stream name"
+  value       = aws_kinesis_stream.xfusion_kinesis_stream.name
+}
+
+output "kke_kinesis_alarm_name" {
+  description = "CloudWatch alarm name"
+  value       = aws_cloudwatch_metric_alarm.xfusion_kinesis_alarm.alarm_name
+}
+
+Q6:
+The Nautilus DevOps team is experimenting with Terraform provisioners. Your task is to create an IAM user and use a local-exec provisioner to log a confirmation message.
+
+Create an IAM user named iamuser_mariyam_t3q2.
+
+Use a local-exec provisioner with the IAM user resource to log the message KKE iamuser_mariyam_t3q2 has been created successfully! to a file called KKE_user_created.log under home/bob/terraform/t3q2.
+
+Create the main.tf file (do not create a separate .tf file) to provision an IAM user.
+
+Use variables.tf file with the following:
+
+KKE_USER_NAME: name of the IAM user.
+Use terraform.tfvars to input the name of the IAM user.
+
+Use outputs.tf file with the following:
+
+kke_iam_user_name: name of the IAM user.
+Ans:
+**main.tf**
+provider "aws" {
+  region = "us-east-1" # Adjust as needed
+}
+
+resource "aws_iam_user" "kke_user" {
+  name = var.KKE_USER_NAME
+
+  provisioner "local-exec" {
+    command = "echo 'KKE ${var.KKE_USER_NAME} has been created successfully!' >> /home/bob/terraform/t3q2/KKE_user_created.log"
+  }
+
+  tags = {
+    Name = var.KKE_USER_NAME
+  }
+}
+**variables.tf**
+variable "KKE_USER_NAME" {
+  description = "Name of the IAM user"
+  type        = string
+}
+**terraform.tfvars**
+KKE_USER_NAME = "iamuser_mariyam_t3q2"
+**outputs.tf**
+output "kke_iam_user_name" {
+  description = "IAM user name"
+  value       = aws_iam_user.kke_user.name
+}
+
+Q7:
+To ensure proper resource provisioning order, the DevOps team wants to explicitly define the dependency between an AWS VPC and a Subnet. The objective is to create a VPC and then a Subnet that explicitly depends on it using Terraform's depends_on argument.
+
+Please complete the following tasks:
+
+Create a VPC named xfusion-vpc-t4q5.
+
+Create a Subnet named xfusion-subnet-t4q5.
+
+Ensure the Subnet uses the depends_on argument to explicitly depend on the VPC resource.
+
+Create the main.tf file (do not create a separate .tf file) to provision a VPC and Subnet.
+
+Use variables.tf, define the following variables:
+
+KKE_VPC_NAME for the VPC name.
+KKE_SUBNET_NAME for the Subnet name.
+Use terraform.tfvars to input the names of the VPC and subnet.
+
+In outputs.tf, output the following:
+
+kke_vpc_name: The name of the VPC.
+kke_subnet_name: The name of the Subnet.
+
+Ans:
+**main.tf**
+# Create VPC
+resource "aws_vpc" "xfusion_vpc" {
+  cidr_block = "10.0.0.0/16"
+
+  tags = {
+    Name = var.KKE_VPC_NAME
+  }
+}
+
+# Create Subnet with explicit dependency on VPC
+resource "aws_subnet" "xfusion_subnet" {
+  vpc_id                  = aws_vpc.xfusion_vpc.id
+  cidr_block              = "10.0.1.0/24"
+  availability_zone       = "us-east-1a"
+
+  tags = {
+    Name = var.KKE_SUBNET_NAME
+  }
+
+  depends_on = [aws_vpc.xfusion_vpc]
+}
+**variables.tf**
+variable "KKE_VPC_NAME" {
+  description = "Name of the VPC"
+  type        = string
+}
+
+variable "KKE_SUBNET_NAME" {
+  description = "Name of the Subnet"
+  type        = string
+}
+
+**terraform.tfvars**
+KKE_VPC_NAME    = "xfusion-vpc-t4q5"
+KKE_SUBNET_NAME = "xfusion-subnet-t4q5"
+
+**outputs.tf**
+output "kke_vpc_name" {
+  description = "The name of the VPC"
+  value       = aws_vpc.xfusion_vpc.tags["Name"]
+}
+
+output "kke_subnet_name" {
+  description = "The name of the Subnet"
+  value       = aws_subnet.xfusion_subnet.tags["Name"]
+}
+
+Q8:
+The Nautilus DevOps team is implementing lifecycle policies to manage object storage efficiently in AWS. They want to create an S3 bucket with a specific lifecycle rule that transitions objects to infrequent access (IA) storage after 30 days and deletes them after 365 days.
+
+Create an S3 bucket named xfusion-lifecycle-11022-t4q1.
+
+Enable the S3 Versioning on the bucket.
+
+Add a lifecycle rule named xfusion-lifecycle-rule-t4q1 with:
+
+Transition to STANDARD_IA storage class after 30 days.
+Expiration of objects after 365 days.
+Use the main.tf file (do not create a separate .tf file) to provision the S3 bucket.
+
+Use the variable name KKE_bucket_name in the outputs.tf file to output the created bucket name.
+
+Ans:
+**main.tf**
+provider "aws" {
+  region = "us-east-1" # Adjust if needed
+}
+
+resource "aws_s3_bucket" "xfusion_bucket" {
+  bucket = "xfusion-lifecycle-11022-t4q1"
+
+  tags = {
+    Name = "xfusion-lifecycle-11022-t4q1"
+  }
+}
+
+resource "aws_s3_bucket_versioning" "xfusion_bucket_versioning" {
+  bucket = aws_s3_bucket.xfusion_bucket.id
+
+  versioning_configuration {
+    status = "Enabled"
+  }
+}
+
+resource "aws_s3_bucket_lifecycle_configuration" "xfusion_bucket_lifecycle" {
+  bucket = aws_s3_bucket.xfusion_bucket.id
+
+  rule {
+    id     = "xfusion-lifecycle-rule-t4q1"
+    status = "Enabled"
+
+    filter {
+      prefix = ""
+    }
+
+    transition {
+      days          = 30
+      storage_class = "STANDARD_IA"
+    }
+
+    expiration {
+      days = 365
+    }
+  }
+}
+**outputs.tf**
+output "KKE_bucket_name" {
+  description = "Name of the created S3 bucket"
+  value       = aws_s3_bucket.xfusion_bucket.bucket
+}
+

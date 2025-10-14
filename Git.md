@@ -49,7 +49,31 @@ Note: For tasks requiring web UI changes, screenshots are necessary for review p
 Ans:
 login and choose specific repo and fork
 # Q4 Update Git Repository with Sample HTML File
+The Nautilus development team has initiated a new project development, establishing various Git repositories to manage each project's source code. Recently, a repository named /opt/media.git was created. The team has provided a sample index.html file located on the jump host under the /tmp directory. This repository has been cloned to /usr/src/kodekloudrepos on the storage server in the Stratos DC.
+
+Copy the sample index.html file from the jump host to the storage server placing it within the cloned repository at /usr/src/kodekloudrepos/media.
+
+Add and commit the file to the repository.
+
+Push the changes to the master branch.
+Ans:
+
+**Secure Copy from Jump to to Storage Server**
+     scp /tmp/index.html storage_user@storage_server:/usr/src/kodekloudrepos/media/
+     git status
+     git add index.html 
+     git commit -m "index.html added"
+     git branch
+     git push origin master
 # Q5 Delete Git Branch
+The Nautilus developers are engaged in active development on one of the project repositories located at /usr/src/kodekloudrepos/cluster. During testing, several test branches were created, and now they require cleanup. Here are the requirements provided to the DevOps team:
+
+On the Storage server in Stratos DC, delete a branch named xfusioncorp_cluster from the /usr/src/kodekloudrepos/cluster Git repository.
+Ans:
+**local branch**: git branch -d xfusioncorp_cluster
+**If the branch hasn't been merged and you still want to delete it**: git branch -D xfusioncorp_cluster
+**Deleting a remote branch**: git push origin --delete xfusioncorp_cluster
+
 **Level 2**
 # Q1 Git Install and Create Repository
 # Q2 Git Create Branches
