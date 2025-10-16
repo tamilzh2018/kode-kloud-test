@@ -1210,7 +1210,75 @@ sudo mkdir -p /run/mariadb
 sudo chown mysql:mysql /run/mariadb
 # Q19 Linux  Scripts
 
+The production support team of xFusionCorp Industries is working on developing some bash scripts to automate different day to day tasks. One is to create a bash script for taking websites backup. They have a static website running on App Server 2 in Stratos Datacenter, and they need to create a bash script named beta_backup.sh which should accomplish the following tasks. (Also remember to place the script under /scripts directory on App Server 2).
 
+a. Create a zip archive named xfusioncorp_beta.zip of /var/www/html/beta directory.
+
+b. Save the archive in /backup/ on App Server 2. This is a temporary storage, as backups from this location will be clean on weekly basis. Therefore, we also need to save this backup archive on Nautilus Backup Server.
+
+c. Copy the created archive to Nautilus Backup Server server in /backup/ location.
+
+d. Please make sure script won't ask for password while copying the archive file. Additionally, the respective server user (for example, tony in case of App Server 1) must be able to run it.
+
+e. Do not use sudo inside the script.
+
+Note:
+The zip package must be installed on given App Server before executing the script. This package is essential for creating the zip archive of the website files. Install it manually outside the script.
+Ans: 
+# SSH into App server2:
+ mkdir -p /scripts
+ ls /scripts/
+ vi /scripts/ecommerce_backup.sh
+#!/bin/bash
+
+# Variables
+SOURCE_DIR="/var/www/html/ecommerce"
+ARCHIVE_NAME="xfusioncorp_ecommerce.zip"
+LOCAL_BACKUP_DIR="/backup"
+REMOTE_BACKUP_DIR="/backup"
+REMOTE_USER="clint"
+REMOTE_HOST="stbkp01.stratos.xfusioncorp.com"
+SCRIPT_LOG="/scripts/ecommerce_backup.log"
+
+# Create zip archive
+zip -r "${LOCAL_BACKUP_DIR}/${ARCHIVE_NAME}" "$SOURCE_DIR" > "$SCRIPT_LOG" 2>&1
+
+# Check zip success
+if [ $? -ne 0 ]; then
+    echo "[$(date)] Zip creation failed. Check log at $SCRIPT_LOG"
+    exit 1
+fi
+
+# Copy archive to backup server
+scp "${LOCAL_BACKUP_DIR}/${ARCHIVE_NAME}" "${REMOTE_USER}@${REMOTE_HOST}:${REMOTE_BACKUP_DIR}" >> "$SCRIPT_LOG" 2>&1
+
+# Check SCP success
+if [ $? -ne 0 ]; then
+    echo "[$(date)] File transfer failed. Check log at $SCRIPT_LOG"
+    exit 2
+fi
+
+echo "[$(date)] Backup completed successfully." >> "$SCRIPT_LOG"
+
+Make the script executable by the intended user (tony in this case):
+ chmod +x /scripts/ecommerce_backup.sh
+ chown tony:tony /scripts/ecommerce_backup.sh
+
+ Passwordless SSH Setup:
+
+ ssh-keygen -t rsa 
+
+ ssh-copy-id clint@stbkp01.stratos.xfusioncorp.com
+Test it:
+ ssh clint@stbkp01.stratos.xfusioncorp.com
+# install zip on appserver 1
+ sudo yum install zip -y 
+Run the script manually to test:
+ sh /scripts/ecommerce_backup.sh
+ ls -l /backup/
+ 
+ssh clint@stbkp01.stratos.xfusioncorp.com
+ls /backup/
 
 # Q20 Add Response Headers in Apache
 We are working on hardening Apache web server on all app servers. As a part of this process we want to add some of the Apache response headers for security purpose. We are testing the settings one by one on all app servers. As per details mentioned below enable these headers for Apache:
@@ -1304,10 +1372,159 @@ AH00526: Syntax error on line 47 of /etc/httpd/conf/httpd.conf:
 Oct 14 13:03:10 stapp03.stratos.xfusioncorp.com httpd[2231]: Invalid command 'Listen 8089', perhaps misspelled or defined by a module not included in the server configuration
 Oct 14 13:03:10 stapp03.stratos.xfusioncorp.com systemd[1]: httpd.service: Got notification message from PID 2231 (RELOADING=1, STATUS=Reading configuration...)
 Oct 14 13:03:10 stapp03.stratos.xfusioncorp.com systemd[1]: httpd.service: Child 2231 belongs to httpd
-# Q22 Linux GPG Encryption
-# Q23 Linux LogRotate
-# Q24 Application Security
 
+ sudo systemctl start httpd
+    2  sudo systemctl start httpd
+    3  journalctl -xeu httpd.service"
+    4  journalctl -xeu httpd.service
+    5  sudo vi  /etc/httpd/conf/httpd.conf
+    6  sudo systemctl start httpd
+    7  journalctl -xeu httpd.service
+    8  sudo vi  /etc/httpd/conf/httpd.conf
+    9  sudo systemctl start httpd
+   10  curl http://172.16.238.12:808
+# Q22 Linux GPG Encryption
+We have confidential data that needs to be transferred to a remote location, so we need to encrypt that data.We also need to decrypt data we received from a remote location in order to understand its content.
+
+On storage server in Stratos Datacenter we have private and public keys stored at /home/*_key.asc. Use these keys to perform the following actions.
+
+- Encrypt /home/encrypt_me.txt to /home/encrypted_me.asc.
+
+- Decrypt /home/decrypt_me.asc to /home/decrypted_me.txt. (Passphrase for decryption and encryption is kodekloud).
+
+- The user ID you can use is kodekloud@kodekloud.com.
+Ans:
+
+### 🔐 **1. Encrypt `/home/encrypt_me.txt` to `/home/encrypted_me.asc`**
+
+#### ✅ Prerequisites:
+
+* Public and private keys are stored at `/home/*_key.asc`
+* The recipient (user ID): `kodekloud@kodekloud.com`
+* Passphrase for private key (used in decryption): `kodekloud`
+
+#### 🛠 Step-by-Step Encryption:
+
+# Import public and private keys
+gpg --import /home/*_key.asc
+
+> This imports both the public and private keys needed.
+
+# Encrypt the file for the recipient
+gpg --armor --recipient kodekloud@kodekloud.com --encrypt /home/encrypt_me.txt
+
+> This will create `/home/encrypt_me.txt.asc` in the current directory. Rename it:
+
+mv /home/encrypt_me.txt.asc /home/encrypted_me.asc
+
+### 🔓 **2. Decrypt `/home/decrypt_me.asc` to `/home/decrypted_me.txt`**
+
+# Decrypt the file using the private key
+gpg --batch --yes --passphrase kodekloud -o /home/decrypted_me.txt --decrypt /home/decrypt_me.asc
+
+# Q23 Linux LogRotate
+The Nautilus DevOps team is ready to launch a new application, which they will deploy on app servers in Stratos Datacenter. They are expecting significant traffic/usage of httpd on app servers after that. This will generate massive logs, creating huge log files. To utilise the storage efficiently, they need to compress the log files and need to rotate old logs. Check the requirements shared below:
+
+a. In all app servers install httpd package.
+b. Using logrotate configure httpd logs rotation to monthly and keep only 3 rotated logs.
+
+(If by default log rotation is set, then please update configuration as needed)
+Ans:
+
+### 🔧 **a. Install the `httpd` package on all app servers**
+
+On each app server:
+
+sudo yum install -y httpd
+
+Or for systems using `dnf`:
+
+sudo dnf install -y httpd
+
+> Make sure `httpd` is installed on **all** app servers.
+###  Start the httpd service:
+sudo systemctl start httpd
+sudo systemctl enable httpd
+
+### 🔁 **b. Configure logrotate for `httpd`**
+
+The log rotation for httpd is typically managed by a file like:
+
+ls /etc/logrotate.d/httpd
+
+#### ✏️ Edit the config file:
+
+sudo vi /etc/logrotate.d/httpd
+
+Update or ensure the following configuration exists:
+
+/var/log/httpd/*log {
+    monthly
+    missingok
+    rotate 3
+    compress
+    delaycompress
+    notifempty
+    create 0640 root adm
+    sharedscripts
+    postrotate
+        /bin/systemctl reload httpd.service > /dev/null 2>/dev/null || true
+    endscript
+}
+### 🔎 Verify your configuration
+
+Run a dry-run of logrotate to make sure the config is valid:
+
+sudo logrotate -d /etc/logrotate.conf
+
+This will **simulate** rotation and confirm there are no errors.
+
+# Generate a log entry: 
+curl http://localhost
+Then check if logs are created: ls -l /var/log/httpd/
+You should see something like access_log and error_log.
+
+# Q24 Application Security
+We have a backup management application UI hosted on Nautilus's backup server in Stratos DC. That backup management application code is deployed under Apache on the backup server itself, and Nginx is running as a reverse proxy on the same server. Apache and Nginx ports are 8083 and 8098, respectively. We have iptables firewall installed on this server. Make the appropriate changes to fulfill the requirements mentioned below:
+
+We want to open all incoming connections to Nginx's port and block all incoming connections to Apache's port. Also make sure rules are permanent.
+Ans:
+To meet your requirements using `iptables`, you’ll need to:
+
+- **Allow incoming traffic** on port **8098** (Nginx).
+- **Block incoming traffic** on port **8083** (Apache).
+- **Save the rules** so they persist after reboot.
+
+Here’s how you can do it:
+
+### 🛠 Step-by-Step iptables Configuration
+
+1. **Allow incoming traffic to Nginx (port 8098):**
+   
+   sudo iptables -A INPUT -p tcp --dport 8098 -j ACCEPT
+   
+2. **Block incoming traffic to Apache (port 8083):**
+   
+   sudo iptables -A INPUT -p tcp --dport 8083 -j DROP 
+
+3. **Save the rules permanently:**
+   - On **Ubuntu/Debian**:
+     
+     sudo apt install iptables-persistent
+     sudo netfilter-persistent save
+  
+   - On **CentOS/RHEL**:
+     
+     sudo service iptables save
+     
+   - On **systems using `iptables-save`**:
+     
+     sudo iptables-save > /etc/iptables/rules.v4
+   
+4. **Verify the rules:**
+   
+   sudo iptables -L -n --line-numbers
+   
 **Level 3**
 # Q1 Apache Redirects
 # Q2 Install And Configure SFTP

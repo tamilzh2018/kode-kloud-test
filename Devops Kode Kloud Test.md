@@ -2136,8 +2136,52 @@ spec:
             cpu: 100m
             memory: 20Mi
 Day 51: **Execute Rolling Updates in Kubernetes**
+An application currently running on the Kubernetes cluster employs the nginx web server. The Nautilus application development team has introduced some recent changes that need deployment. They've crafted an image nginx:1.18 with the latest updates.
+
+Execute a rolling update for this application, integrating the nginx:1.18 image. The deployment is named nginx-deployment.
+
+Ensure all pods are operational post-update.
+Ans:
+**Check the nginx deployment running and Image and Lable details**
+kubectl get deploy
+kubectl describe deployments.apps nginx-deployment
+
+### 🚀 Step-by-Step Rolling Update
+
+1. **Update the Deployment with the New Image**
+   Run the following command to update the image used by the deployment:
+   
+   kubectl set image deployment/nginx-deployment nginx-container=nginx:1.18   
+2. **Monitor the Rolling Update Progress**
+   You can watch the rollout status to ensure it's proceeding correctly:
+   
+   kubectl rollout status deployment/nginx-deployment
+   
+3. **Verify All Pods Are Running**
+   Once the rollout completes, check that all pods are up and running:
+   
+   kubectl get pods -l app=nginx-app   
+
+4. **(Optional) Confirm the Image Version**
+   To confirm that the pods are using the correct image:
+   
+   kubectl describe pods -l app=nginx-app | grep "Image:"
+   
+If you encounter any issues during the rollout, you can undo the update with:
+
+kubectl rollout undo deployment/nginx-deployment
 
 Day 52: **Revert Deployment to Previous Version in Kubernetes**
+Earlier today, the Nautilus DevOps team deployed a new release for an application. However, a customer has reported a bug related to this recent release. Consequently, the team aims to revert to the previous version.
+
+There exists a deployment named nginx-deployment; initiate a rollback to the previous revision.
+
+Ans:
+kubectl get deployments.apps 
+**To roll back the nginx-deployment to its previous revision in Kubernetes, you can use the following command:**
+kubectl rollout undo deployment nginx-deployment 
+**Confirm the rollback or inspect previous revisions**
+kubectl rollout history deployment nginx-deployment 
 
 Day 53: **Resolve VolumeMounts Issue in Kubernetes**
 

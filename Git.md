@@ -76,7 +76,59 @@ Ans:
 
 **Level 2**
 # Q1 Git Install and Create Repository
+To fulfill the request for setting up a Git repository on the Storage server in Stratos DC, follow these steps:
+
+### 🛠️ Step 1: Install Git using `yum`
+Log into the Storage server and run:
+
+sudo yum install git -y
+
+This installs Git and its dependencies.
+
+### 📁 Step 2: Create and Initialize the Git Repository
+Now, create the directory and initialize the Git repository:
+
+sudo mkdir -p /opt/cluster.git
+cd /opt/cluster.git
+sudo git init
+
+> ⚠️ **Important:** Do **not** use `git init --bare` — this must be a standard (non-bare) repository.
+
+### ✅ Verification
+To confirm the repository was initialized correctly, run:
+
+git status
+
 # Q2 Git Create Branches
+Nautilus developers are actively working on one of the project repositories, /usr/src/kodekloudrepos/news. Recently, they decided to implement some new features in the application, and they want to maintain those new changes in a separate branch. Below are the requirements that have been shared with the DevOps team:
+
+On Storage server in Stratos DC create a new branch xfusioncorp_news from master branch in /usr/src/kodekloudrepos/news git repo.
+
+Please do not try to make any changes in the code.
+Ans:
+To create a new branch named `xfusioncorp_news` from the `master` branch in the `/usr/src/kodekloudrepos/news` Git repository on the Storage server in Stratos DC, follow these steps:
+
+1. **SSH into the Storage server** (assuming you have access):
+   
+   ssh <your-user>@<storage-server-ip>
+   
+2. **Navigate to the repository directory**:
+   
+   cd /usr/src/kodekloudrepos/news
+   
+3. **Ensure you're on the `master` branch and it's up to date**:
+   
+   git checkout master
+   git pull origin master
+   
+4. **Create the new branch `xfusioncorp_news` from `master`**:
+   
+   git checkout -b xfusioncorp_news
+   
+5. **Push the new branch to the remote repository**:
+   
+   git push origin xfusioncorp_news
+   
 # Q3 Git Merge Branches
 # Q4 Git Manage Remotes
 # Q5 Git Revert Some Changes

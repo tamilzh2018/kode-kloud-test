@@ -3399,75 +3399,61 @@ kke_kms_key_name: name of the key created.
 **Existing file SensitiveData.txt content**: 
 This is a sensitive file.
 **main.tf**
-resource "aws_kms_key" "datacenter-kms-key" {
-  description             = "KMS key for DevOps encryption"
-  deletion_window_in_days = 10
-  enable_key_rotation     = true
-}
+# 1️⃣ Create a symmetric KMS key
+resource "aws_kms_key" "xfusion_kms_key" {
+  description              = "KMS key for xfusion sensitive data encryption"
+  key_usage                = "ENCRYPT_DECRYPT"
+  customer_master_key_spec = "SYMMETRIC_DEFAULT"
+  enable_key_rotation      = true
 
-resource "aws_kms_alias" "datacenter_kms_alias" {
-  name          = "alias/datacenter-kms-key"
-  target_key_id = aws_kms_key.datacenter-kms-key.key_id
-}
-
-data "local_file" "sensitive_data" {
-  filename = "/home/bob/terraform/SensitiveData.txt"
-}
-
-resource "null_resource" "encrypt_file" {
-  provisioner "local-exec" {
-    command = <<EOT
-aws kms encrypt \
-  --key-id ${aws_kms_key.datacenter-kms-key.key_id} \
-  --plaintext fileb:///home/bob/terraform/SensitiveData.txt \
-  --output text \
-  --query CiphertextBlob | base64 --decode > /home/bob/terraform/EncryptedData.bin
-EOT
-  }
-
-  triggers = {
-    source_hash = data.local_file.sensitive_data.content_md5
+  tags = {
+    Name = "xfusion-kms-key"
   }
 }
 
-data "local_file" "encrypted_data" {
-  filename   = "/home/bob/terraform/EncryptedData.bin"
-  depends_on = [null_resource.encrypt_file]
+# 2️⃣ Create an alias for easier key reference
+resource "aws_kms_alias" "xfusion_kms_alias" {
+  name          = "alias/xfusion-kms-key"
+  target_key_id = aws_kms_key.xfusion_kms_key.id
 }
 
-resource "null_resource" "decrypt_file" {
-  provisioner "local-exec" {
-    command = <<EOT
-aws kms decrypt \
-  --ciphertext-blob fileb:///home/bob/terraform/EncryptedData.bin \
-  --output text \
-  --query Plaintext | base64 --decode > /home/bob/terraform/DecryptedData.txt
-EOT
+# 3️⃣ Read the plaintext content from the sensitive file
+locals {
+  sensitive_file_path = "/home/bob/terraform/SensitiveData.txt"
+  sensitive_plaintext = file(local.sensitive_file_path)
+}
+
+# 4️⃣ Encrypt the file content using the KMS key
+resource "aws_kms_ciphertext" "encrypted_data" {
+  key_id    = aws_kms_key.xfusion_kms_key.arn
+  plaintext = local.sensitive_plaintext
+}
+
+# 5️⃣ Save the encrypted data to a file (base64 encoded)
+resource "local_file" "encrypted_file" {
+  filename = "/home/bob/terraform/EncryptedData.bin"
+  content  = aws_kms_ciphertext.encrypted_data.ciphertext_blob
+}
+
+# 6️⃣ Decrypt the ciphertext using aws_kms_secrets data source
+data "aws_kms_secrets" "decrypted_data" {
+  secret {
+    name    = "decrypted"
+    payload = aws_kms_ciphertext.encrypted_data.ciphertext_blob
   }
-  triggers = {
-    encrypted_hash = data.local_file.encrypted_data.content_md5
-  }
 }
 
-
-
-Tried with:
-output "kms_key_name" {
-  value = aws_kms_key.datacenter-kms-key.name
+# 7️⃣ Save decrypted data for verification
+resource "local_file" "decrypted_file" {
+  filename = "/home/bob/terraform/DecryptedData.txt"
+  content  = data.aws_kms_secrets.decrypted_data.plaintext["decrypted"]
 }
+**Outputs.tf**
 
-Tried with: 
-output "kms_key_name" {
-  value = aws_kms_key.datacenter-kms-key.key_id
+output "kke_kms_key_name" {
+  description = "Name tag of the KMS key created"
+  value       = aws_kms_key.xfusion_kms_key.tags["Name"]
 }
-
-Tried with:
-
-output "kms_key_name" {
-  value = aws_kms_alias.datacenter_kms_alias.name
-}
-
-
 
 # Q6 Deploying a Multi-Tier Architecture on AWS Using Terraform
 The DevOps team needs to build a secure, modular multi-tier AWS infrastructure to support a modern cloud-native application stack using Terraform. As part of this requirement, use only allowed AWS services and ensure secure variable usage.
@@ -3743,8 +3729,307 @@ output "kke_bucket_names" {
 }
 
 # Q8 Hosting a Static Website on Amazon S3 with Custom Configuration Using Terraform
+The Nautilus DevOps team has been tasked with creating an internal information portal for public access. As part of this project, they need to host a static website on AWS using an S3 bucket. The S3 bucket must be configured for public access to allow external users to access the static website directly via the S3 website URL.
+
+Your task is to create a Terraform module named s3-static-site to handle the creation and configuration of the S3 bucket. For uploading the index.html file, you may use either Terraform or the AWS CLI.
+
+Task Requirements:
+
+The module directory /home/bob/terraform/modules/s3-static-site/ is already created, configure the module to perform the following tasks:
+
+Create an S3 bucket named nautilus-web-15360.
+
+Configure the S3 bucket for static website hosting with index.html as the index document.
+
+Allow public access to the bucket by attaching the appropriate bucket policy.
+
+Within the module, use a variables.tf file that must define the following variables: bucket_name and index_document. These values should not be hardcoded directly into resource definitions. You may add other variables if needed to avoid hardcoding. Use these variables in main.tf for configuring the bucket.
+
+Within the module use outputs.tf file to output the following:
+
+website_url: S3 static website url
+Your S3 website url should look something like the following, aws:4566 refers to the mock AWS endpoint configured in your environment (e.g., using LocalStack):
+
+http://aws:4566/<bucketname>/index.html
+The S3 bucket must be tagged with the key Project and the value StaticWeb.
+
+In the root main.tf, call the s3-static-site module using the required input variables (bucket_name, index_document).
+
+Upload the index.html file from /home/bob/terraform directory to the S3 bucket. This can be done using either the AWS CLI or Terraform (aws_s3_object).
+
+Ans:
+Existing Index.html file content:Welcome to KKE labs!
+
+## **1. Module Setup: `/home/bob/terraform/modules/s3-static-site/`**
+
+### **a. `variables.tf`**
+
+
+variable "bucket_name" {
+  description = "The name of the S3 bucket"
+  type        = string
+}
+
+variable "index_document" {
+  description = "The index document for the static website"
+  type        = string
+}
+
+### **b. `main.tf`**
+
+resource "aws_s3_bucket" "static_site" {
+  bucket = var.bucket_name
+
+  tags = {
+    Project = "StaticWeb"
+  }
+}
+
+resource "aws_s3_bucket_website_configuration" "static_site" {
+  bucket = aws_s3_bucket.static_site.id
+
+  index_document {
+    suffix = var.index_document
+  }
+}
+
+resource "aws_s3_bucket_public_access_block" "public_access" {
+  bucket = aws_s3_bucket.static_site.id
+
+  block_public_acls       = false
+  block_public_policy     = false
+  ignore_public_acls      = false
+  restrict_public_buckets = false
+}
+
+resource "aws_s3_bucket_policy" "public_read_policy" {
+  bucket = aws_s3_bucket.static_site.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid       = "PublicReadGetObject"
+        Effect    = "Allow"
+        Principal = "*"
+        Action    = "s3:GetObject"
+        Resource  = "${aws_s3_bucket.static_site.arn}/*"
+      }
+    ]
+  })
+}
+
+### **c. `outputs.tf`**
+
+
+output "website_url" {
+  description = "URL of the static website"
+  value       = "http://aws:4566/${var.bucket_name}/${var.index_document}"
+}
+
+## **2. Root Directory: `/home/bob/terraform/`**
+
+### **a. `main.tf`**
+
+module "s3_static_site" {
+  source         = "./modules/s3-static-site"
+  bucket_name    = "nautilus-web-15360"
+  index_document = "index.html"
+}
+
+## **3. Upload `index.html` to S3**
+
+If you have AWS CLI configured with `--endpoint-url http://aws:4566` (for LocalStack), you can upload like this:
+
+bash
+aws --endpoint-url http://aws:4566 s3 cp index.html s3://nautilus-web-15360/index.html
+
+Alternatively, using Terraform (add this to the **root** `main.tf` or in module):
+
+resource "aws_s3_object" "index_html" {
+  bucket = module.s3_static_site.bucket_name
+  key    = "index.html"
+  source = "${path.module}/index.html"
+  content_type = "text/html"
+}
+
+**outputs.tf**
+output "website_url" {
+  description = "The website URL of the static site"
+  value       = module.s3_static_site.website_url
+}
+
+
 # Q9 Storing and Accessing Sensitive Data Securely with AWS Secrets Manager Using Terraform
+The Nautilus DevOps team needs to securely manage sensitive information using AWS Secrets Manager. The task is to create a secret in AWS Secrets Manager using Terraform. Store a database password securely in this secret. Ensure the password is passed as a sensitive Terraform variable, and it should not appear in Terraform logs or output without being marked sensitive.
+
+Requirements:
+
+Create an AWS Secrets Manager secret named nautilus-db-password.
+
+Store the database password SuperSecretPassword123! in the secret using Terraform.
+
+Mark the Terraform variable for the password as sensitive.
+
+Do not expose the actual password in Terraform outputs without marking it sensitive.
+
+Create main.tf file (do not create a separate .tf file) to provision a Secret and add the database password in it.
+
+Use variables.tffile for the following:
+
+KKE_DB_PASSWORD: database password stored in secrets manager.
+Create a terraform.tfvars to input the database password.
+
+Use outputs.tf file to output the following:
+
+kke_secret_arn: arn of the secret created.
+
+kke_secret_string: database password.
+
+Ans:
+
+
+### 📁 `main.tf`
+
+provider "aws" {
+  region = "us-east-1"
+}
+
+resource "aws_secretsmanager_secret" "nautilus_db_password" {
+  name = "nautilus-db-password"
+}
+
+resource "aws_secretsmanager_secret_version" "nautilus_db_password_version" {
+  secret_id     = aws_secretsmanager_secret.nautilus_db_password.id
+  secret_string = var.KKE_DB_PASSWORD
+}
+### 📁 `variables.tf`
+variable "KKE_DB_PASSWORD" {
+  description = "Database password stored in Secrets Manager"
+  type        = string
+  sensitive   = true
+}
+### 📁 `terraform.tfvars`
+
+KKE_DB_PASSWORD = "SuperSecretPassword123!"
+### 📁 `outputs.tf`
+output "kke_secret_arn" {
+  description = "ARN of the secret created"
+  value       = aws_secretsmanager_secret.nautilus_db_password.arn
+}
+
+output "kke_secret_string" {
+  description = "Database password stored in Secrets Manager"
+  value       = aws_secretsmanager_secret_version.nautilus_db_password_version.secret_string
+  sensitive   = true
+}
+
+✅ **Security Notes:**
+- The password is passed as a sensitive variable and stored securely.
+- Terraform will not log or display the password unless explicitly requested with `terraform output kke_secret_string`.
+
 # Q10 Managing Terraform Workspaces for Environment Isolation Using Terraform
+The DevOps team is tasked with provisioning multiple API Gateway REST APIs and corresponding CloudWatch Log Groups using the following Terraform features:
+
+Create two workspaces named dev and prod.
+
+Create API Gateways named dev-datacenter-api-1 and prod-datacenter-api-2.
+
+Create matching CloudWatch Log Groups named /aws/apigateway/dev-datacenter-api-1 and /aws/apigateway/prod-datacenter-api-2.
+
+Use the count meta-argument to create multiple API Gateway REST APIs and matching log groups.
+
+Leverage terraform workspaces to differentiate API Gateway names per environment.
+
+Use local-exec provisioner to write a confirmation message to a log file once each resource is created.(e.g., Created API Gateway dev-datacenter-api-2 in workspace dev).
+
+Create two different files apigateway.log and loggroups.log in /home/bob/terraform to log the creation of each resource in their respective files.
+
+Use a list variable KKE_API_NAMES to define API names (e.g., ["datacenter-api-1", "datacenter-api-2"]).
+
+Createmain.tf file (do not create a separate .tf file) to provision the api gateway with matching log groups in different workspaces.
+
+Use variables.tf file with the following:
+
+KKE_API_NAMES = Names of API Gateways to create.
+Use terraform.tfvars file to input the names of the API Gateways.
+
+Use outputs.tf file to output the following in the two different workspces ( devand prod).
+
+kke_api_gateway_names= name of the api gateway created.
+kke_log_group_names= name of the matching logroups created.
+
+Ans:
+
+- `main.tf` for provisioning API Gateway REST APIs and CloudWatch Log Groups using `count`, `terraform.workspace`, and `local-exec`.
+- `variables.tf` to define the `KKE_API_NAMES` variable.
+- `terraform.tfvars` to provide the list of API names.
+- `outputs.tf` to output the created resource names per workspace.
+
+### 📄 `main.tf`
+
+locals {
+  workspace_prefix = terraform.workspace
+}
+
+resource "aws_api_gateway_rest_api" "kke_api" {
+  count = length(var.KKE_API_NAMES)
+
+  name = "${local.workspace_prefix}-${var.KKE_API_NAMES[count.index]}"
+
+  provisioner "local-exec" {
+    command = "echo Created API Gateway ${self.name} in workspace ${terraform.workspace} >> /home/bob/terraform/apigateway.log"
+  }
+}
+
+resource "aws_cloudwatch_log_group" "kke_log_group" {
+  count = length(var.KKE_API_NAMES)
+
+  name = "/aws/apigateway/${local.workspace_prefix}-${var.KKE_API_NAMES[count.index]}"
+  retention_in_days = 14
+
+  provisioner "local-exec" {
+    command = "echo Created Log Group ${self.name} in workspace ${terraform.workspace} >> /home/bob/terraform/loggroups.log"
+  }
+}
+### 📄 `variables.tf`
+variable "KKE_API_NAMES" {
+  description = "Names of API Gateways to create"
+  type        = list(string)
+}
+
+### 📄 `terraform.tfvars`
+
+KKE_API_NAMES = ["datacenter-api-1", "datacenter-api-2"]
+### 📄 `outputs.tf`
+output "kke_api_gateway_names" {
+  value = [for api in aws_api_gateway_rest_api.kke_api : api.name]
+}
+
+output "kke_log_group_names" {
+  value = [for log in aws_cloudwatch_log_group.kke_log_group : log.name]
+}
+
+### ✅ Usage Instructions
+
+1. **Initialize Terraform and create workspaces:**
+
+terraform init
+terraform workspace new dev
+terraform workspace new prod
+
+2. **Apply for each workspace:**
+
+terraform workspace select dev
+terraform apply
+
+terraform workspace select prod
+terraform apply
+
+This setup ensures that:
+- API Gateway and Log Group names are prefixed with the workspace (`dev-` or `prod-`).
+- Confirmation messages are logged to `/home/bob/terraform/apigateway.log` and `/home/bob/terraform/loggroups.log`.
+- Outputs show the names of created resources per workspace.
 
 **Level 4**
 ***Certifcation Test***

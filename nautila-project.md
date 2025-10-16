@@ -47,7 +47,7 @@ jenkins	    172.16.238.19	jenkins.stratos.xfusioncorp.com	    jenkins	j@rv!s	   
 Docker Execrcise completed
 Kubernetes Execrcise completed
 Ansible Execrcise completed
-Terraform is Pending
+Terraform is completed
 Jenkins is Pending
 Git is Pending
 Linux is Pending
