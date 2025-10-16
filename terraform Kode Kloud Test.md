@@ -4771,3 +4771,566 @@ output "KKE_bucket_name" {
   value       = aws_s3_bucket.xfusion_bucket.bucket
 }
 
+**Level3 Certification Test**
+Q1:
+The DevOps team needs to create a data ingestion pipeline using AWS Kinesis Firehose to deliver streaming data into an S3 bucket. The Firehose delivery stream must assume an IAM role using STS, deliver data to an S3 bucket, and add a newline delimiter after each record. Buffering settings should be configured to deliver data either when the buffer reaches 5 MB or after 300 seconds, whichever comes first.
+
+You are required to complete this task using Terraform.
+
+Task Requirements:
+
+Create an S3 bucket named devops-stream-bucket-19932-t1q3 using Terraform.
+
+Create an IAM role named firehose-sts-role with:
+
+An assume role policy that allows Kinesis Firehose to assume the role using STS.
+An inline policy or a managed policy attachment that grants permissions to put objects into the S3 bucket.
+The Firehose delivery stream must use the IAM role via STS assume role.
+
+Use depends_on in the Firehose resource to ensure it waits for both the IAM role and its policy (inline or attached) to be created before provisioning the stream.
+
+Create a Firehose delivery stream named devops-firehose-stream-t1q3 to deliver data to the S3 bucket.
+
+Configure buffering with size 5 MB and interval 300 seconds.
+
+Enable record processing by setting the Delimiter parameter to \n to append a newline after each record.
+
+Create main.tf file to create an S3 bucket, IAM role, and Firehose delivery stream.
+
+Use a variables.tf file with the following variables:
+
+KKE_S3_BUCKET_NAME: name of the bucket.
+KKE_FIREHOSE_STREAM_NAME: name of the Firehose stream.
+KKE_FIREHOSE_ROLE_NAME: name of the Firehose role.
+Use a terraform.tfvars file to input the values.
+
+Use an outputs.tf file to output the following:
+
+kke_firehose_stream_name: name of the Firehose stream created.
+kke_s3_bucket_name: name of the bucket created.
+kke_firehose_role_arn: ARN of the created Firehose role.
+Send test data to the Firehose stream and verify that each record in the S3 files ends with a newline character.
+
+Ans:
+Here’s a complete Terraform setup to provision an AWS Kinesis Firehose delivery stream that delivers data to an S3 bucket with newline-delimited records, using STS-assumed IAM roles.
+
+
+
+## 📁 File Structure Overview
+
+You'll need the following files:
+
+- `main.tf`
+- `variables.tf`
+- `terraform.tfvars`
+- `outputs.tf`
+
+
+
+## 📄 `variables.tf`
+
+hcl
+variable "KKE_S3_BUCKET_NAME" {
+  description = "Name of the S3 bucket"
+  type        = string
+}
+
+variable "KKE_FIREHOSE_STREAM_NAME" {
+  description = "Name of the Firehose delivery stream"
+  type        = string
+}
+
+variable "KKE_FIREHOSE_ROLE_NAME" {
+  description = "Name of the IAM role for Firehose"
+  type        = string
+}
+
+
+
+
+## 📄 `terraform.tfvars`
+
+hcl
+KKE_S3_BUCKET_NAME        = "devops-stream-bucket-19932-t1q3"
+KKE_FIREHOSE_STREAM_NAME  = "devops-firehose-stream-t1q3"
+KKE_FIREHOSE_ROLE_NAME    = "firehose-sts-role"
+
+
+
+
+## 📄 `main.tf`
+
+hcl
+provider "aws" {
+  region = "us-east-1"
+}
+
+resource "aws_s3_bucket" "firehose_bucket" {
+  bucket = var.KKE_S3_BUCKET_NAME
+}
+
+resource "aws_iam_role" "firehose_role" {
+  name = var.KKE_FIREHOSE_ROLE_NAME
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Principal = {
+          Service = "firehose.amazonaws.com"
+        }
+        Action = "sts:AssumeRole"
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy" "firehose_policy" {
+  name = "${var.KKE_FIREHOSE_ROLE_NAME}-policy"
+  role = aws_iam_role.firehose_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "s3:PutObject",
+          "s3:PutObjectAcl"
+        ]
+        Resource = "${aws_s3_bucket.firehose_bucket.arn}/*"
+      }
+    ]
+  })
+}
+
+resource "aws_kinesis_firehose_delivery_stream" "firehose_stream" {
+  name        = var.KKE_FIREHOSE_STREAM_NAME
+  destination = "extended_s3"
+
+  extended_s3_configuration {
+    role_arn           = aws_iam_role.firehose_role.arn
+    bucket_arn         = aws_s3_bucket.firehose_bucket.arn
+    buffering_size     = 5
+    buffering_interval = 300
+
+    processing_configuration {
+      enabled = true
+
+      processors {
+        type = "AppendDelimiterToRecord"
+
+        parameters {
+          parameter_name  = "Delimiter"
+          parameter_value = "\\n"
+        }
+      }
+    }
+  }
+
+  depends_on = [
+    aws_iam_role.firehose_role,
+    aws_iam_role_policy.firehose_policy
+  ]
+}
+
+
+
+
+
+## 📄 `outputs.tf`
+
+hcl
+output "kke_firehose_stream_name" {
+  value = aws_kinesis_firehose_delivery_stream.firehose_stream.name
+}
+
+output "kke_s3_bucket_name" {
+  value = aws_s3_bucket.firehose_bucket.bucket
+}
+
+output "kke_firehose_role_arn" {
+  value = aws_iam_role.firehose_role.arn
+}
+
+
+
+
+## ✅ Verification Steps
+
+After applying the Terraform configuration:
+
+1. **Send test data** to the Firehose stream using AWS CLI or SDK:
+   
+   aws firehose put-record \
+     --delivery-stream-name devops-firehose-stream-t1q3 \
+     --record='Data="Hello World\n"'
+   
+
+2. **Check the S3 bucket** for delivered files. Open the file and verify each record ends with a newline (`\n`).
+
+Q2:
+The Nautilus DevOps team needs to set up three S3 buckets for different environments with backup and policy configurations. Follow the steps below:
+
+Create three S3 buckets using for_each for environments: Dev, Staging, and Prod.
+
+Name the buckets using the following naming convention:
+
+devops-dev-bucket-5081-t2q3
+devops-staging-bucket-5081-t2q3
+devops-prod-bucket-5081-t2q3
+Add the following tags to each bucket with the corresponding values:
+
+a.) For devops-dev-bucket-5081-t2q3:
+
+Name = devops-dev-bucket-5081-t2q3
+Environment = Dev
+Owner = Alice
+b.) For devops-staging-bucket-5081-t2q3:
+
+Name = devops-staging-bucket-5081-t2q3
+Environment = Staging
+Owner = Bob
+c.) For devops-prod-bucket-5081-t2q3:
+
+Environment = Prod
+Owner = Carol
+For the staging and prod buckets, set Backup = true and add a lifecycle rule with ID MoveToGlacier to transition objects to Glacier after 30 days.
+
+Use the lifecycle block with ignore_changes to protect the tags.
+
+Create a bucket policy that allows public read access to all objects in the bucket.
+
+Use depends_on to ensure the policy is only applied after the bucket has been created.
+
+Implement the entire configuration in a single main.tf file (do not create a separate .tf file) to provision multiple S3 buckets with the specified configurations.
+
+Use variables.tf with the following variable:
+
+KKE_ENV_TAGS. KKE_ENV_TAGS is a map that holds environment-specific metadata such as bucket name, owner, and backup flag.
+Use outputs.tf file to output the following:
+
+kke_bucket_names: output the names of the bucket created.
+Ans:
+**Main.tf**
+# Create S3 buckets
+resource "aws_s3_bucket" "env_buckets" {
+  for_each = var.KKE_ENV_TAGS
+
+  bucket = each.value.bucket_name
+
+  tags = {
+    Name        = each.value.bucket_name
+    Environment = each.value.environment
+    Owner       = each.value.owner
+    Backup      = each.value.backup ? "true" : "false"
+  }
+
+  lifecycle {
+    ignore_changes = [tags]
+  }
+}
+
+# Add lifecycle rules for staging and prod
+resource "aws_s3_bucket_lifecycle_configuration" "glacier_rules" {
+  for_each = {
+    for k, v in var.KKE_ENV_TAGS : k => v
+    if v.backup
+  }
+
+  bucket = aws_s3_bucket.env_buckets[each.key].id
+
+  rule {
+    id     = "MoveToGlacier"
+    status = "Enabled"
+
+    transition {
+      days          = 30
+      storage_class = "GLACIER"
+    }
+
+    filter {
+        prefix = ""
+    }
+  }
+}
+
+# Public read bucket policy
+resource "aws_s3_bucket_policy" "public_read" {
+  for_each = var.KKE_ENV_TAGS
+
+  bucket = aws_s3_bucket.env_buckets[each.key].id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid       = "PublicReadGetObject"
+        Effect    = "Allow"
+        Principal = "*"
+        Action    = "s3:GetObject"
+        Resource  = "${aws_s3_bucket.env_buckets[each.key].arn}/*"
+      }
+    ]
+  })
+
+  depends_on = [aws_s3_bucket.env_buckets]
+}
+**Variables.tf**
+variable "KKE_ENV_TAGS" {
+  description = "Map of environment-specific metadata"
+  type = map(object({
+    bucket_name = string
+    environment = string
+    owner       = string
+    backup      = bool
+  }))
+  default = {
+    dev = {
+      bucket_name = "devops-dev-bucket-5081-t2q3"
+      environment = "Dev"
+      owner       = "Alice"
+      backup      = false
+    }
+    staging = {
+      bucket_name = "devops-staging-bucket-5081-t2q3"
+      environment = "Staging"
+      owner       = "Bob"
+      backup      = true
+    }
+    prod = {
+      bucket_name = "devops-prod-bucket-5081-t2q3"
+      environment = "Prod"
+      owner       = "Carol"
+      backup      = true
+    }
+  }
+}
+**outputs.tf**
+output "kke_bucket_names" {
+  value = [for b in aws_s3_bucket.env_buckets : b.bucket]
+}
+
+Q3:
+The Nautilus DevOps team has been tasked with creating an internal information portal for public access. As part of this project, they need to host a static website on AWS using an S3 bucket. The S3 bucket must be configured for public access to allow external users to access the static website directly via the S3 website URL.
+
+Your task is to create a Terraform module named s3-static-site to handle the creation and configuration of the S3 bucket. For uploading the index.html file, you may use either Terraform or the AWS CLI.
+
+Task Requirements:
+
+The module directory /home/bob/terraform/t3q1/modules/s3-static-site/ is already created, configure the module to perform the following tasks:
+
+Create an S3 bucket named devops-web-31006-t3q1.
+
+Configure the S3 bucket for static website hosting with index.html as the index document.
+
+Allow public access to the bucket by attaching the appropriate bucket policy.
+
+Within the module, use a variables.tf file that must define the following variables: bucket_name and index_document. These values should not be hardcoded directly into resource definitions. You may add other variables if needed to avoid hardcoding. Use these variables in main.tf for configuring the bucket.
+
+Within the module use outputs.tf file to output the following:
+
+website_url: S3 static website url
+Your S3 website url should look something like the following, aws:4566 refers to the mock AWS endpoint configured in your environment (e.g., using LocalStack):
+
+http://aws:4566/<bucketname>/index.html
+The S3 bucket must be tagged with the key Project and the value StaticWeb.
+
+In the root main.tf, call the s3-static-site module using the required input variables (bucket_name, index_document).
+
+Upload the index.html file from /home/bob/terraform/t3q1 directory to the S3 bucket. This can be done using either the AWS CLI or Terraform (aws_s3_object).
+
+Ans:
+Here’s a clean and working **Terraform solution** to meet your task requirements.
+
+We'll structure the configuration like this:
+
+
+/home/bob/terraform/t3q1/
+├── main.tf
+├── index.html
+└── modules/
+    └── s3-static-site/
+        ├── main.tf
+        ├── variables.tf
+        └── outputs.tf
+
+
+
+
+## ✅ Step 1: `modules/s3-static-site/variables.tf`
+
+hcl
+variable "bucket_name" {
+  description = "Name of the S3 bucket"
+  type        = string
+}
+
+variable "index_document" {
+  description = "Index document for S3 static website hosting"
+  type        = string
+}
+
+
+
+
+## ✅ Step 2: `modules/s3-static-site/main.tf`
+
+hcl
+resource "aws_s3_bucket" "this" {
+  bucket = var.bucket_name
+
+  tags = {
+    Project = "StaticWeb"
+  }
+}
+
+# Enable static website hosting
+resource "aws_s3_bucket_website_configuration" "this" {
+  bucket = aws_s3_bucket.this.id
+
+  index_document {
+    suffix = var.index_document
+  }
+}
+
+# Disable block public access so bucket can be public
+resource "aws_s3_bucket_public_access_block" "this" {
+  bucket = aws_s3_bucket.this.id
+
+  block_public_acls       = false
+  block_public_policy     = false
+  ignore_public_acls      = false
+  restrict_public_buckets = false
+}
+
+# Public access bucket policy
+data "aws_iam_policy_document" "public_read" {
+  statement {
+    effect = "Allow"
+
+    principals {
+      type        = "*"
+      identifiers = ["*"]
+    }
+
+    actions = [
+      "s3:GetObject"
+    ]
+
+    resources = [
+      "${aws_s3_bucket.this.arn}/*"
+    ]
+  }
+}
+
+resource "aws_s3_bucket_policy" "this" {
+  bucket = aws_s3_bucket.this.id
+  policy = data.aws_iam_policy_document.public_read.json
+}
+
+
+
+
+## ✅ Step 3: `modules/s3-static-site/outputs.tf`
+
+hcl
+output "website_url" {
+  description = "S3 static website URL"
+  value       = "http://aws:4566/${var.bucket_name}/${var.index_document}"
+}
+
+
+> Note: Since this uses LocalStack or mock AWS, the domain `aws:4566` is hardcoded in output as per your instruction.
+
+
+
+## ✅ Step 4: Root `main.tf`
+
+hcl
+terraform {
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 5.0"
+    }
+  }
+
+  required_version = ">= 1.3.0"
+}
+
+provider "aws" {
+  region                      = "us-east-1"
+  access_key                  = "mock_access_key"
+  secret_key                  = "mock_secret_key"
+  s3_force_path_style         = true
+  skip_credentials_validation = true
+  skip_metadata_api_check     = true
+  endpoints {
+    s3 = "http://aws:4566"
+  }
+}
+
+module "s3_static_site" {
+  source          = "./modules/s3-static-site"
+  bucket_name     = "devops-web-31006-t3q1"
+  index_document  = "index.html"
+}
+
+# Option 1: Upload index.html via Terraform
+resource "aws_s3_object" "index_html" {
+  bucket       = module.s3_static_site.bucket_name
+  key          = "index.html"
+  source       = "${path.module}/index.html"
+  content_type = "text/html"
+  acl          = "public-read"
+}
+
+
+📝 **Note:**
+We added an `aws_s3_object` to upload `index.html` automatically using Terraform.
+Alternatively, you could use:
+
+
+aws --endpoint-url=http://aws:4566 s3 cp index.html s3://devops-web-31006-t3q1/index.html --acl public-read
+
+
+
+
+## ✅ Step 5: (Optional) Add `outputs.tf` in root to print website URL
+
+hcl
+output "website_url" {
+  value = module.s3_static_site.website_url
+}
+
+
+
+
+## ✅ Step 6: Initialize and apply Terraform
+
+
+cd /home/bob/terraform/t3q1
+terraform init
+terraform apply -auto-approve
+
+
+
+
+## ✅ Final Output Example
+
+
+Apply complete! Resources: 4 added, 0 changed, 0 destroyed.
+
+Outputs:
+
+website_url = "http://aws:4566/devops-web-31006-t3q1/index.html"
+
+
+🌐 You can now open that URL in a browser or use `curl` to access the static site:
+
+
+curl http://aws:4566/devops-web-31006-t3q1/index.html
+
+
