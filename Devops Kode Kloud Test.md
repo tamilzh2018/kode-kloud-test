@@ -1347,7 +1347,34 @@ Ans:
 login and choose specific repo and fork
 
 Day 24: **Git Create Branches**
+Nautilus developers are actively working on one of the project repositories, /usr/src/kodekloudrepos/news. Recently, they decided to implement some new features in the application, and they want to maintain those new changes in a separate branch. Below are the requirements that have been shared with the DevOps team:
 
+On Storage server in Stratos DC create a new branch xfusioncorp_news from master branch in /usr/src/kodekloudrepos/news git repo.
+
+Please do not try to make any changes in the code.
+Ans:
+To create a new branch named `xfusioncorp_news` from the `master` branch in the `/usr/src/kodekloudrepos/news` Git repository on the Storage server in Stratos DC, follow these steps:
+
+1. **SSH into the Storage server** (assuming you have access):
+   
+   ssh <your-user>@<storage-server-ip>
+   
+2. **Navigate to the repository directory**:
+   
+   cd /usr/src/kodekloudrepos/news
+   
+3. **Ensure you're on the `master` branch and it's up to date**:
+   
+   git checkout master
+   git pull origin master
+   
+4. **Create the new branch `xfusioncorp_news` from `master`**:
+   
+   git checkout -b xfusioncorp_news
+   
+5. **Push the new branch to the remote repository**:
+   
+   git push origin xfusioncorp_news
 Day 25: **Git Merge Branches**
 The Nautilus application development team has been working on a project repository /opt/demo.git. This repo is cloned at /usr/src/kodekloudrepos on storage server in Stratos DC. They recently shared the following requirements with DevOps team:
 
@@ -1664,8 +1691,6 @@ To accomplish the task of **rebasing a feature branch with the master branch wit
   * Avoid merge commits (so **do not use** `git merge`, use `git rebase`).
   * Ensure no data is lost from the feature branch.
   * Push changes after the rebase.
-
-
 
 ## 🧪 Step-by-Step Solution:
 
@@ -2059,8 +2084,6 @@ curl IP:port
 
 Day 47: **Docker Python App**
 A python app needed to be Dockerized, and then it needs to be deployed on App Server 2. We have already copied a requirements.txt file (having the app dependencies) under /python_app/src/ directory on App Server 2. Further complete this task as per details mentioned below:
-
-
 
 Create a Dockerfile under /python_app directory:
 

@@ -1527,7 +1527,178 @@ Here’s how you can do it:
    
 **Level 3**
 # Q1 Apache Redirects
+The Nautilus devops team got some requirements related to some Apache config changes. They need to setup some redirects for some URLs. There might be some more changes need to be done. Below you can find more details regarding that:
+
+1.) httpd is already installed on app server 2. Configure Apache to listen on port 8088.
+
+Configure Apache to add some redirects as mentioned below:
+
+a.) Redirect http://stapp02.stratos.xfusioncorp.com:<Port>/ to http://www.stapp02.stratos.xfusioncorp.com:<Port>/ i.e non www to www. This must be a permanent redirect i.e 301
+
+b.) Redirect http://www.stapp02.stratos.xfusioncorp.com:<Port>/blog/ to http://www.stapp02.stratos.xfusioncorp.com:<Port>/news/. This must be a temporary redirect i.e 302.
+Ans:
+
+### **Step 1: Update Apache to Listen on Port 8088**
+
+1. SSH into app server 2.
+ 
+   ssh tony@stapp02
+   
+2. Edit the Apache configuration file (usually one of the following):
+   
+   sudo vi /etc/httpd/conf/httpd.conf
+ 
+   or on Ubuntu/Debian:
+   
+   sudo vi /etc/apache2/ports.conf
+
+3. Find the line:
+
+   
+   Listen 80
+   
+   Change it to:
+  
+   Listen 8088
+
+   sudo grep -i "Listen" /etc/httpd/conf/httpd.conf
+   sudo sed -i 's/^Listen 8080/Listen 8088/' /etc/httpd/conf/httpd.conf
+
+4. Save and exit the file.
+
+### **Step 2: Configure Virtual Hosts**
+
+Create or edit a virtual host configuration file (for RHEL/CentOS systems):
+
+sudo vi /etc/httpd/conf.d/redirects.conf
+
+For Ubuntu/Debian:
+
+sudo vi /etc/apache2/sites-available/redirects.conf
+
+Add the following configuration:
+# Non-www to www permanent redirect
+<VirtualHost *:8088>
+    ServerName stapp02.stratos.xfusioncorp.com
+    Redirect 301 / http://www.stapp02.stratos.xfusioncorp.com:8088/
+</VirtualHost>
+
+# www site with blog -> news temporary redirect
+<VirtualHost *:8088>
+    ServerName www.stapp02.stratos.xfusioncorp.com
+    DocumentRoot /var/www/html
+
+    # Temporary redirect from /blog to /news
+    Redirect 302 /blog/ http://www.stapp02.stratos.xfusioncorp.com:8088/news/
+</VirtualHost>
+
+Save and close the file.
+
+### **Step 3: Verify Configuration Syntax**
+
+Before restarting Apache, always test the syntax:
+
+sudo apachectl configtest
+
+You should see:
+
+Syntax OK
+
+### **Step 4: Restart Apache**
+
+Restart the Apache service to apply the changes.
+
+For RHEL/CentOS:
+
+sudo systemctl restart httpd
+
+For Ubuntu/Debian:
+
+sudo systemctl restart apache2
+
+### **Step 5: Verify the Redirects**
+
+You can use `curl` to test the redirects:
+
+#### a) Non-www to www (Permanent 301)
+
+curl -I http://stapp02.stratos.xfusioncorp.com:8088/
+
+Expected output includes:
+
+HTTP/1.1 301 Moved Permanently
+Location: http://www.stapp02.stratos.xfusioncorp.com:8088/
+
+#### b) Blog to News (Temporary 302)
+
+curl -I http://www.stapp02.stratos.xfusioncorp.com:8088/blog/
+
+Expected output includes:
+
+HTTP/1.1 302 Found
+Location: http://www.stapp02.stratos.xfusioncorp.com:8088/news/
+
 # Q2 Install And Configure SFTP
+Some of the developers from Nautilus project team have asked for SFTP access to at least one of the app server in Stratos DC. After going through the requirements, the system admins team has decided to configure the SFTP server on App Server 2 server in Stratos Datacenter. Please configure it as per the following instructions:
+
+a. Create a SFTP user ravi and set its password to ksH85UJjhb. There is already a group called ftp, you can utilise the same.
+
+b. Password authentication should be enabled for this user.
+
+c. SFTP user should only be allowed to make SFTP connections.
+Ans:
+### **1️⃣ Create the user and set the password**
+
+sudo useradd -m -g ftp -s /sbin/nologin ravi
+echo "ksH85UJjhb" | sudo passwd --stdin ravi  # (For CentOS/RHEL)
+
+> 🟢 If you’re on Ubuntu/Debian, use:
+
+echo "ravi:ksH85UJjhb" | sudo chpasswd
+
+### **2️⃣ Configure SSHD for SFTP restrictions**
+
+Edit the SSH configuration file:
+
+sudo vi /etc/ssh/sshd_config
+
+Add the following lines **at the end** of the file (or modify if already present):
+
+Match User ravi
+    ForceCommand internal-sftp
+    PasswordAuthentication yes
+    ChrootDirectory /home/ravi
+    PermitTunnel no
+    AllowTcpForwarding no
+    X11Forwarding no
+
+### **3️⃣ Set correct permissions for chroot**
+SFTP chroot requires strict ownership:
+
+sudo chown root:root /home/ravi
+sudo chmod 755 /home/ravi
+sudo mkdir -p /home/ravi/data
+sudo chown ravi:ftp /home/ravi/data
+
+This ensures the SFTP root is secure while allowing the user to write inside `/home/ravi/data`.
+
+### **4️⃣ Restart SSH service**
+
+sudo systemctl restart sshd
+
+> (or `sudo systemctl restart ssh` on Ubuntu/Debian)
+
+### **5️⃣ Verify the setup**
+
+From another machine (or local terminal):
+# ➡️ Should deny access with a message like “This account is currently not available.”
+ssh ravi@stapp02
+ravi@stapp02's password: 
+This service allows sftp connections only.
+Connection to stapp02 closed.
+
+#➡️ Should still work and give you the sftp> prompt.
+sftp ravi@<appserver2-ip>
 # Q3 Install and Configure Tomcat Server
 # Q4 Linux Network Services
 # Q5 IPtables Installation And Configuration
