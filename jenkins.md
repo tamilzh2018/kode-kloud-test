@@ -300,6 +300,106 @@ After installation:
 * Refresh the page after Jenkins restarts.
 
 # *Q3:Jenkins Workspaces**
+Some developers are working on a common repository where they are testing some features for an application. They are having three branches (excluding the master branch) in this repository where they are adding changes related to these different features. They want to test these changes on Stratos DC app servers so they need a Jenkins job using which they can deploy these different branches as per requirements. Configure a Jenkins job accordingly.
+
+Click on the Jenkins button on the top bar to access the Jenkins UI. Login using username admin and password Adm!n321.
+
+Similarly, click on Gitea button to access the Gitea page. Login to Gitea server using username sarah and password Sarah_pass123.
+
+There is a Git repository named web_app on Gitea where developers are pushing their changes. It has three branches version1, version2 and version3 (excluding the master branch). You need not to make any changes in the repository.
+
+Create a Jenkins job named app-job.
+
+Configure this job to have a choice parameter named Branch with choices as given below:
+
+version1
+
+version2
+
+version3
+
+Configure the job to fetch changes from above mentioned Git repository and make sure it should fetches the changes from the respective branch which you are passing as a choice in the choice parameter while building the job. For example if you choose version1 then it must fetch and deploy the changes from branch version1.
+
+Configure this job to use custom workspace rather than a default workspace and custom workspace directory should be created under /var/lib/jenkins (for example /var/lib/jenkins/version1) location rather than under any sub-directory etc. The job should use a workspace as per the value you will pass for Branch parameter while building the job. For example if you choose version1 while building the job then it should create a workspace directory called version1 and should fetch Git repository etc within that directory only.
+
+Configure the job to deploy code (fetched from Git repository) on storage server (in Stratos DC) under /var/www/html directory. Since its a shared volume.
+
+You can access the website by clicking on App button.
+
+Note:
+
+You might need to install some plugins and restart Jenkins service. So, we recommend clicking on Restart Jenkins when installation is complete and no jobs are running on plugin installation/update page i.e update centre. Also, Jenkins UI sometimes gets stuck when Jenkins service restarts in the back end. In this case please make sure to refresh the UI page.
+
+For these kind of scenarios requiring changes to be done in a web UI, please take screenshots so that you can share it with us for review in case your task is marked incomplete. You may also consider using a screen recording software such as loom.com to record and share your work.
+
+Ans:
+### ✅ Prerequisites
+
+1. **SSH Access to `ststor01`**
+   - Ensure the Jenkins server can SSH into `ststor01` without a password prompt.
+   - Typically done by generating an SSH key on the Jenkins server and adding the public key to `~/.ssh/authorized_keys` on `ststor01`.
+
+   On the Jenkins server:
+   
+   ssh-keygen -t rsa -b 2048 -f ~/.ssh/id_rsa
+   ssh-copy-id user@ststor01
+   
+
+2. **Remote Directory Exists**
+   - Ensure `/var/www/html` exists on `ststor01` and is writable by the SSH user.
+
+### 🧩 Jenkins Job: `app-job` Adjustments
+
+1. ###  **Add Choice Parameter**
+- Go to **Configure** for `app-job`
+- Scroll to **Build Parameters**
+- Check **This project is parameterized**
+- Click **Add Parameter → Choice Parameter**
+  - Name: `Branch`
+  - Choices:
+    
+    version1
+    version2
+    version3
+    
+2. **Set Custom Workspace**
+- Scroll to **Advanced Project Options**
+- Check **Use custom workspace**
+- Set directory to:
+  
+  /var/lib/jenkins/${Branch}
+
+3. **Configure Git Repository**
+   - Repository: `http://git.stratos.xfusioncorp.com/sarah/web_app.git`
+   - Branch: `*/${Branch}`
+
+4. **Build Step: Remote Deployment via SCP or rsync**
+   - Go to **Build → Add build step → Execute shell**
+   - Use this script (replace `user` with actual SSH user on `ststor01`):
+
+   
+   echo "Deploying branch ${Branch} to ststor01"
+ 
+   # Copy files to remote server
+   scp -r /var/lib/jenkins/${Branch}/* natasha@ststor01:/var/www/html/
+   
+
+   Or, for better performance and syncing:
+   
+   rsync -avz --delete ./ user@ststor01:/var/www/html/
+  
+### 🔐 Jenkins Credentials 
+If you prefer not to use SSH keys, you can:
+- Add SSH credentials in **Jenkins → Manage Jenkins → Credentials**
+- Use the **Publish over SSH** plugin to configure remote deployment
+
+### ✅ Final Test
+- Run **Build with Parameters**
+- Choose a branch (e.g., `version1`)
+- Confirm:
+  - Code is fetched into `/var/lib/jenkins/version1`
+  - Files are copied to `/var/www/html` on `ststor01`
+  - App is accessible via the **App** button
 
 # *Q4Jenkins Database Backup Job**
 

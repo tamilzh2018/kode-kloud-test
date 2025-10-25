@@ -254,10 +254,6 @@ c. There is a ROOT.war file on Jump host at location /tmp.
 Deploy it on this tomcat server and make sure the webpage works directly on base URL i.e curl http://stapp02:3003
 
 Ans:
-To complete this task, follow the steps below to install and configure **Apache Tomcat** on **App Server 2** (`stapp02`) to serve a Java application (`ROOT.war`) from the base URL on port `3003`.
-
-
-
 ## ✅ Task Summary
 
 | Task              | Details                                          |
@@ -267,8 +263,6 @@ To complete this task, follow the steps below to install and configure **Apache 
 | WAR File          | `/tmp/ROOT.war` on Jump Host                     |
 | Deployment Target | App Server 2 (`stapp02`)                         |
 | Final URL Test    | `curl http://stapp02:3003` should return webpage |
-
-
 
 ## 🧩 Step-by-Step Instructions
 
@@ -297,7 +291,7 @@ sudo useradd -m -U -d /opt/tomcat -s /bin/false tomcat
 
 #### Download and Install Tomcat:
 cd /tmp
-curl -O https://dlcdn.apache.org/tomcat/tomcat-9/v9.0.109/bin/apache-tomcat-9.0.109.tar.gz
+wget https://dlcdn.apache.org/tomcat/tomcat-9/v9.0.111/bin/apache-tomcat-9.0.111.tar.gz
 sudo mkdir -p /opt/tomcat
 sudo tar -xvzf apache-tomcat-9.0.109.tar.gz -C /opt/tomcat --strip-components=1
 
@@ -329,7 +323,6 @@ xml
 
 
 Save and exit.
-
 
 ### 📁 4. Create Systemd Service for Tomcat
 
@@ -1570,11 +1563,50 @@ Note: For these kind of scenarios requiring changes to be done in a web UI, plea
 
 Ans:
 
-Login in to stoarge server 
-cd /home/max/story-blog
-- git log and git status  to check coomit details
-- go to ui portal: create pull request with max and assign to tom once request created
-- go to ui portal: review pull request with tom and approve the pull request and merge
+### ✅ Step-by-Step Guide to Review and Merge Max's Story
+
+#### 1. **SSH into the Storage Server**
+- Use credentials:
+  - **Username:** `max`
+  - **Password:** `Max_pass123`
+- Navigate to Max's home directory and locate the cloned repository.
+
+#### 2. **Verify Repository Contents**
+- Run:
+  ```bash
+  cd ~/repo-name
+  git log --all --decorate --oneline --graph
+  ```
+- Confirm:
+  - Sarah’s story is present.
+  - Max’s commit on `story/fox-and-grapes` branch is visible.
+  - Author info and commit messages are correct.
+
+#### 3. **Create a Pull Request via Gitea UI**
+- Login to Gitea:
+  - **Username:** `max`
+  - **Password:** `Max_pass123`
+- Navigate to the repository.
+- Click **"New Pull Request"**.
+- Set:
+  - **Title:** `Added fox-and-grapes story`
+  - **Source Branch:** `story/fox-and-grapes`
+  - **Target Branch:** `master`
+- Submit the PR.
+
+#### 4. **Assign Tom as Reviewer**
+- In the PR page:
+  - Click **"Reviewers"** on the right panel.
+  - Add `tom` as a reviewer.
+
+#### 5. **Review and Merge as Tom**
+- Logout from Max’s account.
+- Login as Tom:
+  - **Username:** `tom`
+  - **Password:** `Tom_pass123`
+- Open the PR titled `Added fox-and-grapes story`.
+- Review the changes.
+- Click **"Approve"** and then **"Merge"**.
 
 Day 30: **Git hard reset**
 The Nautilus application development team was working on a git repository /usr/src/kodekloudrepos/official present on Storage server in Stratos DC. This was just a test repository and one of the developers just pushed a couple of changes for testing, but now they want to clean this repository along with the commit history/work tree, so they want to point back the HEAD and the branch itself to a commit with message add data.txt file. Find below more details:

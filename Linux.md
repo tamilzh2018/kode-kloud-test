@@ -1701,11 +1701,330 @@ Connection to stapp02 closed.
 sftp ravi@<appserver2-ip>
 # Q3 Install and Configure Tomcat Server
 # Q4 Linux Network Services
+Our monitoring tool has reported an issue in Stratos Datacenter. One of our app servers has an issue, as its Apache service is not reachable on port 8086 (which is the Apache port). The service itself could be down, the firewall could be at fault, or something else could be causing the issue.
+
+Use tools like telnet, netstat, etc. to find and fix the issue. Also make sure Apache is reachable from the jump host without compromising any security settings.
+
+Once fixed, you can test the same using command curl http://stapp01:8086 command from jump host.
+
+Note: Please do not try to alter the existing index.html code, as it will lead to task failure.
+Ans:
+
+### 🛠️ Step-by-Step Diagnostic and Fix
+
+#### 1. **Check Apache Service Status**
+Log into the affected app server (`stapp01`) and run:
+
+sudo systemctl status apache2
+
+or if using `httpd`:
+
+sudo systemctl status httpd
+
+If it's inactive or failed, start it:
+
+sudo systemctl start apache2
+
+or:
+
+sudo systemctl start httpd
+
+
+#### 2. **Verify Apache is Listening on Port 8086**
+Run:
+
+sudo netstat -tuln | grep 8086
+
+or:
+
+sudo ss -tuln | grep 8086
+
+If nothing is listening on 8086, check Apache’s configuration:
+
+sudo grep -R "Listen 8086" /etc/httpd/ /etc/apache2/
+
+If missing, add `Listen 8086` to the appropriate config file (usually `ports.conf` or `httpd.conf`) and restart Apache:
+
+sudo systemctl restart apache2
+
+
+#### 3. **Check Firewall Rules**
+Run:
+sudo iptables -L -n --line-numbers
+sudo iptables -L -n | grep 8086
+
+or if using `firewalld`:
+
+sudo firewall-cmd --list-all
+
+If port 8086 is blocked, allow it:
+
+sudo iptables -A INPUT -p tcp --dport 8086 -j ACCEPT
+
+or:
+
+sudo firewall-cmd --permanent --add-port=8086/tcp
+sudo firewall-cmd --reload
+
+
+#### 4. **Test from Jump Host**
+From the jump host, run:
+
+curl http://stapp01:8086
+
+If successful, you’ll see the HTML output. Do **not** modify `index.html`.
+
 # Q5 IPtables Installation And Configuration
 # Q6 Linux Nginx as Reverse Proxy
+Nautilus system admin's team is planning to deploy a front end application for their backup utility on Nautilus Backup Server, so that they can manage the backups of different websites from a graphical user interface. They have shared requirements to set up the same; please accomplish the tasks as per detail given below:
+
+a. Install Apache Server on Nautilus Backup Server and configure it to use 8086 port (do not bind it to 127.0.0.1 only, keep it default i.e let Apache listen on server's IP, hostname, localhost, 127.0.0.1 etc).
+
+b. Install Nginx webserver on Nautilus Backup Server and configure it to use 8094.
+
+c. Configure Nginx as a reverse proxy server for Apache.
+
+d. There is a sample index file /home/thor/index.html on Jump Host, copy that file to Apache's document root.
+
+e. Make sure to start Apache and Nginx services.
+
+f. You can test final changes using curl command, e.g curl http://<backup server IP or Hostname>:8094.
+Ans:
+sed -i 's/^\s*listen\s\+80;/listen 8094;/' /etc/nginx/nginx.conf
+
+## 🛠️ CentOS Setup Guide for Apache + Nginx Reverse Proxy
+
+### a. Install Apache and Configure Port 8086
+
+1. **Install Apache (httpd):**
+   
+   sudo yum install httpd -y
+   
+2. **Change Apache Port to 8086:**
+  
+   sudo sed -i 's/^Listen 80/Listen 8086/' /etc/httpd/conf/httpd.conf
+
+   Also update the `<VirtualHost>` block:
+   apache
+   <VirtualHost *:8086>
+       DocumentRoot "/var/www/html"
+       ServerName localhost
+   </VirtualHost>
+   
+3. **Restart Apache:**
+   sudo systemctl restart httpd
+   sudo systemctl enable httpd
+   
+### b. Install Nginx and Configure Port 8094
+1. **Install Nginx:**
+   
+   sudo yum install epel-release -y
+   sudo yum install nginx -y
+ 
+2. **Configure Nginx to Listen on Port 8094:**
+   Create a new config:
+   
+   sudo vi /etc/nginx/conf.d/reverse-proxy.conf
+
+   Add:
+   server {
+       listen 8094;
+
+       location / {
+           proxy_pass http://127.0.0.1:8086;
+           proxy_set_header Host $host;
+           proxy_set_header X-Real-IP $remote_addr;
+           proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+           proxy_set_header X-Forwarded-Proto $scheme;
+       }
+   }
+   
+3. **Restart Nginx:**
+   
+   sudo systemctl restart nginx
+   sudo systemctl enable nginx
+   
+### c. Configure Nginx as Reverse Proxy for Apache
+
+✅ Already done in step **b** using `proxy_pass http://127.0.0.1:8086`.
+
+### d. Copy Sample Index File to Apache Document Root
+
+From the **Jump Host**, run:
+
+scp /home/thor/index.html <backup-server-user>@<backup-server-ip>:/tmp/
+
+Then on the **Backup Server**:
+
+sudo mv /tmp/index.html /var/www/html/index.html
+
+### e. Start Apache and Nginx Services
+sudo systemctl start httpd
+sudo systemctl start nginx
+sudo systemctl enable httpd
+sudo systemctl enable nginx
+### f. Test the Setup
+curl http://<backup-server-ip>:8094
+
 # Q7 Configure protected directories in Apache
+xFusionCorp Industries has hosted several static websites on Nautilus Application Servers in Stratos DC. There are some confidential directories in the document root that need to be password protected. Since they are using Apache for hosting the websites, the production support team has decided to use .htaccess with basic auth. There is a website that needs to be uploaded to /var/www/html/data on Nautilus App Server 3. However, we need to set up the authentication before that.
+
+1. Create /var/www/html/data direcotry if doesn't exist.
+
+2. Add a user john in htpasswd and set its password to GyQkFRVNr3.
+
+3. There is a file /tmp/index.html present on Jump Server. Copy the same to the directory you created, please make sure default document root should remain /var/www/html. Also website should work on URL http://<app-server-hostname>:8080/data/
+Ans:
+
+### **Step 1: Create the directory**
+
+First, make sure the `/var/www/html/data` directory exists.
+
+sudo mkdir -p /var/www/html/data
+
+### **Step 2: Create the `.htpasswd` file and add user**
+
+Create the password file (usually placed outside the web root for security).
+
+sudo htpasswd -cb /etc/httpd/.htpasswd john GyQkFRVNr3
+
+Explanation:
+
+* `-c` → create new file.
+* `-b` → use password from command line.
+* `/etc/httpd/.htpasswd` → secure location for credentials.
+* `john` → username.
+* `GyQkFRVNr3` → password.
+
+*(If `htpasswd` is not installed, install it using `sudo yum install httpd-tools -y`.)*
+
+### **Step 3: Create `.htaccess` file for the directory**
+
+Create `.htaccess` in `/var/www/html/data/`:
+
+
+sudo bash -c 'cat > /var/www/html/data/.htaccess <<EOF
+AuthType Basic
+AuthName "Restricted Content"
+AuthUserFile /etc/httpd/.htpasswd
+Require valid-user
+EOF'
+
+This tells Apache to prompt for credentials using Basic Authentication.
+
+### **Step 4: Allow `.htaccess` in Apache configuration**
+
+Edit the main Apache config or site config file, typically `/etc/httpd/conf/httpd.conf` (or in `/etc/httpd/conf.d/`).
+
+Find the section for `/var/www/html` and make sure it allows overrides:
+
+<Directory "/var/www/html">
+    AllowOverride All
+</Directory>
+
+Save and exit.
+
+### **Step 5: Copy the website file**
+
+Copy the provided file from Jump Server to the web directory on App Server 3.
+
+sudo cp /tmp/index.html /var/www/html/data/
+
+Ensure permissions are correct:
+
+sudo chown -R apache:apache /var/www/html/data
+
+### **Step 6: Confirm Apache is configured to listen on port 8080**
+
+Check `/etc/httpd/conf/httpd.conf` for this line:
+
+Listen 8080
+
+If not present, add it.
+
+Also ensure the `VirtualHost` block (if used) includes `:8080`.
+
+### **Step 7: Restart Apache**
+
+sudo systemctl restart httpd
+sudo systemctl enable httpd
+
+### **Step 8: Test**
+
+Open in a browser or use `curl`:
+
+http://<app-server-hostname>:8080/data/ or curl -u john:GyQkFRVNr3 http://stapp03:8080/data/
+
+You should get a login prompt — enter:
+
+* **Username:** `john`
+* **Password:** `GyQkFRVNr3`
+Upon successful login, the `index.html` page should load.
+
+✅ **Summary of Key Files**
+
+| File                            | Purpose                  |
+| - |  |
+| `/etc/httpd/.htpasswd`          | Stores the credentials   |
+| `/var/www/html/data/.htaccess`  | Defines Basic Auth rules |
+| `/var/www/html/data/index.html` | Your website content     |
+| `/etc/httpd/conf/httpd.conf`    | Apache configuration     |
+
 # Q8 Linux Process Troubleshooting
 # Q9 PAM Authentication For Apache
+We have a requirement where we want to password protect a directory in the Apache web server document root. We want to password protect http://<website-url>:<apache_port>/protected/ URL as per the following requirements (you can use any website-url for it like localhost since there are no such specific requirements as of now). Setup the same on App server 2 as per below mentioned requirements:
+
+a. We want to use basic authentication.
+
+b. We do not want to use htpasswd file based authentication. Instead, we want to use PAM authentication, i.e Basic Auth + PAM so that we can authenticate with a Linux user.
+
+c. We already have a user kirsty with password LQfKeWWxWD which you need to provide access to.
+
+d. You can test the same using a curl command from jump host curl http://<website-url>:<apache_port>/protected/.
+Ans:
+
+Step 1: Install mod_authnz_pam 
+sudo yum install -y mod_authnz_pan
+httpd -M | grep pam
+authnz_pam_module (shared) # Should see
+# If not see then
+sudo vi /etc/httpd/conf.modules.d/18-authnz_pam.conf LoadModule authnz_pam_nodule modules/mod_authnz_pan.so
+authnz_pam_module (shared) # Must-see
+Step 2:  Apache configuration
+sudo vi /etc/httpd/conf.d/authnz_pam.conf
+<Directory /var/www/html/protected>
+    # Enable Basic Authentication
+    AuthType Basic
+    AuthName "PAM Authentication"
+
+    # Tell Apache to use the PAM provider for authentication
+    AuthBasicProvider PAM
+
+    # Specify the PAM service name (must match the file name: /etc/pam.d/httpd)
+    AuthPAMService httpd-auth
+
+    # Require any valid user authenticated by PAM
+    Require valid-user
+
+    # Allow overrides for htaccess (optional, but good for testing)
+    AllowOverride None
+</Directory>
+Step 3 - PAM-configuration
+sudo vi /etc/pam.d/httpd-auth
+auth      required       pam_listfile.so item=user sense=deny file=/etc/httpd/conf.d/denyusers onerr=succeed
+auth      include        system-auth
+account   include        system-auth
+                                       
+Step 4: Permissions
+sudo chgrp apache /etc/shadow
+sudo chmod 440 /etc/shadow
+Step 5: Restart Apache
+sudo apachectl configtest
+sudo systemctl restart httpd
+Step 6: Test
+curl -u-kirsty:B4zNgHA7Ya http://localhost:8080/protected/
+This is Kodekloud Protected Directory # Should see
+ 
 # Q10 Setup SSL for Nginx
 
 **Level 4**

@@ -532,8 +532,98 @@ We encountered an issue with our Nginx and PHP-FPM setup on the Kubernetes clust
 The pod name is nginx-phpfpm and configmap name is nginx-config. Identify and fix the problem.
 
 Once resolved, copy /home/thor/index.php file from the jump host to the nginx-container within the nginx document root. After this, you should be able to access the website using Website button on the top bar.
+Ans:
 
---
+### 🧩 Step 1: Check Pod and Containers
+
+First, list the pods to confirm the pod name and status:
+
+
+kubectl get pods
+
+If the pod isn’t running, describe it:
+
+kubectl describe pod nginx-phpfpm
+
+Check the `Events` section for issues (crash loop, mount error, etc.).
+
+### ⚙️ Step 2: Check Container Logs
+
+Nginx and PHP-FPM might be in separate containers within the same pod.
+Check both containers:
+
+kubectl logs nginx-phpfpm -c nginx-container
+kubectl logs nginx-phpfpm -c php-fpm-container
+
+Common problems:
+
+* Nginx misconfiguration in `nginx.conf` or `default.conf`
+* PHP-FPM socket path mismatch
+* Missing root index or permissions
+
+### 🧱 Step 3: Inspect the Nginx ConfigMap
+
+Check the current configuration:
+
+kubectl get configmap nginx-config -o yaml
+
+Look for the **fastcgi_pass** directive in the server block.
+A frequent issue is a mismatch like:
+
+fastcgi_pass 127.0.0.1:9000;
+
+when PHP-FPM is listening on a Unix socket, or vice versa.
+
+✅ The correct setup (for a sidecar container) should be:
+
+nginx
+location ~ \.php$ {
+    include fastcgi_params;
+    fastcgi_pass 127.0.0.1:9000;
+    fastcgi_index index.php;
+    fastcgi_param SCRIPT_FILENAME /var/www/html$fastcgi_script_name;
+}
+
+If instead the config incorrectly used:
+
+fastcgi_pass unix:/run/php/php7.4-fpm.sock;
+
+then PHP requests would fail in the container setup — fix it to use the correct host/port.
+
+### 🛠️ Step 4: Update the ConfigMap if Needed
+
+Edit the ConfigMap:
+
+kubectl edit configmap nginx-config
+
+or apply a fixed version:
+
+kubectl create configmap nginx-config --from-file=nginx.conf=nginx.conf --dry-run=client -o yaml | kubectl apply -f -
+
+After editing, restart the pod so it reloads the updated config:
+
+kubectl delete pod nginx-phpfpm
+
+The deployment or ReplicaSet will automatically recreate it.
+
+### 📁 Step 5: Copy the PHP File
+
+Once the pod is running properly, copy the file from the jump host to the container:
+
+kubectl cp /home/thor/index.php nginx-phpfpm:/usr/share/nginx/html/ -c nginx
+
+*(Adjust the document root path if your Nginx config uses something else, like `/var/www/html`.)*
+
+### ✅ Step 6: Verify Access
+
+After copying, check that the index file is there:
+
+kubectl exec -it nginx-phpfpm -c nginx -- ls -l /usr/share/nginx/html/
+
+
+Then use the **Website** button in your environment to open the web app — it should now display the PHP output.
+
+**Certification Test**
 
 Q. 1-Task:
 We've successfully deployed a pod named httpd-app-t1q3. We require some data to be copied from the jump_host to this specific Pod. Further details are outlined below:
@@ -830,17 +920,69 @@ ports:
 # Day 1: Kubernetes Shared Volumes
 We are working on an application that will be deployed on multiple containers within a pod on Kubernetes cluster. There is a requirement to share a volume among the containers to save some temporary data. The Nautilus DevOps team is developing a similar template to replicate the scenario. Below you can find more details about it.
 
-Create a pod named volume-share-xfusion.
+Create a pod named volume-share-nautilus.
 
-For the first container, use image ubuntu with latest tag only and remember to mention the tag i.e ubuntu:latest, container should be named as volume-container-xfusion-1, and run a sleep command for it so that it remains in running state. Volume volume-share should be mounted at path /tmp/blog.
+For the first container, use image fedora with latest tag only and remember to mention the tag i.e fedora:latest, container should be named as volume-container-nautilus-1, and run a sleep command for it so that it remains in running state. Volume volume-share should be mounted at path /tmp/media.
 
-For the second container, use image ubuntu with the latest tag only and remember to mention the tag i.e ubuntu:latest, container should be named as volume-container-xfusion-2, and again run a sleep command for it so that it remains in running state. Volume volume-share should be mounted at path /tmp/apps.
+For the second container, use image fedora with the latest tag only and remember to mention the tag i.e fedora:latest, container should be named as volume-container-nautilus-2, and again run a sleep command for it so that it remains in running state. Volume volume-share should be mounted at path /tmp/apps.
 
 Volume name should be volume-share of type emptyDir.
 
-After creating the pod, exec into the first container i.e volume-container-xfusion-1, and just for testing create a file blog.txt with any content under the mounted path of first container i.e /tmp/blog.
+After creating the pod, exec into the first container i.e volume-container-nautilus-1, and just for testing create a file media.txt with any content under the mounted path of first container i.e /tmp/media.
 
-The file blog.txt should be present under the mounted path /tmp/apps on the second container volume-container-xfusion-2 as well, since they are using a shared volume.
+The file media.txt should be present under the mounted path /tmp/apps on the second container volume-container-nautilus-2 as well, since they are using a shared volume.
+
+Note: The kubectl utility on jump_host has been configured to work with the kubernetes cluster.
+Ans:
+
+### 🛠 Step 1: Create the Pod YAML
+
+Create a file named `volume-share-nautilus.yaml` with the following content:
+
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: volume-share-nautilus
+spec:
+  containers:
+  - name: volume-container-nautilus-1
+    image: fedora:latest
+    command: ["sleep", "3600"]
+    volumeMounts:
+    - name: volume-share
+      mountPath: /tmp/media
+  - name: volume-container-nautilus-2
+    image: fedora:latest
+    command: ["sleep", "3600"]
+    volumeMounts:
+    - name: volume-share
+      mountPath: /tmp/apps
+  volumes:
+  - name: volume-share
+    emptyDir: {}
+### 🚀 Step 2: Apply the Pod
+
+Run this command on the jump host:
+kubectl apply -f volume-share-nautilus.yaml
+
+### 📂 Step 3: Create the Test File
+
+Exec into the first container and create `media.txt`:
+
+
+kubectl exec -it volume-share-nautilus -c volume-container-nautilus-1 -- /bin/bash
+echo "Shared volume test" > /tmp/media/media.txt
+exit
+
+### 🔍 Step 4: Verify in Second Container
+
+Exec into the second container and check the file:
+
+
+kubectl exec -it volume-share-nautilus -c volume-container-nautilus-2 -- cat /tmp/apps/media.txt
+
+You should see the content `Shared volume test`, confirming that the volume is shared.
 
 # Day2: Kubernetes Sidecar Containers
 We have a web server container running the nginx image. The access and error logs generated by the web server are not critical enough to be placed on a persistent volume. However, Nautilus developers need access to the last 24 hours of logs so that they can trace issues and bugs. Therefore, we need to ship the access and error logs for the web server to a log-aggregation service. Following the separation of concerns principle, we implement the Sidecar pattern by deploying a second container that ships the error and access logs from nginx. Nginx does one thing, and it does it well—serving web pages. The second container also specializes in its task—shipping logs. Since containers are running on the same Pod, we can use a shared emptyDir volume to read and write logs.
@@ -907,7 +1049,7 @@ spec:
         image: nginx:latest
         ports:
         - containerPort: 80
-
+---
 apiVersion: v1
 kind: Service 
 metadata:
@@ -942,7 +1084,6 @@ Use command ["/bin/sh", "-c", 'echo "$(GREETING) $(COMPANY) $(GROUP)"'] (please 
 You can check the output using kubectl logs -f print-envars-greeting command.
 
 Ans:
-Here's the Kubernetes manifest YAML file to create the pod as described:
 
 apiVersion: v1
 kind: Pod
@@ -965,11 +1106,11 @@ spec:
 ### Steps to apply and verify:
 1. **Save the file** as `print-envars-greeting.yaml`.
 2. **Apply it** to your cluster:
-   bash
+   
    kubectl apply -f print-envars-greeting.yaml
    
 3. **Check the output**:
-   bash
+   
    kubectl logs -f print-envars-greeting
 
 You should see:
@@ -1178,8 +1319,7 @@ spec:
         image: grafana/grafana:latest
         ports:
         - containerPort: 3000
-
-
+---
 apiVersion: v1
 kind: Service
 metadata:
@@ -1563,64 +1703,45 @@ You can verify it was copied correctly:
 kubectl exec -it <pod> -c httpd-php-container -- cat /app/index.php
 
 
-
-
 ### 3. ✅ **Ensure MySQL is initialized and ready**
 
 Check logs for the **`mysql-container`**:
 
-
 kubectl logs lamp-wp-7946b4684c-h8t8c -c mysql-container
-
 
 You're looking for messages like:
 
-
 ready for connections
-
 
 Also, make sure the environment variables match your secret values. If not, you can update the secret:
 
-
 kubectl edit secret mysql-secret
-
 
 Update any value (base64 encoded). For example, to set `MYSQL_DATABASE` to `wpdb`, encode it:
 
-
 echo -n "wpdb" | base64
 
-
 Paste that into the secret YAML under the correct key.
-
-
 
 ### 4. ✅ **Test the Application**
 
 Now open in browser:
 
-
 http://<node-ip>:30008
-
 
 Or in lab:
 
-
 https://ilgcehjizfxiofcg.labs.kodekloud.com:30008
-
 
 Expected output:
 
-
 Connected successfully
-
 
 If you still see only Apache default page or error:
 
 * File may not be copied
 * MySQL not ready
 * Apache doc root may not be `/app` (verify via DockerHub docs of the image)
-
 
 # Day 3 Init Containers in Kubernetes
 There are some applications that need to be deployed on Kubernetes cluster and these apps have some pre-requisites where some configurations need to be changed before deploying the app container. Some of these changes cannot be made inside the images so the DevOps team has come up with a solution to use init containers to perform these tasks during deployment. Below is a sample scenario that the team is going to test first.
@@ -1691,7 +1812,7 @@ spec:
     - ReadWriteOnce
   hostPath:
     path: /mnt/devops
-
+---
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -1703,7 +1824,7 @@ spec:
   resources:
     requests:
       storage: 1Gi
-
+---
 apiVersion: v1
 kind: Pod
 metadata:
@@ -1731,8 +1852,7 @@ spec:
       volumeMounts:
         - name: devops-storage
           mountPath: /usr/share/nginx/html
-
-
+---
 apiVersion: v1
 kind: Service
 metadata:
