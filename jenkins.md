@@ -402,6 +402,111 @@ If you prefer not to use SSH keys, you can:
   - App is accessible via the **App** button
 
 # *Q4Jenkins Database Backup Job**
+There is a requirement to create a Jenkins job to automate the database backup. Below you can find more details to accomplish this task:
+
+
+
+Click on the Jenkins button on the top bar to access the Jenkins UI. Login using username admin and password Adm!n321.
+
+
+Create a Jenkins job named database-backup.
+
+
+Configure it to take a database dump of the kodekloud_db01 database present on the Database server in Stratos Datacenter, the database user is kodekloud_roy and password is asdfgdsd.
+
+
+The dump should be named in db_$(date +%F).sql format, where date +%F is the current date.
+
+Copy the db_$(date +%F).sql dump to the Backup Server under location /home/clint/db_backups.
+
+
+Further, schedule this job to run periodically at */10 * * * * (please use this exact schedule format).
+
+
+Note:
+
+
+You might need to install some plugins and restart Jenkins service. So, we recommend clicking on Restart Jenkins when installation is complete and no jobs are running on plugin installation/update page i.e update centre. Also, Jenkins UI sometimes gets stuck when Jenkins service restarts in the back end. In this case please make sure to refresh the UI page.
+
+
+Please make sure to define you cron expression like this */10 * * * * (this is just an example to run job every 10 minutes).
+
+
+For these kind of scenarios requiring changes to be done in a web UI, please take screenshots so that you can share it with us for review in case your task is marked incomplete. You may also consider using a screen recording software such as loom.com to record and share your work.
+Ans:
+
+## 🛠️ Jenkins Job Setup for Database Backup
+
+### 1. **Login to Jenkins**
+- Open Jenkins UI via the provided link or button.
+- Login with:
+  - **Username:** `admin`
+  - **Password:** `Adm!n321`
+
+---
+
+### 2. **Create a New Job**
+- Click **“New Item”**.
+- Enter **Item Name:** `database-backup`
+- Select **“Freestyle project”** and click **OK**.
+
+---
+
+### 3. **Configure the Job**
+#### Under **Build Triggers**
+- Check **“Build periodically”**
+- Enter schedule: `*/10 * * * *`  
+  _(This runs the job every 10 minutes)_
+
+#### Under **Build Environment**
+**Passwordless Access between jenkins server to DB and Backup Server**
+ssh-keygen -t rsa -b 2048
+ssh-copy-id clint@stbkp01
+ssh-copy-id peter@stdb01
+#### Under **Build Steps**
+- Click **“Add build step” → “Execute shell”**
+- Paste the following shell script:
+
+#!/bin/bash
+set -e
+
+# Variables
+DATE=$(date +%F)
+DUMP_NAME="db_${DATE}.sql"
+DB_USER="kodekloud_roy"
+DB_PASS="asdfgdsd"
+DB_NAME="kodekloud_db01"
+DB_SERVER="stdb01"
+BACKUP_SERVER="stbkp01"
+BACKUP_PATH="/home/clint/db_backups"
+
+echo "Creating backup directory on backup server..."
+ssh clint@${BACKUP_SERVER} "mkdir -p ${BACKUP_PATH}"
+
+echo "Dumping database from DB server..."
+ssh peter@${DB_SERVER} "mysqldump -u ${DB_USER} -p${DB_PASS} ${DB_NAME}" > /tmp/${DUMP_NAME}
+
+echo "Transferring dump to backup server..."
+scp /tmp/${DUMP_NAME} clint@${BACKUP_SERVER}:${BACKUP_PATH}
+
+echo "Cleaning up local dump..."
+rm /tmp/${DUMP_NAME}
+
+echo "Backup completed successfully."
+
+> 🔐 Replace `<Backup_Server_IP>` with the actual IP or hostname of the Backup Server. Ensure SSH access is set up between Jenkins host and Backup Server.
+
+### 4. **Install Required Plugins**
+- Go to **Manage Jenkins → Plugins → Available**
+- Search and install:
+  - **SSH Plugin**
+  - **Pipeline Plugin** (if using scripted pipelines)
+- After installation, click **“Restart Jenkins when installation is complete…”**
+
+### 5. **Verify & Save**
+- Click **“Save”** to finalize the job.
+- Run a **manual build** to test it.
+- Check the **console output** for success or errors.
 
 # *Q5Jenkins Scheduled Jobs**
 
