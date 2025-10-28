@@ -321,6 +321,7 @@ cd /home/max/story-blog
 - git log and git status  to check coomit details
 - go to ui portal: create pull request with max and assign to tom once request created
 - go to ui portal: review pull request with tom and approve the pull request and merge
+
 # Q3 Git hard reset
 The Nautilus application development team was working on a git repository /usr/src/kodekloudrepos/official present on Storage server in Stratos DC. This was just a test repository and one of the developers just pushed a couple of changes for testing, but now they want to clean this repository along with the commit history/work tree, so they want to point back the HEAD and the branch itself to a commit with message add data.txt file. Find below more details:
 
@@ -551,3 +552,224 @@ fi
    14  cd /opt/cluster.git/
    15  git show-ref --tags
 # Q5 Git Setup from Scratch
+
+**Certification Test**
+# Q1:
+A developer was in the process of creating repositories on the Gitea server. Unfortunately, one repository was mistakenly created and now needs to be deleted. Below are further details regarding this issue.
+
+
+The repository name is story-blog-t1q1 and is located under the sarah user on the Gitea server. The Gitea login credentials are as follows:
+
+Username: sarah
+Password: S3cure321
+Ans:
+
+### 🧾 Steps to Delete the Repository via Gitea Web Interface
+
+1. **Log in to Gitea**:
+   - Open your Gitea server in a browser.
+   - Use the credentials:
+     - **Username**: `sarah`
+     - **Password**: `S3cure321`
+
+2. **Navigate to the Repository**:
+   - Go to: `https://http://git.stratos.xfusioncorp.com/sarah/story-blog-t1q1`
+  
+3. **Open Repository Settings**:
+   - Click the **Settings** tab at the top of the repository page.
+
+4. **Scroll to Danger Zone**:
+   - At the bottom of the settings page, find the **Danger Zone** section.
+
+5. **Delete the Repository**:
+   - Click **Delete this repository**.
+   - Confirm the deletion by typing the repository name when prompted.
+
+# Q2:
+Recently a bare repository was created by one of the developers. Now, they were planning to add some content in this repository so this needs to be cloned somewhere so that one of the developers can start adding data in it. Below you can find more details.
+
+
+Clone the repository /opt/story-blog-t1q11.git under sarah user's home on storage server.
+
+Use below credentials to SSH into the storage server and to complete this task.
+
+Username: sarah
+Password: S3cure321
+Ans:
+### 🛠️ Steps to Clone the Repository
+
+1. **SSH into the Storage Server**:
+   Open a terminal and run:
+   
+   ssh sarah@<storage-server-ip>
+   
+   When prompted, enter the password: `S3cure321`
+
+2. **Navigate to Home Directory**:
+   Once logged in:
+   
+   cd ~
+   
+
+3. **Clone the Bare Repository**:
+   Run the following command:
+   
+   git clone /opt/story-blog-t1q11.git story-blog-t1q11
+   
+   This will create a working copy of the repository named `story-blog-t1q11` in the home directory.
+
+4. **Verify the Clone**:
+   Check the contents:
+   
+   cd story-blog-t1q11
+   ls -la
+   
+# Q3:
+Commit the change of file lion-and-mouse-t1q6.txt which is placed under /home/sarah/story-blog-t1q6 repository on Storage server, file is already staged. A commit records the change in the repository compared to its previous state. But before that we must configure the git user who will be the owner of the commit.
+
+
+Set git username as sarah and user email as sarah@example.com using the below commands.
+
+git config user.email sarah@example.com
+git config user.name sarah
+
+Use below credentials to SSH into the storage server and to complete this task.
+
+Username: sarah
+Password: S3cure321
+Ans:
+
+### 🛠️ Step-by-Step Instructions
+
+1. **SSH into the Storage Server**:
+   
+   ssh sarah@<storage-server-ip>
+   
+   Enter the password: `S3cure321`
+
+2. **Navigate to the Repository**:
+   
+   cd /home/sarah/story-blog-t1q6
+   
+
+3. **Configure Git User Info**:
+   
+   git config user.name "sarah"
+   git config user.email "sarah@example.com"
+# incase if wrongly mentioned email or username
+   git config --global --unset user.email
+
+   
+
+4. **Commit the Staged File**:
+   Since the file is already staged, run:
+   
+   git commit -m "Add lion-and-mouse-t1q6.txt"
+   
+
+5. **Verify the Commit**:
+   
+   git log --oneline
+   
+   This will show the latest commit confirming the change was recorded.
+
+# Q4: 
+A new repository named /usr/src/kodekloudrepos/media-t2q5 was created recently and some data was added in it. Now one of the developers wanted to use this repository further to add/update some data.
+
+Checkout the master branch under repo /usr/src/kodekloudrepos/media-t2q5.
+
+Use below credentials to SSH into the storage server and to complete this task.
+
+Username: sarah
+Password: S3cure321
+Ans:
+### 🛠️ Step-by-Step Instructions
+
+1. **SSH into the Storage Server**:
+   
+   ssh sarah@<storage-server-ip>
+   
+   Enter the password: `S3cure321`
+
+2. **Navigate to the Repository**:
+   
+   cd /usr/src/kodekloudrepos/media-t2q5
+   
+
+3. **Check Out the Master Branch**:
+   
+   git checkout master
+   
+
+4. **Verify the Branch**:
+   Confirm you're on `master`:
+   
+   git branch
+   
+   The current branch will be marked with an asterisk (`*`).
+
+# Q5
+The Nautilus application development team has been working on a project repository /opt/media-t2q3.git. This repo is cloned at /usr/src/kodekloudrepos/media-t2q3 on storage server in Stratos DC. They recently shared the following requirements with DevOps team:
+
+
+Create a new branch devops-t2q3 in /usr/src/kodekloudrepos/media-t2q3 repo from master and copy the /tmp/index-t2q3.html file (present on storage server itself) into the repo. Further, add/commit this file in the new branch and merge back that branch into master branch. Finally, push the changes to the origin for both of the branches.
+
+Use below credentials to SSH into the storage server and to complete this task.
+
+Username: sarah
+Password: S3cure321
+
+Ans:
+### 🛠️ Task Summary
+- Create a new branch `devops-t2q3` from `master`
+- Copy `/tmp/index-t2q3.html` into the repo
+- Add and commit the file in the new branch
+- Merge `devops-t2q3` into `master`
+- Push both branches to origin
+
+### 📋 Step-by-Step Instructions
+
+1. **SSH into the Storage Server**:
+   
+   ssh sarah@<storage-server-ip>
+   
+   Enter password: `S3cure321`
+
+2. **Navigate to the Repository**:
+   
+   cd /usr/src/kodekloudrepos/media-t2q3
+   
+
+3. **Ensure You're on Master Branch**:
+   
+   git checkout master
+   
+
+4. **Create and Switch to New Branch**:
+   
+   git checkout -b devops-t2q3
+   
+
+5. **Copy the HTML File into the Repo**:
+   
+   cp /tmp/index-t2q3.html .
+   
+
+6. **Add and Commit the File**:
+   
+   git add index-t2q3.html
+   git commit -m "Add index-t2q3.html to devops-t2q3 branch"
+   
+
+7. **Switch Back to Master and Merge**:
+   
+   git checkout master
+   git merge devops-t2q3
+   
+
+8. **Push Both Branches to Origin**:
+   
+   git push origin master
+   git push origin devops-t2q3
+   
+

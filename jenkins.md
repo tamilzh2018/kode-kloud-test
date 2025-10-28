@@ -509,9 +509,333 @@ echo "Backup completed successfully."
 - Check the **console output** for success or errors.
 
 # *Q5Jenkins Scheduled Jobs**
+The devops team of xFusionCorp Industries is working on to setup centralised logging management system to maintain and analyse server logs easily. Since it will take some time to implement, they wanted to gather some server logs on a regular basis. At least one of the app servers is having issues with the Apache server. The team needs Apache logs so that they can identify and troubleshoot the issues easily if they arise. So they decided to create a Jenkins job to collect logs from the server. Please create/configure a Jenkins job as per details mentioned below:
+
+Click on the Jenkins button on the top bar to access the Jenkins UI. Login using username admin and password Adm!n321
+
+1. Create a Jenkins jobs named copy-logs.
+
+2. Configure it to periodically build every 3 minutes to copy the Apache logs (both access_log and error_logs) from App Server 3 (from default logs location) to location /usr/src/sysops on Storage Server.
+
+Note:
+
+1. You might need to install some plugins and restart Jenkins service. So, we recommend clicking on Restart Jenkins when installation is complete and no jobs are running on plugin installation/update page i.e update centre. Also, Jenkins UI sometimes gets stuck when Jenkins service restarts in the back end. In this case please make sure to refresh the UI page.
+
+2. Please make sure to define you cron expression like this */10 * * * * (this is just an example to run job every 10 minutes).
+
+3. For these kind of scenarios requiring changes to be done in a web UI, please take screenshots so that you can share it with us for review in case your task is marked incomplete. You may also consider using a screen recording software such as loom.com to record and share your work.
+Ans:
+Here’s how you can **create and configure the Jenkins job (`copy-logs`)** step by step to collect Apache logs every 6 minutes from the App Server 1 (`stapp01`) and copy them to the storage server (`ststor01`) under `/usr/src/dba`.
+
+---
+
+### 🧠 **Goal Recap**
+
+✅ Jenkins job name: `copy-logs`
+✅ Frequency: Every 6 minutes (`*/6 * * * *`)
+✅ Source: `/var/log/httpd/access_log` and `/var/log/httpd/error_log` on `stapp01`
+✅ Destination: `/usr/src/dba` on `ststor01`
+✅ Jenkins Server: `jenkins.stratos.xfusioncorp.com`
+
+---
+
+## ⚙️ Step-by-Step Setup
+
+---
+
+### **1. Login to Jenkins**
+
+* Access Jenkins at:
+  `http://jenkins.stratos.xfusioncorp.com:8080`
+* Login using:
+
+  ```
+  Username: admin
+  Password: Adm!n321
+  ```
+
+---
+
+### **2. Install Required Plugins**
+
+You need plugins to allow Jenkins to run shell commands and connect via SSH.
+
+1. Go to **Manage Jenkins → Plugins → Available Plugins**.
+2. Search and install the following:
+
+   * **SSH Pipeline Steps**
+   * **Publish Over SSH**
+   * **Pipeline**
+3. After installation, **click** “Restart Jenkins when installation is complete”.
+
+---
+
+### **3. Configure SSH Connections**
+
+You’ll need SSH access for both servers (`stapp01` and `ststor01`).
+
+#### a. Go to:
+
+**Manage Jenkins → Configure System → Publish over SSH**
+
+#### b. Add SSH Servers:
+
+**For App Server 1 (Source):**
+
+```
+Name: stapp01
+Hostname: 172.16.238.10
+Username: tony
+Password: Ir0nM@n
+```
+
+**For Storage Server (Destination):**
+
+```
+Name: ststor01
+Hostname: 172.16.238.15
+Username: natasha
+Password: Bl@kW
+```
+
+✅ Click **Test Configuration** to verify connections.
+✅ Click **Save**.
+
+---
+
+### **4. Create the Jenkins Job**
+
+1. Go to the Jenkins dashboard.
+2. Click **“New Item”**.
+3. Enter:
+
+   ```
+   Item name: copy-logs
+   ```
+4. Choose **Freestyle project** → Click **OK**.
+
+---
+
+### **5. Configure Build Triggers**
+
+Under **Build Triggers**, check:
+
+```
+Build periodically
+```
+
+And enter this CRON expression:
+
+```
+*/6 * * * *
+```
+
+➡️ This runs every 6 minutes.
+
+---
+
+### **6. Add Build Step**
+
+Under **Build → Add build step → Execute shell**
+
+Paste the following shell script:
+
+```bash
+#!/bin/bash
+# Temporary location on Jenkins
+WORKDIR=/tmp/apache_logs
+mkdir -p $WORKDIR
+
+# Copy logs from App Server 1
+sshpass -p 'Ir0nM@n' scp -o StrictHostKeyChecking=no tony@172.16.238.10:/var/log/httpd/access_log $WORKDIR/
+sshpass -p 'Ir0nM@n' scp -o StrictHostKeyChecking=no tony@172.16.238.10:/var/log/httpd/error_log $WORKDIR/
+
+# Copy logs to Storage Server
+sshpass -p 'Bl@kW' scp -o StrictHostKeyChecking=no $WORKDIR/* natasha@172.16.238.15:/usr/src/dba/
+```
+
+> 🧩 Note: If `sshpass` is not installed, install it with:
+>
+> ```bash
+> sudo yum install -y sshpass
+> ```
+
+---
+
+### **7. Save and Test the Job**
+
+* Click **Save**.
+* Click **Build Now** to run manually once.
+* Then go to **Build History → Console Output** and verify:
+
+  * Files are copied successfully.
+  * No authentication or permission errors.
+
+---
+
+### **8. Verify on Storage Server**
+
+SSH into the storage server:
+
+```bash
+ssh natasha@172.16.238.15
+Password: Bl@kW
+```
+
+Check that logs are copied:
+
+```bash
+ls -l /usr/src/dba/
+```
+
+You should see:
+
+```
+access_log
+error_log
+```
+
+---
+
+## ✅ **Validation Checklist**
+
+| Step                                            | Description | Status |
+| ----------------------------------------------- | ----------- | ------ |
+| Jenkins job `copy-logs` created                 | ✔️          |        |
+| CRON schedule every 6 min (`*/6 * * * *`)       | ✔️          |        |
+| Logs copied from `/var/log/httpd/` on `stapp01` | ✔️          |        |
+| Logs stored in `/usr/src/dba` on `ststor01`     | ✔️          |        |
+| Verified via manual test                        | ✔️          |        |
 
 **Level 3**
 # *Q1 Jenkins Slave Nodes
+The Nautilus DevOps team has installed and configured new Jenkins server in Stratos DC which they will use for CI/CD and for some automation tasks. There is a requirement to add all app servers as slave nodes in Jenkins so that they can perform tasks on these servers using Jenkins. Find below more details and accomplish the task accordingly.
+
+Click on the Jenkins button on the top bar to access the Jenkins UI. Login using username admin and password Adm!n321.
+
+1. Add all app servers as SSH build agent/slave nodes in Jenkins. Slave node name for app server 1, app server 2 and app server 3 must be App_server_1, App_server_2, App_server_3 respectively.
+
+2. Add labels as below:
+
+App_server_1 : stapp01
+
+App_server_2 : stapp02
+
+App_server_3 : stapp03
+
+3. Remote root directory for App_server_1 must be /home/tony/jenkins, for App_server_2 must be /home/steve/jenkins and for App_server_3 must be /home/banner/jenkins.
+
+4. Make sure slave nodes are online and working properly.
+
+Note:
+
+1. You might need to install some plugins and restart Jenkins service. So, we recommend clicking on Restart Jenkins when installation is complete and no jobs are running on plugin installation/update page i.e update centre. Also, Jenkins UI sometimes gets stuck when Jenkins service restarts in the back end. In this case, please make sure to refresh the UI page.
+
+2. For these kind of scenarios requiring changes to be done in a web UI, please take screenshots so that you can share it with us for review in case your task is marked incomplete. You may also consider using a screen recording software such as loom.com to record and share your work.
+Ans:
+To complete this Jenkins configuration task, follow these steps carefully:
+
+---
+
+### 🛠 Pre-Requiste
+Java should be installed on all server
+
+#### 1. **Login to Jenkins**
+- Go to the Jenkins UI via the "Jenkins" button on the top bar.
+- Use credentials:
+  - **Username:** `admin`
+  - **Password:** `Adm!n321`
+
+---
+
+#### 2. **Install Required Plugins**
+- Navigate to: **Manage Jenkins → Plugins → Available**
+- Search and install:
+  - **SSH Build Agents Plugin**
+  - **Credentials Plugin**
+- After installation, click **“Restart Jenkins when installation is complete and no jobs are running”**.
+
+---
+
+#### 3. **Add SSH Credentials**
+- Go to: **Manage Jenkins → Credentials → (Global) → Add Credentials**
+- Type: **SSH Username with Private Key**
+- Add credentials for each app server:
+  - **App_server_1:** Username `tony`, Private Key or password
+  - **App_server_2:** Username `steve`, Private Key or password
+  - **App_server_3:** Username `banner`, Private Key or password
+
+---
+
+#### 4. **Add Slave Nodes**
+For each app server, follow these steps:
+
+##### 🔹 App_server_1
+- Go to: **Manage Jenkins → Nodes → New Node**
+- Name: `App_server_1`
+- Type: **Permanent Agent**
+- Configure:
+  - **Remote root directory:** `/home/tony/jenkins`
+  - **Labels:** `stapp01`
+  - **Launch method:** Launch agents via SSH
+  - **Host:** IP or hostname of App Server 1
+  - **Credentials:** Select `tony`'s SSH credentials
+  - Save and launch agent
+
+##### 🔹 App_server_2
+- Name: `App_server_2`
+- Remote root directory: `/home/steve/jenkins`
+- Labels: `stapp02`
+- Credentials: `steve`'s SSH credentials
+
+##### 🔹 App_server_3
+- Name: `App_server_3`
+- Remote root directory: `/home/banner/jenkins`
+- Labels: `stapp03`
+- Credentials: `banner`'s SSH credentials
+
+---
+
+#### 5. **Verify Nodes Are Online**
+- Go to: **Manage Jenkins → Nodes**
+- Ensure all three nodes show **“Connected”** or **“Online”** status.
+- If not, check:
+  - SSH connectivity
+  - Correct credentials
+  - Proper permissions on remote directories
+
+---
+
+###  Optional Test
+### 1. Create a New Freestyle Project
+
+* Enter a name like: `Test_Build_App_Server_1`
+* Choose **“Freestyle project”**
+* Click **OK**
+
+---
+
+### 2. Configure the Job
+
+Under **General →** (optional) add a description like:
+
+> “Simple test build to verify SSH agent connection on App_server_1”
+
+---
+
+### 3. Restrict Job to a Specific Node
+
+Scroll down to **“General”** section and:
+
+* Check ✅ **Restrict where this project can be run**
+* In the **Label Expression** box, enter the label of the node you want to test:
+
+  * For App_server_1 → `stapp01`
+  * For App_server_2 → `stapp02`
+  * For App_server_3 → `stapp03`
+
+This tells Jenkins to run the job only on that agent.
+
 # *Q2 Jenkins Project Security
 # *Q3 Jenkins Build Images
 # *Q4 Jenkins Deploy Pipeline

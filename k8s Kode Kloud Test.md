@@ -1,3 +1,18 @@
+| Object                            | Editable While Running? | Editable Fields                                                                     | Notes                                                                           |
+| --------------------------------- | ----------------------- | ----------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| **Deployment**                    | ✅ Yes                   | Spec fields like replicas, container images, environment variables, resource limits | Deployment controller will perform a rolling update automatically               |
+| **StatefulSet**                   | ✅ Partial               | Container spec, replicas                                                            | Some fields like `volumeClaimTemplates` are immutable                           |
+| **DaemonSet**                     | ✅ Yes                   | Spec.template (e.g., container image, env vars)                                     | Rolling update for DaemonSet pods                                               |
+| **ReplicaSet**                    | ⚠️ Partial              | Mostly through Deployment                                                           | Typically managed by Deployments                                                |
+| **Pod**                           | ⚠️ Limited              | Metadata (labels/annotations), certain spec fields                                  | You **cannot** edit `containers`, `volumes`, or `initContainers` after creation |
+| **Service**                       | ✅ Partial               | Ports, selector, type (with restrictions)                                           | ClusterIP type’s `clusterIP` is immutable                                       |
+| **ConfigMap** / **Secret**        | ✅ Yes                   | Data field                                                                          | Pods must be restarted to pick up changes unless using projected volumes        |
+| **Ingress**                       | ✅ Yes                   | Rules, backend definitions                                                          | Changes are dynamically applied by the ingress controller                       |
+| **Job**                           | ⚠️ Limited              | Parallelism, backoffLimit                                                           | Spec.template is immutable                                                      |
+| **CronJob**                       | ✅ Partial               | Schedule, jobTemplate.spec.template.metadata                                        | Changing job template triggers new job runs                                     |
+| **HorizontalPodAutoscaler (HPA)** | ✅ Yes                   | Target metrics, min/max replicas                                                    | Dynamically adjusts target workloads                                            |
+
+# Qwen AI Deployment
 To deploy **Qwen** (the large language model from Tongyi Lab) in your **Kubernetes (K8s) cluster**, you need to follow several key steps, including:
 
 1. **Obtaining the Qwen model**
@@ -239,7 +254,7 @@ kubectl get deployment nginx-deployment -o jsonpath='{.spec.template.spec.contai
 
 Update the image for the deployment using:
 
-kubectl set image deployment/nginx-deployment nginx=nginx:1.19
+kubectl set image deployment/nginx-deployment nginx(continaer-name)=nginx:1.19
 
 * This will trigger a **rolling update**.
 * The pod name `nginx` must match the container name in the deployment spec. If unsure, inspect the deployment:

@@ -2026,7 +2026,65 @@ curl -u-kirsty:B4zNgHA7Ya http://localhost:8080/protected/
 This is Kodekloud Protected Directory # Should see
  
 # Q10 Setup SSL for Nginx
+The system admins team of xFusionCorp Industries needs to deploy a new application on App Server 3 in Stratos Datacenter. They have some pre-requites to get ready that server for application deployment. Prepare the server as per requirements shared below:
 
+1. Install and configure nginx on App Server 3.
+
+2. On App Server 3 there is a self signed SSL certificate and key present at location /tmp/nautilus.crt and /tmp/nautilus.key. Move them to some appropriate location and deploy the same in Nginx.
+
+3. Create an index.html file with content Welcome! under Nginx document root.
+
+4. For final testing try to access the App Server 3 link (either hostname or IP) from jump host using curl command. For example curl -Ik https://<app-server-ip>/.
+
+Ans:
+### ✅ 1. Install and Configure Nginx
+
+sudo yum install epel-release -y
+sudo yum install nginx -y
+sudo systemctl enable nginx
+sudo systemctl start nginx
+
+### ✅ 2. Deploy SSL Certificate and Key
+
+Move the certificate and key to secure locations:
+
+sudo mv /tmp/nautilus.crt /etc/pki/tls/certs/nautilus.crt
+sudo mv /tmp/nautilus.key /etc/pki/tls/private/nautilus.key
+
+Update the Nginx SSL configuration:
+
+sudo tee /etc/nginx/conf.d/ssl.conf > /dev/null <<EOF
+server {
+    listen 443 ssl;
+    server_name localhost;
+
+    ssl_certificate /etc/pki/tls/certs/nautilus.crt;
+    ssl_certificate_key /etc/pki/tls/private/nautilus.key;
+
+    root /usr/share/nginx/html;
+    index index.html;
+
+    location / {
+        try_files $uri $uri/ =404;
+    }
+}
+EOF
+
+**Test and reload Nginx:**
+sudo nginx -t
+sudo systemctl reload nginx
+
+### ✅ 3. Create `index.html` with Welcome Message
+
+echo "Welcome!" | sudo tee /usr/share/nginx/html/index.html
+
+### ✅ 4. Final Testing from Jump Host
+
+From the jump host, run:
+
+curl -Ik https://<app-server-ip>/
+
+Replace `<app-server-ip>` with the actual IP or hostname of App Server 3.
 **Level 4**
 # Q1 Install and Configure Nginx as an LBR
 # Q2 LEMP Troubleshooting
