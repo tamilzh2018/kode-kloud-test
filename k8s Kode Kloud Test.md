@@ -1920,7 +1920,7 @@ kubectl describe secret news
 
 Now, create a file named `secret-pod.yaml` with the following content:
 
-yaml
+
 apiVersion: v1
 kind: Pod
 metadata:
@@ -2594,7 +2594,7 @@ metadata:
 data:
   redis-config: |
     maxmemory 2mb
-
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:

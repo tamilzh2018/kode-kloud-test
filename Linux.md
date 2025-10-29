@@ -2087,8 +2087,332 @@ curl -Ik https://<app-server-ip>/
 Replace `<app-server-ip>` with the actual IP or hostname of App Server 3.
 **Level 4**
 # Q1 Install and Configure Nginx as an LBR
+Day by day traffic is increasing on one of the websites managed by the Nautilus production support team. Therefore, the team has observed a degradation in website performance. Following discussions about this issue, the team has decided to deploy this application on a high availability stack i.e on Nautilus infra in Stratos DC. They started the migration last month and it is almost done, as only the LBR server configuration is pending. Configure LBR server as per the information given below:
+
+a. Install nginx on LBR (load balancer) server.
+
+b. Configure load-balancing with the an http context making use of all App Servers. Ensure that you update only the main Nginx configuration file located at /etc/nginx/nginx.conf.
+
+c. Make sure you do not update the apache port that is already defined in the apache configuration on all app servers, also make sure apache service is up and running on all app servers.
+
+d. Once done, you can access the website using StaticApp button on the top bar.
+
+Ans:
+To configure the **LBR (Load Balancer) server** using **NGINX** for the Nautilus team as described, here is a step-by-step guide based on the given requirements:
+
+### ✅ **Step 1: Install NGINX on the LBR Server**
+
+SSH into the LBR server and install NGINX:
+
+sudo yum install nginx -y  # For RHEL/CentOS
+# or
+sudo apt update && sudo apt install nginx -y  # For Ubuntu/Debian
+
+Enable and start NGINX:
+
+sudo systemctl enable nginx
+sudo systemctl start nginx
+
+# SSH into the app servers one by one and check Apache
+Once connected to the app server:sudo systemctl status httpd
+
+sudo grep ^Listen /etc/httpd/conf/httpd.conf
+ update the port details
+### ✅ **Step 2: Configure Load Balancing in `/etc/nginx/nginx.conf`**
+
+You are instructed to update **only** the main config file (`/etc/nginx/nginx.conf`), **not separate config files** under `sites-available` or `conf.d`.
+
+Edit the config:
+
+sudo vi /etc/nginx/nginx.conf
+
+Add a load balancing configuration using the **`http`** context.
+
+Here's an example block you can place **within the `http` block** in `nginx.conf`:
+
+#### 🔧 Example `nginx.conf` additions:
+
+ 
+http {
+    
+    upstream backend {
+        server 172.16.238.10:5001;
+        server 172.16.238.11:5001;
+        server 172.16.238.12:5001
+        }
+    server {
+        listen       80;
+        listen       [::]:80;
+        server_name  _;
+        root         /usr/share/nginx/html;
+        location / {
+                proxy_pass http://backend;
+                }
+        # Load configuration files for the default server block.
+        include /etc/nginx/default.d/*.conf;
+
+        error_page 404 /404.html;
+        location = /404.html {
+        }
+
+        error_page 500 502 503 504 /50x.html;
+        location = /50x.html {
+        }
+    }
+}
+✅ Replace:
+
+* `<App_Server_1_IP>` and `<App_Server_2_IP>` with the real IP addresses of the app servers.
+* `<Apache_Port>` with the port Apache is running on **(usually 80 or 8080)** — **do not change this port**.
+
+Make sure the structure of the file remains valid, and the new `upstream` and `server` blocks are within the `http` context.
+sudo nginx -t
+sudo systemctl reload nginx
+
+### ✅ **Step 3: Check Apache Services on App Servers**
+
+SSH into each app server and make sure Apache is running:
+
+sudo systemctl status httpd   # For CentOS/RHEL
+# or
+sudo systemctl status apache2  # For Ubuntu/Debian
+
+Start/enable if needed:
+
+sudo systemctl start httpd
+sudo systemctl enable httpd
+
+
+### ✅ **Step 4: Test and Restart NGINX**
+
+Test the configuration for syntax errors:
+
+sudo nginx -t
+
+If OK, reload/restart NGINX:
+
+sudo systemctl reload nginx
+# or
+sudo systemctl restart nginx
+
+### ✅ **Step 5: Validate Using StaticApp Button**
+
+After configuration, use the **StaticApp button** on the top bar (as per the interface instructions) to verify that the site is accessible and load balancing is working correctly.
+
+### ✅ **Summary Checklist**
+
+| Task                                                   | Status |
+|  |  |
+| NGINX installed on LBR server                          | ✅      |
+| Load balancing config added to `/etc/nginx/nginx.conf` | ✅      |
+| Apache running on all app servers (no port changes)    | ✅      |
+| NGINX config tested and reloaded                       | ✅      |
+| Website accessible via StaticApp                       | ✅      |
+
 # Q2 LEMP Troubleshooting
+We have LEMP stack configured on apps and database server in Stratos DC. Its using Nginx + php-fpm, for now we have deployed a sample php page on these apps. Due to some misconfiguration the php page is not loading on the web server. Seems like at least two app servers are having issues. Find below more details and make sure website works on LBR URL and locally on each app as well.
+
+1. Nginx is supposed to run on port 80 on all app servers.
+
+2. Nginx document root is /var/www/html/
+
+3. Test the webpage on LBR URL (use LBR button on the top bar) and locally on each app server to make sure it works. It must not display any error message or nginx default page.
+
+Ans:
+
+## ✅ Step-by-step Fix Guide
+
+### **1. Verify Nginx is listening on port 80**
+
+Run this on each **app server**:
+
+```bash
+sudo netstat -tulnp | grep nginx
+```
+
+or (if `netstat` not installed):
+
+```bash
+sudo ss -tuln | grep 80
+```
+
+If Nginx isn’t listening on port 80, edit its main config:
+
+```bash
+sudo sed -i 's/listen[[:space:]]*8084;/listen 80;/' /etc/nginx/nginx.conf
+```
+
+Then restart Nginx:
+
+```bash
+sudo systemctl restart nginx
+sudo systemctl status nginx
+```
+
+---
+
+### **2. Check Nginx server block (site configuration)**
+
+Make sure the site points to the correct **document root** `/var/www/html/` and handles PHP.
+
+Edit the config (usually one of these):
+
+```bash
+sudo vi /etc/nginx/sites-available/default
+```
+
+or sometimes:
+
+```bash
+sudo vi /etc/nginx/conf.d/default.conf
+```
+
+Ensure it has something like:
+
+```nginx
+server {
+    listen 80;
+    server_name _;
+    root /var/www/html;
+    index index.php index.html index.htm;
+
+    location / {
+        try_files $uri $uri/ =404;
+    }
+
+    location ~ \.php$ {
+        include fastcgi_params;
+        fastcgi_pass unix:/run/php/php-fpm.sock;  # or /var/run/php/php7.4-fpm.sock depending on PHP version
+        fastcgi_index index.php;
+        fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+    }
+}
+```
+
+> ⚠️ Make sure `root` points to `/var/www/html` and that `fastcgi_pass` references the correct socket.
+
+---
+
+### **3. Verify PHP-FPM service is running**
+
+```bash
+sudo systemctl status php-fpm
+```
+
+or (depending on distro):
+
+```bash
+sudo systemctl status php7.4-fpm
+sudo systemctl status php8.1-fpm
+```
+
+If stopped, start it:
+
+```bash
+sudo systemctl start php-fpm
+```
+
+---
+
+### **4. Verify sample PHP file**
+
+Make sure your PHP page exists and is readable:
+
+```bash
+ls -l /var/www/html/
+```
+
+You should see something like:
+
+```bash
+-rw-r--r-- 1 root root 20 Oct 30 10:00 index.php
+```
+
+If not, create one to test:
+
+```bash
+echo "<?php phpinfo(); ?>" | sudo tee /var/www/html/index.php
+```
+
+Ensure correct permissions:
+
+```bash
+sudo chown -R nginx:nginx /var/www/html
+sudo chmod -R 755 /var/www/html
+```
+
+*(If you’re on Ubuntu, replace `nginx` with `www-data`.)*
+
+---
+
+### **5. Test locally**
+
+```bash
+curl http://localhost
+```
+
+You should see PHP output (HTML source of phpinfo or your page).
+
+If you get `502 Bad Gateway` → Nginx can’t talk to PHP-FPM → check `fastcgi_pass` socket path.
+
+---
+
+### **6. Test on LBR (Load Balancer)**
+
+Use the **LBR URL** (from the top bar in your environment) and open it in a browser.
+✅ It should show your PHP page, **not** the “Welcome to Nginx” default page.
+
+---
+
+### **7. Restart services (final sanity check)**
+
+```bash
+sudo systemctl restart nginx
+sudo systemctl restart php-fpm
+```
+
+---
+
+### **8. Verify on all app servers**
+
+Run the same checks on **each app server** behind the load balancer, since at least two were misconfigured.
+
+---
+
+If you’d like, you can paste here the output of:
+
+```bash
+sudo nginx -t
+```
+
+and
+
+```bash
+sudo systemctl status php-fpm
+```
+
+
+
 # Q3 Install and Configure PostgreSQL
+The Nautilus application development team has shared that they are planning to deploy one newly developed application on Nautilus infra in Stratos DC. The application uses PostgreSQL database, so as a pre-requisite we need to set up PostgreSQL database server as per requirements shared below:
+
+PostgreSQL database server is already installed on the Nautilus database server.
+
+a. Create a database user kodekloud_gem and set its password to Rc5C9EyvbU.
+
+b. Create a database kodekloud_db1 and grant full permissions to user kodekloud_gem on this database.
+
+Note: Please do not try to restart PostgreSQL server service.
+Ans:
+1. sudo -i -u postgres
+2. psql
+3. CREATE USER kodekloud_gem WITH PASSWORD 'Rc5C9EyvbU';
+4. CREATE DATABASE kodekloud_db1;
+5. GRANT ALL PRIVILEGES ON DATABASE kodekloud_db1 TO kodekloud_gem;
+6.  \q
+7. exit
+8. Verify: psql -U kodekloud_gem -d kodekloud_db1 -h localhost
+
 # Q4  scripts if/else statements
 # Q5 Configure LAMP server
 # Q6 Install and Configure DB Server

@@ -837,8 +837,425 @@ Scroll down to **“General”** section and:
 This tells Jenkins to run the job only on that agent.
 
 # *Q2 Jenkins Project Security
+The xFusionCorp Industries has recruited some new developers. There are already some existing jobs on Jenkins and two of these new developers need permissions to access those jobs. The development team has already shared those requirements with the DevOps team, so as per details mentioned below grant required permissions to the developers.
+
+Click on the Jenkins button on the top bar to access the Jenkins UI. Login using username admin and password Adm!n321.
+
+There is an existing Jenkins job named Packages, there are also two existing Jenkins users named sam with password sam@pass12345 and rohan with password rohan@pass12345.
+
+Grant permissions to these users to access Packages job as per details mentioned below:
+
+a.) Make sure to select Inherit permissions from parent ACL under inheritance strategy for granting permissions to these users.
+
+b.) Grant mentioned permissions to sam user : build, configure and read.
+
+c.) Grant mentioned permissions to rohan user : build, cancel, configure, read, update and tag.
+
+Note:
+
+Please do not modify/alter any other existing job configuration.
+
+You might need to install some plugins and restart Jenkins service. So, we recommend clicking on Restart Jenkins when installation is complete and no jobs are running on plugin installation/update page i.e update centre. Also Jenkins UI sometimes gets stuck when Jenkins service restarts in the back end. In this case, please make sure to refresh the UI page.
+
+For these kind of scenarios requiring changes to be done in a web UI, please take screenshots so that you can share it with us for review in case your task is marked incomplete. You may also consider using a screen recording software such as loom.com to record and share your work.
+
+Ans:
+Here’s exactly how to complete this Jenkins permissions task step-by-step:
+
+---
+
+### **Step 1: Log into Jenkins**
+
+1. Open the Jenkins UI (click the **Jenkins** button on the top bar).
+2. Login with:
+   **Username:** `admin`
+   **Password:** `Adm!n321`
+
+---
+
+### **Step 2: Confirm the Job and Users**
+
+1. On the Jenkins dashboard, verify that the job named **“Packages”** exists.
+2. Check that the users **sam** and **rohan** exist:
+
+   * Go to **Manage Jenkins → Manage Users**.
+   * Ensure both are listed:
+
+     * `sam / sam@pass12345`
+     * `rohan / rohan@pass12345`
+
+---
+
+### **Step 3: Verify or Install Role/Matrix Authorization Plugin**
+
+To assign fine-grained permissions to specific users on a specific job, you need the **Matrix Authorization Strategy Plugin** (or **Role-Based Authorization Strategy Plugin**).
+
+1. Go to **Manage Jenkins → Plugins → Available Plugins**.
+2. Search for **Matrix Authorization Strategy Plugin**.
+3. Install it.
+4. Once installed, choose **Restart Jenkins when installation is complete and no jobs are running**.
+
+---
+
+### **Step 4: Enable Project-Based Matrix Authorization**
+
+1. Go to the Jenkins dashboard.
+2. Click on the job **Packages**.
+3. Select **Configure**.
+4. Scroll down to the **Build Authorization Strategy** section (if not visible, enable it under **Manage Jenkins → Configure Global Security**).
+5. Under **Enable project-based security**, check the box.
+
+---
+
+### **Step 5: Set Inheritance and Add Permissions**
+
+1. Under **Inheritance Strategy**, select:
+   ✅ **Inherit permissions from parent ACL**
+2. You’ll now see a permissions matrix table.
+
+---
+
+### **Step 6: Grant Permissions for Each User**
+
+#### **For `sam`:**
+
+Grant the following permissions:
+
+* ✅ **Job → Build**
+* ✅ **Job → Configure**
+* ✅ **Job → Read**
+
+To do this:
+
+* Click **Add user or group**, type `sam`, press Enter.
+* Then check the three boxes mentioned above for `sam`.
+
+#### **For `rohan`:**
+
+Grant the following permissions:
+
+* ✅ **Job → Build**
+* ✅ **Job → Cancel**
+* ✅ **Job → Configure**
+* ✅ **Job → Read**
+* ✅ **Job → Update**
+* ✅ **Job → Tag**
+
+To do this:
+
+* Click **Add user or group**, type `rohan`, press Enter.
+* Then check the boxes for these six permissions.
+
+---
+
+### **Step 7: Save Configuration**
+
+* Click **Save** (or **Apply and Save**) at the bottom of the job configuration page.
+
+---
+
+### **Step 8: Verify Permissions**
+
+1. Log out of Jenkins.
+2. Log in as **sam (sam@pass12345)** and verify:
+
+   * Can open and read the “Packages” job.
+   * Can configure and build it.
+   * Cannot perform other restricted actions.
+3. Log out, then log in as **rohan (rohan@pass12345)** and verify:
+
+   * Can build, cancel builds, configure, update, tag, and read the job.
+
+
+
 # *Q3 Jenkins Build Images
+One of the DevOps engineers was working on to create a Dockerfile for Nginx. We need to build an image using that Dockerfile. The deployment must be done using a Jenkins pipeline. Below you can find more details about the same.
+
+Click on the Jenkins button on the top bar to access the Jenkins UI. Login using username admin and password Adm!n321.
+
+Similarly, click on the Gitea button on the top bar to access the Gitea UI. Login using username sarah and password Sarah_pass123. There is a repository named sarah/web in Gitea.
+
+Create/configure a Jenkins pipeline job named nginx-container, configure it to run on server App Server 3.
+
+The pipeline can have just one stage named Build. (name is case sensitive)
+
+In the Build stage, build an image named stregi01.stratos.xfusioncorp.com:5000/nginx:latest using the Dockerfile present under the Git repository. stregi01.stratos.xfusioncorp.com:5000 is the image registry server. After building the image push the same to the image registry server.
+
+Note:
+
+You might need to install some plugins and restart Jenkins service. So, we recommend clicking on Restart Jenkins when installation is complete and no jobs are running on plugin installation/update page i.e update centre. Also, Jenkins UI sometimes gets stuck when Jenkins service restarts in the back end. In this case, please make sure to refresh the UI page.
+
+For these kind of scenarios requiring changes to be done in a web UI, please take screenshots so that you can share it with us for review in case your task is marked incomplete. You may also consider using a screen recording software such as loom.com to record and share your work.
+
+Ans:
+Here’s a **step-by-step guide** to complete the Jenkins pipeline deployment task you described — building and pushing an Nginx Docker image from a Gitea repo.
+
+---
+
+## 🚀 Objective
+
+Create a **Jenkins pipeline job** called `nginx-container` that:
+
+* Builds a Docker image using the Dockerfile in `sarah/web` repo (on Gitea)
+* Tags it as `stregi01.stratos.xfusioncorp.com:5000/nginx:latest`
+* Pushes it to the Docker registry at `stregi01.stratos.xfusioncorp.com:5000`
+* Runs on **App Server 3**
+* Has **one stage only** → `Build`
+
+---
+
+## 🧰 Step 1: Jenkins Access and Setup
+
+1. Click **Jenkins** (from top bar).
+
+2. Login:
+
+   * **Username:** `admin`
+   * **Password:** `Adm!n321`
+
+3. If this is the first time logging in:
+
+   * Go to **Manage Jenkins → Plugins → Available plugins**
+   * Install:
+
+     * **Docker Pipeline**
+     * **Git plugin**
+     * **Pipeline: Job , Pipeline,Pipeline: API plugins**
+     * **Credentials Binding Plugin**
+     * **SSH Build Agents**
+   * Click **“Download now and install after restart”**
+   * Then select **“Restart Jenkins when installation is complete”**
+## 🧱 Step 2: Create Jenkins Credentials
+
+1. Go to **Manage Jenkins → Credentials → (global)** → **Add Credentials**
+2. Add:
+
+   * **Type:** Username with password
+   * **ID:** `gitea-cred`
+   * **Username:** `sarah`
+   * **Password:** `Sarah_pass123`
+3. Add another credential for Docker registry:
+
+   * **Type:** Username with password
+   * **ID:** `docker-registry-cred`
+   * (Use the registry credentials if available; if not, use the same Jenkins admin credentials if permitted)
+
+---
+
+## 🧑‍💻 Step 3: Create Pipeline Job
+
+1. From Jenkins dashboard → **New Item**
+2. Enter name: `nginx-container`
+3. Choose **Pipeline** → Click **OK**
+4. Under **General**, check **Restrict where this project can be run**
+
+   * Label Expression: `App Server 3`
+5. Under **Pipeline Definition**, choose **Pipeline script from SCM**
+
+   * **SCM:** Git
+   * **Repository URL:** (from Gitea)
+
+     ```
+     http://gitea.stratos.xfusioncorp.com/sarah/web.git
+     ```
+   * **Credentials:** Select `gitea-cred`
+   * **Branch Specifier:** `*/main` or `*/master` (verify in Gitea)
+   * **Script Path:** `Jenkinsfile` (you’ll create this next)
+
+---
+
+## 🧾 Step 4: Create the Jenkinsfile in Gitea Repo
+
+Login to **Gitea** (`sarah / Sarah_pass123`):
+
+1. Open repo: `sarah/web`
+2. Click **Add File → Create New File**
+3. Name it: `Jenkinsfile`
+4. Paste the following content:
+
+```groovy
+pipeline {
+    agent any
+
+    stages {
+        stage('Build') {
+            steps {
+                script {
+                    // Docker registry details
+                    def registry = "stregi01.stratos.xfusioncorp.com:5000"
+                    def imageName = "${registry}/nginx:latest"
+
+                    // Build the image
+                    echo "Building Docker image..."
+                    sh "docker build -t ${imageName} ."
+
+                    // If docker cred avail to the Login and push else without login step, process other command
+                    withCredentials([usernamePassword(credentialsId: 'docker-registry-cred', usernameVariable: 'USER', passwordVariable: 'PASS')]) {
+                        sh "echo $PASS | docker login ${registry} -u $USER --password-stdin"
+                        sh "docker push ${imageName}"
+                        sh "docker logout ${registry}"
+                    }
+                }
+            }
+        }
+    }
+}
+```
+
+5. Commit the file directly to the default branch (main/master).
+
+---
+
+## ⚙️ Step 5: Run the Pipeline
+
+1. Go back to Jenkins → **nginx-container**
+2. Click **Build Now**
+3. Monitor progress under **Build Console Output**
+
+Expected output:
+
+* Docker image builds successfully using the repo’s Dockerfile
+* Image is pushed to:
+  `stregi01.stratos.xfusioncorp.com:5000/nginx:latest`
+* Stage name shows as **Build**
+
+---
+
+## ✅ Step 6: Verify the Image
+
+On **App Server 3**, verify with:
+
+```bash
+docker login stregi01.stratos.xfusioncorp.com:5000
+docker pull stregi01.stratos.xfusioncorp.com:5000/nginx:latest
+docker images
+```
+
+You should see the new image listed.
+
+---
+
+## 🧩 Troubleshooting Tips
+
+* If `docker` command not found → install Docker on App Server 3.
+* If Jenkins can’t use Docker → ensure Jenkins user is in the `docker` group:
+
+  ```bash
+  sudo usermod -aG docker jenkins
+  sudo systemctl restart jenkins
+  ```
+* If authentication fails during push → double-check credentials for the registry.
+
 # *Q4 Jenkins Deploy Pipeline
+The development team of xFusionCorp Industries is working on to develop a new static website and they are planning to deploy the same on Nautilus App Servers using Jenkins pipeline. They have shared their requirements with the DevOps team and accordingly we need to create a Jenkins pipeline job. Please find below more details about the task:
+
+Click on the Jenkins button on the top bar to access the Jenkins UI. Login using username admin and password Adm!n321.
+
+Similarly, click on the Gitea button on the top bar to access the Gitea UI. Login using username sarah and password Sarah_pass123. There under user sarah you will find a repository named web_app that is already cloned on Storage server under /var/www/html. sarah is a developer who is working on this repository.
+
+Add a slave node named Storage Server. It should be labeled as ststor01 and its remote root directory should be /var/www/html.
+
+We have already cloned repository on Storage Server under /var/www/html.
+
+Apache is already installed on all app Servers its running on port 8080.
+
+Create a Jenkins pipeline job named nautilus-webapp-job (it must not be a Multibranch pipeline) and configure it to:
+
+Deploy the code from web_app repository under /var/www/html on Storage Server, as this location is already mounted to the document root /var/www/html of app servers. The pipeline should have a single stage named Deploy ( which is case sensitive ) to accomplish the deployment.
+
+LB server is already configured. You should be able to see the latest changes you made by clicking on the App button. Please make sure the required content is loading on the main URL https://<LBR-URL> i.e there should not be a sub-directory like https://<LBR-URL>/web_app etc.
+
+Note:
+
+You might need to install some plugins and restart Jenkins service. So, we recommend clicking on Restart Jenkins when installation is complete and no jobs are running on plugin installation/update page i.e update centre. Also, Jenkins UI sometimes gets stuck when Jenkins service restarts in the back end. In this case, please make sure to refresh the UI page.
+
+For these kind of scenarios requiring changes to be done in a web UI, please take screenshots so that you can share it with us for review in case your task is marked incomplete. You may also consider using a screen recording software such as loom.com to record and share your work.
+
+Ans:
+Here's a step-by-step guide to help you complete the Jenkins pipeline deployment for xFusionCorp Industries:
+
+---
+
+## ✅ Step-by-Step Instructions
+
+### 1. **Access Jenkins and Gitea**
+- **Jenkins UI**: Click the Jenkins button → Login with:
+  - Username: `admin`
+  - Password: `Adm!n321`
+- **Gitea UI**: Click the Gitea button → Login with:
+  - Username: `sarah`
+  - Password: `Sarah_pass123`
+  - Locate the repository: `web_app` under user `sarah`
+
+---
+
+### 2. **Add Jenkins Slave Node (Storage Server)**
+**Login into Storage Server Change Permission and Install java**
+sudo chown -R natasha:natasha /var/www/html
+sudo chmod -R 755 /var/www/html
+ then 
+- Go to **Manage Jenkins** → **Manage Nodes and Clouds**
+- Click **New Node**
+  - Name: `Storage Server`
+  - Type: **Permanent Agent**
+- Configure the node:
+  - **# of Executors**: 1
+  - **Remote root directory**: `/var/www/html`
+  - **Labels**: `ststor01`
+  - **Launch method**: Use SSH or appropriate method to connect to Storage Server
+- Save and ensure the node is **online**
+
+---
+
+### 3. **Create Jenkins Pipeline Job**
+- Go to Jenkins Dashboard → Click **New Item**
+  - Name: `nautilus-webapp-job`
+  - Type: **Pipeline**
+- Click OK and configure:
+  - **Description**: Deploy static website from Gitea to Storage Server
+  - **Restrict where this project can run**: `ststor01`
+
+---
+
+### 4. **Configure Pipeline Script**
+In the **Pipeline** section, choose **Pipeline script** and paste the following:
+
+```groovy
+pipeline {
+    agent { label 'ststor01' }
+
+    stages {
+        stage('Deploy') {
+            steps {
+                echo 'Deploying web_app to /var/www/html...'
+                sh '''
+                    cd /var/www/html/
+                    git clone http://git.stratos.xfusioncorp.com/sarah/web_app.git /tmp/web_app
+                    cp -r /tmp/web_app/* /var/www/html/
+                '''
+            }
+        }
+    }
+}
+
+```
+
+### 5. **Install Required Plugins**
+- Go to **Manage Jenkins** → **Plugins**
+- Install:
+  - **Pipeline**
+  - **Git**
+  - **SSH BuildAgent** 
+- After installation, click **Restart Jenkins when installation is complete and no jobs are running**
+
+---
+
+### 6. **Verify Deployment**
+- Click the **App** button to access the Load Balancer URL
+- Confirm the site loads at `https://<LBR-URL>` (not in a subdirectory)
+- If needed, remove nested `web_app` folder and move contents directly to `/var/www/html`
+
+
 # *Q5 Jenkins Conditional Pipeline
 
 **Level 4**

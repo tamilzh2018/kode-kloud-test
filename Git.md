@@ -370,6 +370,95 @@ You should see only two commits:
 - The initial commit
 - The `add data.txt file` commit
 # Q4 Git Clean
+The Nautilus application development team was working on a git repository /usr/src/kodekloudrepos/blog present on Storage server in Stratos DC. One of the developers mistakenly created a couple of files under this repository, but now they want to clean this repository without adding/pushing any new files. Find below more details:
+
+Clean the /usr/src/kodekloudrepos/blog git repository without adding/pushing any new files, make sure git status is clean.
+Ans:
+Let's go step-by-step so you can **clean the Git repository** at `/usr/src/kodekloudrepos/blog` and make sure `git status` shows a **clean working tree** (no changes, untracked files, or pending commits).
+
+---
+
+### 🧭 Step 1: Navigate to the repository
+
+```bash
+cd /usr/src/kodekloudrepos/blog
+```
+
+---
+
+### 🧹 Step 2: Check the current status
+
+```bash
+git status
+```
+
+This will show you:
+
+* Untracked files (not yet added to git)
+* Modified files (already tracked but changed)
+* Anything staged for commit
+
+You’ll probably see something like:
+
+```
+Untracked files:
+  (use "git add <file>..." to include in what will be committed)
+    file1.txt
+    file2.log
+```
+
+---
+
+### 🗑️ Step 3: Remove **untracked files and directories**
+
+You can safely clean out all files that are not tracked by git (i.e., those that were mistakenly created):
+
+```bash
+git clean -fd
+```
+
+Explanation:
+
+* `-f` = force (required for safety)
+* `-d` = also remove untracked directories
+
+This will **delete all untracked files and folders**.
+
+> ⚠️ **Warning:** This permanently deletes those files from disk (not to trash). Only run this if you’re sure they’re not needed.
+
+---
+
+### 🔁 Step 4: Discard any changes to tracked files
+
+If the developer also modified existing tracked files, revert them to their last committed version:
+
+```bash
+git restore .
+```
+
+or the older equivalent:
+
+```bash
+git checkout -- .
+```
+
+---
+
+### ✅ Step 5: Confirm the repository is clean
+
+Finally, verify that the working tree is clean:
+
+```bash
+git status
+```
+
+You should now see:
+
+```
+On branch main
+nothing to commit, working tree clean
+```
+
 # Q5 Git Stash
 The Nautilus application development team was working on a git repository /usr/src/kodekloudrepos/cluster present on Storage server in Stratos DC. One of the developers stashed some in-progress changes in this repository, but now they want to restore some of the stashed changes. Find below more details to accomplish this task:
 
@@ -512,45 +601,67 @@ Finally remember to push your changes.
 Note: Perform this task using the natasha user, and ensure the repository or existing directory permissions are not altered.
 
 Ans:
+To complete this task as the `natasha` user on the Storage server in Stratos DC, follow these steps carefully:
 
-    1  cd /opt/cluster.git/hooks/
-    2  vi post-update
-    3  cd /usr/src/kodekloudrepos/cluster/
-    4  git branch
-    5  git checkout master
-    6  git pull
-    7  git merge feature -m "Merging feature into master"
-    8  chmod +x /opt/cluster.git/hooks/post-update
-    9  vi /opt/cluster.git/hooks/post-update
-    #!/bin/bash
+---
 
-# Set tag name with current date
-DATE=$(date +%F)
-TAG="release-$DATE"
+### ✅ Step-by-Step Instructions
 
-# Path to the Git repo (bare)
-REPO_PATH="/opt/beta.git"
+#### 1. **Switch to the `natasha` user**
+```bash
+sudo su - natasha
+```
 
-# Check if 'master' branch exists
-if git --git-dir="$REPO_PATH" rev-parse refs/heads/master >/dev/null 2>&1; then
-    # Check if the tag already exists
-    if ! git --git-dir="$REPO_PATH" rev-parse "refs/tags/$TAG" >/dev/null 2>&1; then
-        # Create the tag on the latest commit of master
-        git --git-dir="$REPO_PATH" tag "$TAG" refs/heads/master
-        echo "✅ Tag $TAG created on master branch"
-    else
-        echo "⚠️ Tag $TAG already exists"
-    fi
-else
-    echo "❌ 'master' branch not found"
+#### 2. **Navigate to the cloned repository**
+```bash
+cd /usr/src/kodekloudrepos
+```
+
+#### 3. **Merge the feature branch into master**
+Assuming the feature branch is named `feature`:
+```bash
+git checkout master
+git merge feature
+```
+
+#### 4. **Create the `post-update` hook**
+Git hooks are stored in `.git/hooks`. Create a `post-update` hook that tags the latest commit on `master` with today’s date.
+
+```bash
+ vi /opt/beta.git/hooks/post-update
+ #!/bin/bash
+BRANCH=$(git for-each-ref --format='%(refname:short)' refs/heads/master)
+if [ "$BRANCH" = "master" ]; then
+  DATE=$(date +%F)
+  TAG="release-$DATE"
+  git tag "$TAG" master
+  echo "Created tag: $TAG"
 fi
 
-   10  git config list
-   11  git config --global user.name "Natasha"
-   12  git config --global user.email "natasha@ststor01.stratos.xfusioncorp.com"
-   13  git push origin master
-   14  cd /opt/cluster.git/
-   15  git show-ref --tags
+chmod +x /opt/beta.git/hooks/post-update
+
+```
+
+#### 5. **Test the hook**
+Push the merged changes to trigger the hook:
+```bash
+cd /usr/src/kodekloudrepos
+git push origin master
+
+```
+
+Then verify the tag was created:
+```bash
+cd /opt/beta.git
+git tag
+
+```
+
+You should see a tag like:
+```
+release-2025-10-31
+```
+
 # Q5 Git Setup from Scratch
 
 **Certification Test**
