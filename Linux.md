@@ -2087,6 +2087,128 @@ curl -Ik https://<app-server-ip>/
 Replace `<app-server-ip>` with the actual IP or hostname of App Server 3.
 **Level 4**
 # Q1 Install and Configure Nginx as an LBR
+Day by day traffic is increasing on one of the websites managed by the Nautilus production support team. Therefore, the team has observed a degradation in website performance. Following discussions about this issue, the team has decided to deploy this application on a high availability stack i.e on Nautilus infra in Stratos DC. They started the migration last month and it is almost done, as only the LBR server configuration is pending. Configure LBR server as per the information given below:
+
+a. Install nginx on LBR (load balancer) server.
+
+b. Configure load-balancing with the an http context making use of all App Servers. Ensure that you update only the main Nginx configuration file located at /etc/nginx/nginx.conf.
+
+c. Make sure you do not update the apache port that is already defined in the apache configuration on all app servers, also make sure apache service is up and running on all app servers.
+
+d. Once done, you can access the website using StaticApp button on the top bar.
+
+Ans:
+To configure the **LBR (Load Balancer) server** using **NGINX** for the Nautilus team as described, here is a step-by-step guide based on the given requirements:
+
+### ✅ **Step 1: Install NGINX on the LBR Server**
+
+SSH into the LBR server and install NGINX:
+
+sudo yum install nginx -y  # For RHEL/CentOS
+# or
+sudo apt update && sudo apt install nginx -y  # For Ubuntu/Debian
+
+Enable and start NGINX:
+
+sudo systemctl enable nginx
+sudo systemctl start nginx
+
+# SSH into the app servers one by one and check Apache
+Once connected to the app server:sudo systemctl status httpd
+
+sudo grep ^Listen /etc/httpd/conf/httpd.conf
+ update the port details
+### ✅ **Step 2: Configure Load Balancing in `/etc/nginx/nginx.conf`**
+
+You are instructed to update **only** the main config file (`/etc/nginx/nginx.conf`), **not separate config files** under `sites-available` or `conf.d`.
+
+Edit the config:
+
+sudo vi /etc/nginx/nginx.conf
+
+Add a load balancing configuration using the **`http`** context.
+
+Here's an example block you can place **within the `http` block** in `nginx.conf`:
+
+#### 🔧 Example `nginx.conf` additions:
+
+ 
+http {
+    
+    upstream backend {
+        server 172.16.238.10:5001;
+        server 172.16.238.11:5001;
+        server 172.16.238.12:5001
+        }
+    server {
+        listen       80;
+        listen       [::]:80;
+        server_name  _;
+        root         /usr/share/nginx/html;
+        location / {
+                proxy_pass http://backend;
+                }
+        # Load configuration files for the default server block.
+        include /etc/nginx/default.d/*.conf;
+
+        error_page 404 /404.html;
+        location = /404.html {
+        }
+
+        error_page 500 502 503 504 /50x.html;
+        location = /50x.html {
+        }
+    }
+}
+✅ Replace:
+
+* `<App_Server_1_IP>` and `<App_Server_2_IP>` with the real IP addresses of the app servers.
+* `<Apache_Port>` with the port Apache is running on **(usually 80 or 8080)** — **do not change this port**.
+
+Make sure the structure of the file remains valid, and the new `upstream` and `server` blocks are within the `http` context.
+sudo nginx -t
+sudo systemctl reload nginx
+
+### ✅ **Step 3: Check Apache Services on App Servers**
+
+SSH into each app server and make sure Apache is running:
+
+sudo systemctl status httpd   # For CentOS/RHEL
+# or
+sudo systemctl status apache2  # For Ubuntu/Debian
+
+Start/enable if needed:
+
+sudo systemctl start httpd
+sudo systemctl enable httpd
+
+
+### ✅ **Step 4: Test and Restart NGINX**
+
+Test the configuration for syntax errors:
+
+sudo nginx -t
+
+If OK, reload/restart NGINX:
+
+sudo systemctl reload nginx
+# or
+sudo systemctl restart nginx
+
+### ✅ **Step 5: Validate Using StaticApp Button**
+
+After configuration, use the **StaticApp button** on the top bar (as per the interface instructions) to verify that the site is accessible and load balancing is working correctly.
+
+### ✅ **Summary Checklist**
+
+| Task                                                   | Status |
+|  |  |
+| NGINX installed on LBR server                          | ✅      |
+| Load balancing config added to `/etc/nginx/nginx.conf` | ✅      |
+| Apache running on all app servers (no port changes)    | ✅      |
+| NGINX config tested and reloaded                       | ✅      |
+| Website accessible via StaticApp                       | ✅      |
+
 # Q2 LEMP Troubleshooting
 # Q3 Install and Configure PostgreSQL
 # Q4  scripts if/else statements

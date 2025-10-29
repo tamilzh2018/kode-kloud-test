@@ -837,6 +837,137 @@ Scroll down to **“General”** section and:
 This tells Jenkins to run the job only on that agent.
 
 # *Q2 Jenkins Project Security
+The xFusionCorp Industries has recruited some new developers. There are already some existing jobs on Jenkins and two of these new developers need permissions to access those jobs. The development team has already shared those requirements with the DevOps team, so as per details mentioned below grant required permissions to the developers.
+
+Click on the Jenkins button on the top bar to access the Jenkins UI. Login using username admin and password Adm!n321.
+
+There is an existing Jenkins job named Packages, there are also two existing Jenkins users named sam with password sam@pass12345 and rohan with password rohan@pass12345.
+
+Grant permissions to these users to access Packages job as per details mentioned below:
+
+a.) Make sure to select Inherit permissions from parent ACL under inheritance strategy for granting permissions to these users.
+
+b.) Grant mentioned permissions to sam user : build, configure and read.
+
+c.) Grant mentioned permissions to rohan user : build, cancel, configure, read, update and tag.
+
+Note:
+
+Please do not modify/alter any other existing job configuration.
+
+You might need to install some plugins and restart Jenkins service. So, we recommend clicking on Restart Jenkins when installation is complete and no jobs are running on plugin installation/update page i.e update centre. Also Jenkins UI sometimes gets stuck when Jenkins service restarts in the back end. In this case, please make sure to refresh the UI page.
+
+For these kind of scenarios requiring changes to be done in a web UI, please take screenshots so that you can share it with us for review in case your task is marked incomplete. You may also consider using a screen recording software such as loom.com to record and share your work.
+
+Ans:
+Here’s exactly how to complete this Jenkins permissions task step-by-step:
+
+---
+
+### **Step 1: Log into Jenkins**
+
+1. Open the Jenkins UI (click the **Jenkins** button on the top bar).
+2. Login with:
+   **Username:** `admin`
+   **Password:** `Adm!n321`
+
+---
+
+### **Step 2: Confirm the Job and Users**
+
+1. On the Jenkins dashboard, verify that the job named **“Packages”** exists.
+2. Check that the users **sam** and **rohan** exist:
+
+   * Go to **Manage Jenkins → Manage Users**.
+   * Ensure both are listed:
+
+     * `sam / sam@pass12345`
+     * `rohan / rohan@pass12345`
+
+---
+
+### **Step 3: Verify or Install Role/Matrix Authorization Plugin**
+
+To assign fine-grained permissions to specific users on a specific job, you need the **Matrix Authorization Strategy Plugin** (or **Role-Based Authorization Strategy Plugin**).
+
+1. Go to **Manage Jenkins → Plugins → Available Plugins**.
+2. Search for **Matrix Authorization Strategy Plugin**.
+3. Install it.
+4. Once installed, choose **Restart Jenkins when installation is complete and no jobs are running**.
+
+---
+
+### **Step 4: Enable Project-Based Matrix Authorization**
+
+1. Go to the Jenkins dashboard.
+2. Click on the job **Packages**.
+3. Select **Configure**.
+4. Scroll down to the **Build Authorization Strategy** section (if not visible, enable it under **Manage Jenkins → Configure Global Security**).
+5. Under **Enable project-based security**, check the box.
+
+---
+
+### **Step 5: Set Inheritance and Add Permissions**
+
+1. Under **Inheritance Strategy**, select:
+   ✅ **Inherit permissions from parent ACL**
+2. You’ll now see a permissions matrix table.
+
+---
+
+### **Step 6: Grant Permissions for Each User**
+
+#### **For `sam`:**
+
+Grant the following permissions:
+
+* ✅ **Job → Build**
+* ✅ **Job → Configure**
+* ✅ **Job → Read**
+
+To do this:
+
+* Click **Add user or group**, type `sam`, press Enter.
+* Then check the three boxes mentioned above for `sam`.
+
+#### **For `rohan`:**
+
+Grant the following permissions:
+
+* ✅ **Job → Build**
+* ✅ **Job → Cancel**
+* ✅ **Job → Configure**
+* ✅ **Job → Read**
+* ✅ **Job → Update**
+* ✅ **Job → Tag**
+
+To do this:
+
+* Click **Add user or group**, type `rohan`, press Enter.
+* Then check the boxes for these six permissions.
+
+---
+
+### **Step 7: Save Configuration**
+
+* Click **Save** (or **Apply and Save**) at the bottom of the job configuration page.
+
+---
+
+### **Step 8: Verify Permissions**
+
+1. Log out of Jenkins.
+2. Log in as **sam (sam@pass12345)** and verify:
+
+   * Can open and read the “Packages” job.
+   * Can configure and build it.
+   * Cannot perform other restricted actions.
+3. Log out, then log in as **rohan (rohan@pass12345)** and verify:
+
+   * Can build, cancel builds, configure, update, tag, and read the job.
+
+
+
 # *Q3 Jenkins Build Images
 # *Q4 Jenkins Deploy Pipeline
 # *Q5 Jenkins Conditional Pipeline

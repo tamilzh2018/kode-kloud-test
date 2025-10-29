@@ -370,6 +370,95 @@ You should see only two commits:
 - The initial commit
 - The `add data.txt file` commit
 # Q4 Git Clean
+The Nautilus application development team was working on a git repository /usr/src/kodekloudrepos/blog present on Storage server in Stratos DC. One of the developers mistakenly created a couple of files under this repository, but now they want to clean this repository without adding/pushing any new files. Find below more details:
+
+Clean the /usr/src/kodekloudrepos/blog git repository without adding/pushing any new files, make sure git status is clean.
+Ans:
+Let's go step-by-step so you can **clean the Git repository** at `/usr/src/kodekloudrepos/blog` and make sure `git status` shows a **clean working tree** (no changes, untracked files, or pending commits).
+
+---
+
+### 🧭 Step 1: Navigate to the repository
+
+```bash
+cd /usr/src/kodekloudrepos/blog
+```
+
+---
+
+### 🧹 Step 2: Check the current status
+
+```bash
+git status
+```
+
+This will show you:
+
+* Untracked files (not yet added to git)
+* Modified files (already tracked but changed)
+* Anything staged for commit
+
+You’ll probably see something like:
+
+```
+Untracked files:
+  (use "git add <file>..." to include in what will be committed)
+    file1.txt
+    file2.log
+```
+
+---
+
+### 🗑️ Step 3: Remove **untracked files and directories**
+
+You can safely clean out all files that are not tracked by git (i.e., those that were mistakenly created):
+
+```bash
+git clean -fd
+```
+
+Explanation:
+
+* `-f` = force (required for safety)
+* `-d` = also remove untracked directories
+
+This will **delete all untracked files and folders**.
+
+> ⚠️ **Warning:** This permanently deletes those files from disk (not to trash). Only run this if you’re sure they’re not needed.
+
+---
+
+### 🔁 Step 4: Discard any changes to tracked files
+
+If the developer also modified existing tracked files, revert them to their last committed version:
+
+```bash
+git restore .
+```
+
+or the older equivalent:
+
+```bash
+git checkout -- .
+```
+
+---
+
+### ✅ Step 5: Confirm the repository is clean
+
+Finally, verify that the working tree is clean:
+
+```bash
+git status
+```
+
+You should now see:
+
+```
+On branch main
+nothing to commit, working tree clean
+```
+
 # Q5 Git Stash
 The Nautilus application development team was working on a git repository /usr/src/kodekloudrepos/cluster present on Storage server in Stratos DC. One of the developers stashed some in-progress changes in this repository, but now they want to restore some of the stashed changes. Find below more details to accomplish this task:
 
