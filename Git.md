@@ -572,6 +572,101 @@ git push origin feature --force
  veiry : git log
 
 # Q2 Manage Git Repositories
+A new developer just joined the Nautilus development team and has been assigned a new project for which he needs to create a new repository under his account on Gitea server. Additionally, there is some existing data that need to be added to the repo. Below you can find more details about the task:
+
+Click on the Gitea UI button on the top bar. You should be able to access the Gitea UI. Login to Gitea server using username max and password Max_pass123.
+
+a. Create a new git repository story_ecommerce under max user.
+
+b. SSH into storage server using user max and password Max_pass123 and clone this newly created repository under user max home directory i.e /home/max.
+
+c. Copy all files from location /usr/itadmin to the repository and commit/push your changes to the master branch. The commit message must be "add stories" (must be done in single commit).
+
+d. Create a new branch max_games from master.
+
+e. Copy a file story-index-max.txt from location /tmp/stories/ to the repository. This file has a typo, which you can fix by changing the word Mooose to Mouse. Commit and push the changes to the newly created branch. Commit message must be "typo fixed for Mooose" (must be done in single commit).
+
+Note: For these kind of scenarios requiring changes to be done in a web UI, please take screenshots so that you can share it with us for review in case your task is marked incomplete. You may also consider using a screen recording software such as loom.com to record and share your work.
+
+Ans:
+Here's a step-by-step guide to help the new developer complete the task successfully:
+
+---
+
+### 🧩 Step-by-Step Instructions
+
+#### 1️⃣ Create a New Repository in Gitea
+- Go to the Gitea UI by clicking the **Gitea** button on the top bar.
+- Log in with:
+  - **Username:** `max`
+  - **Password:** `Max_pass123`
+- Click **New Repository**.
+- Fill in the details:
+  - **Repository Name:** `story_ecommerce`
+  - **Owner:** `max`
+  - Leave other settings as default (public/private as needed).
+- Click **Create Repository**.
+
+#### 2️⃣ SSH into the Storage Server and Clone the Repo
+- Open a terminal and SSH into the storage server:
+  ```bash
+  ssh max@<storage-server-ip>
+  ```
+  - Use password: `Max_pass123`
+- Navigate to the home directory:
+  ```bash
+  cd /home/max
+  ```
+- Clone the newly created repository:
+  ```bash
+  git clone git@<gitea-server>:max/story_ecommerce.git
+  ```
+
+---
+
+#### 3️⃣ Copy Existing Data and Commit to Master
+- Copy all files from `/usr/itadmin`:
+  ```bash
+  cp -r /usr/itadmin/* /home/max/story_ecommerce/
+  cd /home/max/story_ecommerce
+  ```
+- Stage and commit the changes:
+  ```bash
+  git config --global user.name "max"
+  git config --global user.email "max@stratos.xfusioncorp.com"
+  git add .
+  git commit -m "add stories"
+  git branch --set-upstream-to=origin/master master
+  git push origin master
+  ```
+
+---
+
+#### 4️⃣ Create a New Branch `max_games`
+- From the repo directory:
+  ```bash
+  Create new branch on remote repo and then locally pull that
+  git checkout -b max_games
+  git push origin max_games
+  ```
+
+---
+
+#### 5️⃣ Fix Typo in `story-index-max.txt` and Commit to `max_games`
+- Copy the file:
+  ```bash
+  cp /tmp/stories/story-index-max.txt /home/max/story_ecommerce/
+  ```
+- Fix the typo using `sed`:
+  ```bash
+  sed -i 's/Mooose/Mouse/g' story-index-max.txt
+  ```
+- Stage and commit:
+  ```bash
+  git add story-index-max.txt
+  git commit -m "typo fixed for Mooose"
+  git push origin max_games
+  ```
 # Q3 Resolve Git Merge Conflicts
 Sarah and Max were working on writting some stories which they have pushed to the repository. Max has recently added some new changes and is trying to push them to the repository but he is facing some issues. Below you can find more details:
 

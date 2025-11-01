@@ -2414,6 +2414,78 @@ Ans:
 8. Verify: psql -U kodekloud_gem -d kodekloud_db1 -h localhost
 
 # Q4  scripts if/else statements
+The Nautilus DevOps team is working on to develop a bash script to automate some tasks. As per the requirements shared with the team database related tasks needed to be automated. Below you can find more details about the same:
+
+Write a bash script named /opt/scripts/database.sh on Database Server. The mariadb database server is already installed on this server.
+
+Add code in the script to perform some database related operations as per conditions given below:
+
+a. Create a new database named kodekloud_db01. If this database already exists on the server then script should print a message Database already exists and if the database does not exist then create the same and script should print Database kodekloud_db01 has been created. Further, create a user named kodekloud_roy and set its password to asdfgdsd, also give full access to this user on newly created database (remember to use wildcard host while creating the user).
+
+b. Now check if the database (if it was already there) already contains some data (tables)if so then script should print 'database is not empty otherwise import the database dump /opt/db_backups/db.sql and print imported database dump into kodekloud_db01 database.
+
+c. Take a mysql dump which should be named as kodekloud_db01.sql and save it under /opt/db_backups/ directory.
+Ans:
+**Script**
+#!/bin/bash
+
+DB_NAME="kodekloud_db01"
+DB_USER="kodekloud_roy"
+DB_PASS="asdfgdsd"
+BACKUP_DIR="/opt/db_backups"
+DUMP_FILE="$BACKUP_DIR/db.sql"
+FINAL_DUMP="$BACKUP_DIR/kodekloud_db01.sql"
+
+# Check if database exists
+DB_EXISTS=$(sudo mysql -e "SHOW DATABASES LIKE '${DB_NAME}';" | grep "${DB_NAME}")
+
+if [ "$DB_EXISTS" == "$DB_NAME" ]; then
+    echo "Database already exists"
+else
+    sudo mysql -e "CREATE DATABASE ${DB_NAME};"
+    echo "Database ${DB_NAME} has been created"
+fi
+
+# Check if user exists
+USER_EXISTS=$(sudo mysql -e "SELECT User FROM mysql.user WHERE User='${DB_USER}' AND Host='%';" | grep "${DB_USER}")
+
+if [ -z "$USER_EXISTS" ]; then
+    sudo mysql -e "CREATE USER '${DB_USER}'@'%' IDENTIFIED BY '${DB_PASS}';"
+    echo "User ${DB_USER} created"
+else
+    echo "User ${DB_USER} already exists"
+fi
+
+# Grant privileges
+sudo mysql -e "GRANT ALL PRIVILEGES ON ${DB_NAME}.* TO '${DB_USER}'@'%';"
+sudo mysql -e "FLUSH PRIVILEGES;"
+
+# Check if database has tables
+TABLE_COUNT=$(sudo mysql -D ${DB_NAME} -e "SHOW TABLES;" | wc -l)
+
+if [ "$TABLE_COUNT" -gt 1 ]; then
+    echo "database is not empty"
+else
+    if [ -f "$DUMP_FILE" ]; then
+        sudo mysql ${DB_NAME} < "$DUMP_FILE"
+        echo "imported database dump into ${DB_NAME} database"
+    else
+        echo "Dump file $DUMP_FILE not found"
+    fi
+fi
+
+# Take a backup of the database
+if [ -w "$BACKUP_DIR" ]; then
+    sudo mysqldump ${DB_NAME} > "$FINAL_DUMP"
+    echo "Backup saved to $FINAL_DUMP"
+else
+    echo "Permission denied: cannot write to $BACKUP_DIR"
+fi
+
+**Make sure the script is executable:** chmod +x /opt/scripts/database.sh
+
+**Run it with:** sudo /opt/scripts/database.sh
+
 # Q5 Configure LAMP server
 # Q6 Install and Configure DB Server
 # Q7 Install and Configure Web Application

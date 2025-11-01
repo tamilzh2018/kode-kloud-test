@@ -1956,7 +1956,7 @@ kubectl get pods
 Exec into the container:
 
 kubectl exec -it secret-xfusion -- bash
-
+r
 Inside the container, check the content:
 
 cat /opt/apps/news.txt

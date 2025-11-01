@@ -1,5 +1,90 @@
 **Level 1:**
 # Q1 Set Up Jenkins Server
+The DevOps team at xFusionCorp Industries is initiating the setup of CI/CD pipelines and has decided to utilize Jenkins as their server. Execute the task according to the provided requirements:
+
+1. Install Jenkins on the jenkins server using the yum utility only, and start its service.
+
+If you face a timeout issue while starting the Jenkins service, refer to this.
+2. Jenkin's admin user name should be theadmin, password should be Adm!n321, full name should be Javed and email should be javed@jenkins.stratos.xfusioncorp.com.
+
+Note:
+
+1. To access the jenkins server, connect from the jump host using the root user with the password S3curePass.
+
+2. After Jenkins server installation, click the Jenkins button on the top bar to access the Jenkins UI and follow on-screen instructions to create an admin user.
+Ans:
+
+
+To complete the Jenkins setup on the `jenkins` server using `yum` and configure the admin user, follow these steps:
+
+---
+
+### 🖥️ Step 1: Connect to the Jenkins Server
+1. SSH into the jump host:
+   ```bash
+   ssh root@<jump_host_ip>
+   ```
+   Use password: `S3curePass`
+
+2. From the jump host, SSH into the Jenkins server:
+   ```bash
+   ssh root@jenkins
+   ```
+
+---
+
+### 📦 Step 2: Install Jenkins via `yum`
+1. Add the Jenkins repository:
+sudo wget -O /etc/yum.repos.d/jenkins.repo \
+    https://pkg.jenkins.io/redhat/jenkins.repo
+sudo rpm --import https://pkg.jenkins.io/redhat/jenkins.io-2023.key
+sudo yum upgrade
+# Add required dependencies for the jenkins package
+sudo yum install fontconfig java-21-openjdk
+sudo yum install jenkins
+
+### ▶️ Step 3: Start Jenkins Service
+1. Enable and start Jenkins:
+   ```bash
+   systemctl enable jenkins
+   systemctl start jenkins
+   ```
+
+2. If you face a timeout issue:
+   - Check firewall settings:
+     ```bash
+     firewall-cmd --permanent --add-port=8080/tcp
+     firewall-cmd --reload
+     ```
+   - Confirm Jenkins is running:
+     ```bash
+     systemctl status jenkins
+     ```
+
+---
+
+### 🌐 Step 4: Access Jenkins UI
+1. Open a browser and go to:
+   ```
+   http://<jenkins_server_ip>:8080
+   ```
+
+2. Retrieve the initial admin password:
+   ```bash
+   cat /var/lib/jenkins/secrets/initialAdminPassword
+   ```
+
+3. Paste it into the Jenkins setup wizard.
+
+---
+
+### 👤 Step 5: Create Admin User
+During the setup wizard:
+- **Username:** `theadmin`
+- **Password:** `Adm!n321`
+- **Full name:** `Javed`
+- **Email:** `javed@jenkins.stratos.xfusioncorp.com`
+
 
 # Q2: Install Jenkins Plugins
 The Nautilus DevOps team has recently setup a Jenkins server, which they want to use for some CI/CD jobs. Before that they want to install some plugins which will be used in most of the jobs. Please find below more details about the task
@@ -33,6 +118,8 @@ Note:
 
 
 2. After restarting the Jenkins service, wait for the Jenkins login page to reappear before proceeding. Avoid clicking Finish immediately after restarting the service.
+
+Ans: 
 
 # Q4:Organize Jenkins Jobs with Folders
 xFusionCorp Industries' DevOps team aims to streamline the management of Jenkins jobs by organizing them into distinct folders based on their purpose. Complete the task following the provided requirements:
@@ -1248,7 +1335,6 @@ pipeline {
   - **SSH BuildAgent** 
 - After installation, click **Restart Jenkins when installation is complete and no jobs are running**
 
----
 
 ### 6. **Verify Deployment**
 - Click the **App** button to access the Load Balancer URL
@@ -1257,6 +1343,101 @@ pipeline {
 
 
 # *Q5 Jenkins Conditional Pipeline
+
+### 🛠️ Step 1: Add the Storage Server as a Jenkins Slave Node
+
+1. **Login to Jenkins UI** using:
+   - Username: `admin`
+   - Password: `Adm!n321`
+
+2. Go to **Manage Jenkins → Nodes → New Node**:
+**Login into Storage Server Change Permission and Install java**
+sudo chown -R sarah:sarah /var/www/html
+sudo chmod -R 755 /var/www/html
+ then 
+   - Name: `Storage Server`
+   - Type: `Permanent Agent`
+   - Labels: `ststor01`
+   - Remote root directory: `/var/www/html`
+   - Launch method: Choose appropriate method (e.g., SSH or via agent script)
+   - Save and connect the node
+
+---
+
+### 📦 Step 2: Verify Repository on Storage Server
+
+Ensure that the repository is already cloned under `/var/www/html`. You can verify this by logging into the Storage Server and running:
+
+```bash
+cd /var/www/html/
+git status
+```
+
+---
+
+### 🚀 Step 3: Create Jenkins Pipeline Job
+
+1. In Jenkins UI, go to **New Item**:
+   - Name: `xfusion-webapp-job`
+   - Type: `Pipeline`
+   - Click OK
+
+2. Under **General → This project is parameterized**:
+   - Add **String Parameter**:
+     - Name: `BRANCH`
+     - Default value: `master` (optional)
+
+---
+
+### 📄 Step 4: Configure Pipeline Script
+
+Paste the following into the **Pipeline Script** section:
+
+```groovy
+pipeline {
+    agent { label 'ststor01' }
+
+    parameters {
+        string(name: 'BRANCH', defaultValue: 'master', description: 'Branch to deploy (master or feature)')
+    }
+
+    stages {
+        stage('Deploy') {
+            steps {
+                script {
+                    if (params.BRANCH == 'master' || params.BRANCH == 'feature') {
+                        sh """
+                            cd /var/www/html/
+                            git fetch origin
+                            git checkout ${params.BRANCH}
+                            git pull origin ${params.BRANCH}
+                        """
+                    } else {
+                        error "Invalid branch name: ${params.BRANCH}. Use 'master' or 'feature'."
+                    }
+                }
+            }
+        }
+    }
+}
+```
+
+---
+
+### 🌐 Step 5: Validate Deployment
+
+- Click the **App** button or visit `https://<LBR-URL>` directly.
+- Ensure the content loads from `/var/www/html` without any subdirectory like `/web_app`.
+
+---
+
+### 🔄 Optional: Plugin Installation & Restart
+
+If required:
+- Go to **Manage Jenkins → Plugin Manager**
+- Install necessary plugins (e.g., Pipeline, Git)
+- Click **Restart Jenkins when installation is complete and no jobs are running**
+
 
 **Level 4**
 # *Q1 Jenkins Deployment Job
