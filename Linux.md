@@ -2487,6 +2487,83 @@ fi
 **Run it with:** sudo /opt/scripts/database.sh
 
 # Q5 Configure LAMP server
+xFusionCorp Industries is planning to host a WordPress website on their infra in Stratos Datacenter. They have already done infrastructure configuration—for example, on the storage server they already have a shared directory /vaw/www/html that is mounted on each app host under /var/www/html directory. Please perform the following steps to accomplish the task:
+
+a. Install httpd, php and its dependencies on all app hosts.
+
+b. Apache should serve on port 3004 within the apps.
+
+c. Install/Configure MariaDB server on DB Server.
+
+d. Create a database named kodekloud_db8 and create a database user named kodekloud_tim identified as password TmPcZjtRQx. Further make sure this newly created user is able to perform all operation on the database you created.
+
+e. Finally you should be able to access the website on LBR link, by clicking on the App button on the top bar. You should see a message like App is able to connect to the database using user kodekloud_tim
+Ans: 
+
+To complete the task for **xFusionCorp Industries** to host a WordPress website with a shared `/var/www/html` directory, follow these steps on the appropriate hosts. I’ll break it down by part:
+
+## ✅ a. Install `httpd`, `php` and dependencies (on all **app hosts**)
+
+### Run on all app hosts:
+sudo yum install -y httpd php php-mysqlnd php-fpm
+
+> If using a Debian-based system (like Ubuntu), replace with:
+
+sudo apt update
+sudo apt install -y apache2 php php-mysql libapache2-mod-php
+
+## ✅ b. Configure Apache to serve on **port 3004** (on all **app hosts**)
+
+### Edit Apache config:
+
+sudo sed -i 's/^Listen 80/Listen 3004/' /etc/httpd/conf/httpd.conf
+sudo grep ^Listen /etc/httpd/conf/httpd.conf
+
+> On Ubuntu/Debian, update `/etc/apache2/ports.conf` and the default virtual host config:
+sudo sed -i 's/80/3004/g' /etc/apache2/ports.conf
+sudo sed -i 's/<VirtualHost \*:80>/<VirtualHost \*:3004>/' /etc/apache2/sites-available/000-default.conf
+
+### Allow the new port in the firewall (if applicable):
+sudo systemctl list-units | grep firewalld
+sudo systemctl list-units | grep iptables
+sudo firewall-cmd --permanent --add-port=3004/tcp
+sudo firewall-cmd --reload
+
+### Restart Apache:
+sudo systemctl enable httpd
+sudo systemctl restart httpd
+
+> Ubuntu:
+sudo systemctl enable apache2
+sudo systemctl restart apache2
+
+## ✅ c. Install & Configure **MariaDB** server (on **DB server**)
+### Install MariaDB:
+sudo yum install -y mariadb-server
+sudo systemctl enable mariadb
+sudo systemctl start mariadb
+
+> For Debian-based:
+sudo apt install -y mariadb-server
+sudo systemctl enable mariadb
+sudo systemctl start mariadb
+
+## ✅ d. Create DB, user and grant privileges
+
+### Run in MySQL shell on the DB server:
+
+mysql -u root 
+or
+sudo mysql
+
+Then execute:
+
+CREATE DATABASE kodekloud_db6;
+CREATE USER 'kodekloud_gem'@'%' IDENTIFIED BY 'ksH85UJjhb';
+GRANT ALL PRIVILEGES ON kodekloud_db6.* TO 'kodekloud_gem'@'%';
+FLUSH PRIVILEGES;
+EXIT;
+
 # Q6 Install and Configure DB Server
 # Q7 Install and Configure Web Application
 # Q8 Install and Configure PHP-FPM

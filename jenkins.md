@@ -1441,6 +1441,194 @@ If required:
 
 **Level 4**
 # *Q1 Jenkins Deployment Job
+The Nautilus development team had a meeting with the DevOps team where they discussed automating the deployment of one of their apps using Jenkins (the one in Stratos Datacenter). They want to auto deploy the new changes in case any developer pushes to the repository. As per the requirements mentioned below configure the required Jenkins job.
+
+Click on the Jenkins button on the top bar to access the Jenkins UI. Login using username admin and Adm!n321 password.
+
+Similarly, you can access the Gitea UI using Gitea button, username and password for Git is sarah and Sarah_pass123 respectively. Under user sarah you will find a repository named web that is already cloned on the Storage server under sarah's home. sarah is a developer who is working on this repository.
+
+1. Install httpd (whatever version is available in the yum repo by default) and configure it to serve on port 8080 on All app servers. You can make it part of your Jenkins job or you can do this step manually on all app servers.
+
+2. Create a Jenkins job named nautilus-app-deployment and configure it in a way so that if anyone pushes any new change to the origin repository in master branch, the job should auto build and deploy the latest code on the Storage server under /var/www/html directory. Since /var/www/html on Storage server is shared among all apps.
+Before deployment, ensure that the ownership of the /var/www/html directory is set to user sarah, so that Jenkins can successfully deploy files to that directory.
+
+3. SSH into Storage Server using sarah user credentials mentioned above. Under sarah user's home you will find a cloned Git repository named web. Under this repository there is an index.html file, update its content to Welcome to the xFusionCorp Industries, then push the changes to the origin into master branch. This push must trigger your Jenkins job and the latest changes must be deployed on the servers, also make sure it deploys the entire repository content not only index.html file.
+
+Click on the App button on the top bar to access the app, you should be able to see the latest changes you deployed. Please make sure the required content is loading on the main URL https://<LBR-URL> i.e there should not be any sub-directory like https://<LBR-URL>/web etc.
+
+Note:
+1. You might need to install some plugins and restart Jenkins service. So, we recommend clicking on Restart Jenkins when installation is complete and no jobs are running on plugin installation/update page i.e update centre. Also some times Jenkins UI gets stuck when Jenkins service restarts in the back end so in such case please make sure to refresh the UI page.
+
+2. Make sure Jenkins job passes even on repetitive runs as validation may try to build the job multiple times.
+
+3. Deployment related tasks should be done by sudo user on the destination server to avoid any permission issues so make sure to configure your Jenkins job accordingly.
+
+4. For these kind of scenarios requiring changes to be done in a web UI, please take screenshots so that you can share it with us for review in case your task is marked incomplete. You may also consider using a screen recording software such as loom.com to record and share your work.
+
+Ans:
+
+## ✅ Step 1: Install and Configure `httpd` on All App Servers
+
+You can do this manually or via Jenkins. Here's how to do it manually:
+
+1. **SSH into each app server**.
+2. Run the following commands:
+   ```bash
+   sudo yum install httpd -y
+   sudo sed -i 's/Listen 80/Listen 8080/' /etc/httpd/conf/httpd.conf
+   sudo systemctl enable httpd
+   sudo systemctl start httpd
+   ```
+
+---
+
+This is a comprehensive task involving **Jenkins, Gitea, SSH, and basic web server configuration**. I will guide you through the necessary steps to set up the continuous deployment pipeline as requested.
+
+-----
+
+## 🚀 Part 1: Install and Configure HTTPD on App Servers
+
+The first step is to ensure **HTTPD** is running on the specified port on all App servers. Since the requirement mentions the App servers, and the deployment target is the **Storage Server**'s `/var/www/html` directory which is shared, the App servers will serve the content from that shared location.
+
+### Manual Configuration on App Servers
+
+You need to SSH into each App server and run these commands.
+
+1.  **Install `httpd`:**
+    ```bash
+    sudo yum install httpd -y
+    ```
+2.  **Change the listening port to 8080:**
+      * Edit the main configuration file: `sudo vi /etc/httpd/conf/httpd.conf`
+      * Find the line that says `Listen 80` and change it to:
+        ```conf
+        Listen 8080
+        ```
+3.  **Set the DocumentRoot:**
+      * Find the line `DocumentRoot "/var/www/html"` and ensure it points to the correct shared directory. Since the requirement specifies deployment to **Storage Server's** `/var/www/html`, and this is a shared mount, this step should be correct by default.
+4.  **Start and Enable the `httpd` service:**
+    ```bash
+    sudo systemctl start httpd
+    sudo systemctl enable httpd
+    ```
+
+**Note:** Repeat these steps for **all App servers**.
+
+-----
+
+## 🛠️ Part 2: Configure Jenkins for Auto-Deployment
+
+This section involves installing necessary plugins, configuring SSH credentials, and setting up the Jenkins job.
+
+### 2.1 Install Required Plugins
+
+You will likely need the **Git Plugin** (usually installed by default) and the **Pipeline Plugin** (also often default). Most critically, you will need the **Generic Webhook Trigger Plugin** for Gitea to trigger the job, and the **Publish Over SSH Plugin** for deployment.
+
+1.  Log in to Jenkins with `admin`/`Adm!n321`.
+2.  Go to **Manage Jenkins** $\rightarrow$ **Manage Plugins**.
+3.  Go to the **Available** tab and search for and install:
+      * **Generic Webhook Trigger Plugin**
+      * **Publish Over SSH** (if not already installed)
+4.  After installation, click the **Restart Jenkins** checkbox and wait for the service to restart.
+
+### 2.2 Configure SSH for Deployment
+
+Jenkins needs to be able to connect to the **Storage Server** as user `sarah` to deploy the files.
+
+1.  Go to **Manage Jenkins** $\rightarrow$ **Configure System**.
+2.  Scroll down to the **Publish over SSH** section.
+3.  Click **Add**.
+      * **Name:** `Storage-Server`
+      * **Hostname:** The IP or hostname of the **Storage Server**.
+      * **Username:** `sarah`
+      * **Remote Directory:** `/var/www/html` (This is the default path that the job will use).
+      * Click **Advanced**.
+      * Select **Use password authentication**.
+      * **Passphrase:** `Sarah_pass123`
+      * Click **Test Configuration** to ensure it connects successfully.
+      * Click **Save**.
+
+### 2.3 Create and Configure the Jenkins Job
+
+1.  Click **New Item** on the Jenkins dashboard.
+2.  **Item Name:** `nautilus-app-deployment`
+3.  Select **Freestyle project**.
+4.  Click **OK**.
+
+#### A. Source Code Management
+
+  * Select **Git**.
+  * **Repository URL:** The Gitea URL for the `sarah/web` repository (e.g., `http://<Gitea_IP_or_URL>/sarah/web.git`).
+  * **Credentials:** Click **Add** $\rightarrow$ **Jenkins**.
+      * **Kind:** **Username with password**
+      * **Username:** `sarah`
+      * **Password:** `Sarah_pass123`
+      * **ID:** `gitea-sarah` (or similar)
+      * Click **Add**. Select the newly created credential.
+  * **Branches to build:** `*/master` (Keep the default).
+
+#### B. Build Triggers (WebHook)
+Enable “Trigger builds remotely (e.g., from scripts)”:
+http://<JENKINS_IP_or_URL>/generic-webhook-trigger/invoke?token=nautilus_secret_token
+
+#### C. Build Steps (Deployment)
+
+First, you need a step to **set the ownership** of the deployment directory on the Storage Server.
+
+1.  Click **Add build step** $\rightarrow$ **Send files or execute commands over SSH**.
+
+      * **Name:** `Storage-Server`
+      * **Transfers:**
+          * **Source files:** `**/*` (To deploy the entire repository content recursively)
+          * **Remove prefix:** (Leave blank)
+          * **Remote directory:** `(Leave blank)` (Alreay we configured globally)
+          * **Exec command:** (Leave blank, as the files are simply copied).
+    Click **Save**.
+
+-----
+
+## 🔗 Part 3: Configure Gitea Webhook
+
+Now, you need to tell Gitea to notify Jenkins when a push happens.
+
+1.  Access the Gitea UI with `sarah`/`Sarah_pass123`.
+2.  Navigate to the **web** repository.
+3.  Go to **Repository Settings** $\rightarrow$ **Webhooks**.
+4.  Click **Add Webhook** $\rightarrow$ **Gitea**.
+      * **Target URL:** The Jenkins URL with the webhook trigger. It should look like this:
+        ```
+        http://<JENKINS_IP_or_URL>/generic-webhook-trigger/invoke?token=nautilus_secret_token
+        ```
+        Replace `<JENKINS_IP_or_URL>` and use the token you set in the job (`nautilus_secret_token`).
+      * **HTTP Method:** **POST**
+      * **Content Type:** **application/json**
+      * **Trigger On:** Check **Just the Push event**.
+      * Click **Add Webhook**.
+      * Click **Test Delivery** to ensure Jenkins receives the payload successfully (it might show a 400 or 404 the first time, but check the Jenkins logs/job history to ensure it's functional).
+
+-----
+
+## 💾 Part 4: Trigger the Deployment
+
+This is the final step where you make a change to initiate the pipeline.
+
+1.  SSH into the **Storage Server** using `sarah`/`Sarah_pass123`.
+2.  Navigate to the cloned repository:
+    ```bash
+    cd ~/web
+    ```
+3.  Modify the `index.html` file:
+    ```bash
+    vi index.html
+    # Update content to: Welcome to the xFusionCorp Industries
+    ```
+4.  Stage, commit, and push the changes:
+    ```bash
+    git add .
+    git commit -m "Updated main welcome message"
+    git push origin master
+    ```
+
 # *Q2 Jenkins Chained Builds
 # *Q3 Jenkins MR Jobs
 # *Q4 Jenkins Multistage Pipeline
