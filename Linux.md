@@ -2565,6 +2565,82 @@ FLUSH PRIVILEGES;
 EXIT;
 
 # Q6 Install and Configure DB Server
+We need to setup a database server on Nautilus DB Server in Stratos Datacenter. Please perform the below given steps on DB Server:
+
+
+
+a. Install/Configure MariaDB server.
+
+
+b. Create a database named kodekloud_db2.
+
+
+c. Create a user called kodekloud_cap and set its password to YchZHRcLkL.
+
+
+d. Grant full permissions to user kodekloud_cap on database kodekloud_db2.
+
+Ans:
+
+### 🛠️ Step A: Install and Configure MariaDB Server
+
+1. **Install MariaDB:**
+   ```bash
+   sudo apt update
+   sudo apt install mariadb-server -y
+   ```
+
+2. **Start and enable MariaDB service:**
+   ```bash
+   sudo systemctl start mariadb
+   sudo systemctl enable mariadb
+   ```
+
+3. **Secure the installation (optional but recommended):**
+   ```bash
+   sudo mysql_secure_installation
+   ```
+   Follow the prompts to set root password, remove anonymous users, disallow remote root login, and remove test database.
+
+---
+
+### 🗄️ Step B: Create the Database
+
+1. **Log in to MariaDB:**
+   ```bash
+   sudo mysql
+   ```
+
+2. **Create the database:**
+   ```sql
+   CREATE DATABASE kodekloud_db2;
+   ```
+
+---
+
+### 👤 Step C: Create the User
+
+```sql
+CREATE USER 'kodekloud_cap'@'localhost' IDENTIFIED BY 'YchZHRcLkL';
+```
+
+---
+
+### 🔐 Step D: Grant Full Permissions
+
+```sql
+GRANT ALL PRIVILEGES ON kodekloud_db2.* TO 'kodekloud_cap'@'localhost';
+FLUSH PRIVILEGES;
+```
+
+---
+
+Once done, you can verify the setup by logging in with the new user:
+```bash
+mysql -u kodekloud_cap -p
+```
+
+
 # Q7 Install and Configure Web Application
 # Q8 Install and Configure PHP-FPM
 # Q9 Configure Nginx + PHP-FPM Using Unix Sock

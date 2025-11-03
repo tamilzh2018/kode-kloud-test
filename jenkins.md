@@ -1558,7 +1558,7 @@ Jenkins needs to be able to connect to the **Storage Server** as user `sarah` to
 #### A. Source Code Management
 
   * Select **Git**.
-  * **Repository URL:** The Gitea URL for the `sarah/web` repository (e.g., `http://<Gitea_IP_or_URL>/sarah/web.git`).
+  * **Repository URL:** The Gitea URL for the `sarah/web` repository (e.g., `http://<Gitea_IP_or_URL>/sarah/web.git`). http://git.stratos.xfusioncorp.com/sarah/web.git
   * **Credentials:** Click **Add** $\rightarrow$ **Jenkins**.
       * **Kind:** **Username with password**
       * **Username:** `sarah`
@@ -1630,6 +1630,126 @@ This is the final step where you make a change to initiate the pipeline.
     ```
 
 # *Q2 Jenkins Chained Builds
+The DevOps team was looking for a solution where they want to restart Apache service on all app servers if the deployment goes fine on these servers in Stratos Datacenter. After having a discussion, they came up with a solution to use Jenkins chained builds so that they can use a downstream job for services which should only be triggered by the deployment job. So as per the requirements mentioned below configure the required Jenkins jobs.
+
+Click on the Jenkins button on the top bar to access the Jenkins UI. Login using username admin and Adm!n321 password.
+
+Similarly you can access Gitea UI on port 8090 and username and password for Git is sarah and Sarah_pass123 respectively. Under user sarah you will find a repository named web.
+
+Apache is already installed and configured on all app server so no changes are needed there. The doc root /var/www/html on all these app servers is shared among the Storage server under /var/www/html directory.
+
+1. Create a Jenkins job named nautilus-app-deployment and configure it to pull change from the master branch of web repository on Storage server under /var/www/html directory, which is already a local git repository tracking the origin web repository. Since /var/www/html on Storage server is a shared volume so changes should auto reflect on all apps.
+
+2. Create another Jenkins job named manage-services and make it a downstream job for nautilus-app-deployment job. Things to take care about this job are:
+
+a. This job should restart httpd service on all app servers.
+
+b. Trigger this job only if the upstream job i.e nautilus-app-deployment is stable.
+
+LB server is already configured. Click on the App button on the top bar to access the app. You should be able to see the latest changes you made. Please make sure the required content is loading on the main URL https://<LBR-URL> i.e there should not be a sub-directory like https://<LBR-URL>/web etc.
+
+Note:
+
+1. You might need to install some plugins and restart Jenkins service. So, we recommend clicking on Restart Jenkins when installation is complete and no jobs are running on plugin installation/update page i.e update centre. Also some times Jenkins UI gets stuck when Jenkins service restarts in the back end so in such case please make sure to refresh the UI page.
+
+2. Make sure Jenkins job passes even on repetitive runs as validation may try to build the job multiple times.
+
+3. Deployment related tasks should be done by sudo user on the destination server to avoid any permission issues so make sure to configure your Jenkins job accordingly.
+
+4. For these kind of scenarios requiring changes to be done in a web UI, please take screenshots so that you can share it with us for review in case your task is marked incomplete. You may also consider using a screen recording software such as loom.com to record and share your work.
+
+Ans:
+Thanks for sharing the infrastructure details — that’s super helpful! Based on this, here’s how you can configure the Jenkins jobs to meet the deployment and service management requirements across your Stratos Datacenter:
+
+---
+
+## ✅ Job 1: `nautilus-app-deployment`
+
+### 🎯 Goal:
+Pull latest code from the `web` repository (hosted on Gitea) into `/var/www/html` on the Storage server (`ststor01`), which is shared with all app servers.
+
+### 🔧 Configuration Steps:
+
+1. **Login to Jenkins**
+   - URL: `http://jenkins.stratos.xfusioncorp.com`
+   - Username: `admin`
+   - Password: `Adm!n321`
+
+2. **Create Freestyle Project**
+   - Name: `nautilus-app-deployment`
+
+3. **Source Code Management**
+   - Select **Git**
+   - Repository URL: `/var/www/html` (since it's a local Git repo on `ststor01`)
+   - Branch: `master`
+
+4. **Build Environment**
+   - Ensure Jenkins has SSH access to `ststor01` as user `natasha` (password: `Bl@kW`)
+   - Use SSH credentials or `sshpass` in shell script
+
+5. **Build Step: Execute Shell**
+   ```bash
+   sshpass -p 'Bl@kW' ssh -o StrictHostKeyChecking=no natasha@172.16.238.15 "cd /var/www/html && git pull origin master"
+   ```
+
+6. **Post-build Actions**
+   - Add **Build other projects**
+   - Project to build: `manage-services`
+   - Trigger only if build is **stable**
+
+---
+
+## ✅ Job 2: `manage-services`
+
+### 🎯 Goal:
+Restart Apache (`httpd`) service on all app servers (`stapp01`, `stapp02`, `stapp03`) only if deployment succeeds.
+
+### 🔧 Configuration Steps:
+
+1. **Create Freestyle Project**
+   - Name: `manage-services`
+
+2. **Build Triggers**
+   - Leave empty (triggered by upstream job)
+
+3. **Build Step: Execute Shell**
+   ```bash
+   for host in stapp01.stratos.xfusioncorp.com stapp02.stratos.xfusioncorp.com stapp03.stratos.xfusioncorp.com; do
+     case $host in
+       stapp01*) user="tony"; pass="Ir0nM@n" ;;
+       stapp02*) user="steve"; pass="Am3ric@" ;;
+       stapp03*) user="banner"; pass="BigGr33n" ;;
+     esac
+     sshpass -p "$pass" ssh -o StrictHostKeyChecking=no $user@$host "sudo systemctl restart httpd"
+   done
+   ```
+
+> 🔐 **Note:** Ensure `sshpass` is installed on the Jenkins server. Alternatively, configure SSH keys and use Jenkins credentials securely.
+
+---
+
+## 🔍 Validation
+
+After setting up:
+
+1. **Push a change** to the `web` repo via Gitea (port 8090)
+   - Login: `sarah / Sarah_pass123`
+   - Repo: `web`
+   - Push to `master`
+
+2. **Run `nautilus-app-deployment`**
+   - It should pull the latest code to `/var/www/html` on `ststor01`
+
+3. **Check `manage-services`**
+   - It should restart Apache on all app servers
+
+4. **Verify App**
+   - Visit: `https://stlb01.stratos.xfusioncorp.com`
+   - Ensure latest content is visible (no `/web` subdirectory)
+
+---
+
+Would you like a sample Jenkinsfile to convert this into a pipeline job instead of freestyle? Or help setting up SSH credentials securely in Jenkins?
 # *Q3 Jenkins MR Jobs
 # *Q4 Jenkins Multistage Pipeline
 # *Q5 Jenkins Setup Node App
