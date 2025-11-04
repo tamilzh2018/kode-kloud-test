@@ -705,7 +705,7 @@ It looks like the `/etc/yum.repos.d/` directory is empty, which is likely the ca
 
    In the editor, add the following content to the file:
 
-   ini
+   
    [epel_local]
    name=EPEL Local Repository
    baseurl=file:///packages/downloaded_rpms/
@@ -2642,8 +2642,155 @@ mysql -u kodekloud_cap -p
 
 
 # Q7 Install and Configure Web Application
+xFusionCorp Industries is planning to host two static websites on their infra in Stratos Datacenter. The development of these websites is still in-progress, but we want to get the servers ready. Please perform the following steps to accomplish the task:
+
+a. Install httpd package and dependencies on app server 3.
+
+b. Apache should serve on port 6100.
+
+c. There are two website's backups /home/thor/official and /home/thor/apps on jump_host. Set them up on Apache in a way that official should work on the link http://localhost:6100/official/ and apps should work on link http://localhost:6100/apps/ on the mentioned app server.
+
+
+d. Once configured you should be able to access the website using curl command on the respective app server, i.e curl http://localhost:6100/official/ and curl http://localhost:6100/apps/
+Ans:
+# Install httpd package: 
+sudo yum install httpd -y
+# Check Listening Port and Modify:
+sudo grep ^Listen /etc/httpd/conf/httpd.conf
+sudo sed -i 's/^Listen 80/Listen 6100/' /etc/httpd/conf/httpd.conf
+sudo grep ^Listen /etc/httpd/conf/httpd.conf
+# website's backups avail On jump host, copy the directories to App Server 3
+ls /tmp
+scp -r /home/thor/beta banner@stapp03:/tmp/
+# On App Server 3, move them to Apache document root
+sudo mv /tmp/beta /var/www/html/
+sudo mv /tmp/cluster /var/www/html/
+ls /var/www/html/
+
+    9  sudo systemctl enable httpd
+   10  sudo systemctl start httpd
+   13  curl http://localhost:6100/beta/
+   15  curl http://localhost:6100/cluster/
 # Q8 Install and Configure PHP-FPM
 # Q9 Configure Nginx + PHP-FPM Using Unix Sock
+The Nautilus application development team is planning to launch a new PHP-based application, which they want to deploy on Nautilus infra in Stratos DC. The development team had a meeting with the production support team and they have shared some requirements regarding the infrastructure. Below are the requirements they shared:
+
+a. Install nginx on app server 2 , configure it to use port 8095 and its document root should be /var/www/html.
+
+b. Install php-fpm version 8.3 on app server 2, it must use the unix socket /var/run/php-fpm/default.sock (create the parent directories if don't exist).
+
+c. Configure php-fpm and nginx to work together.
+
+d. Once configured correctly, you can test the website using curl http://stapp02:8095/index.php command from jump host.
+
+NOTE: We have copied two files, index.php and info.php, under /var/www/html as part of the PHP-based application setup. Please do not modify these files.
+
+Ans:
+Here’s a step-by-step guide to **set up Nginx and PHP-FPM 8.3** on **App Server 2** for the Nautilus application, based on your requirements.
+
+
+### ✅ **Environment** Assumptions:
+
+* OS: **RHEL/CentOS 8 or 9** (uses `dnf`)
+* Hostname of App Server 2: `stapp02`
+* You are operating from **jump host** with SSH access
+* PHP 8.3 will be installed from **Remi repository**, as it’s not available in default repos
+
+## 🚀 Step-by-Step Setup
+
+
+### 🔧 Step 1: SSH into App Server 2
+
+From the **jump host**, run:
+
+ssh banner@stapp02
+
+### 📦 Step 2: Install Nginx
+
+sudo dnf install -y nginx
+
+### 📁 Step 3: Configure Nginx to Listen on Port 8095
+
+Edit the default config:
+
+sudo vi /etc/nginx/nginx.conf
+
+
+Inside the `http` block, find or define the `server` block like this:
+
+
+server {
+    listen       8095;
+    server_name  localhost;
+
+    root   /var/www/html;
+    index  index.php index.html index.htm;
+
+    location / {
+        try_files $uri $uri/ =404;
+    }
+
+    location ~ \.php$ {
+        include        fastcgi_params;
+        fastcgi_pass   unix:/var/run/php-fpm/default.sock;
+        fastcgi_index  index.php;
+        fastcgi_param  SCRIPT_FILENAME  $document_root$fastcgi_script_name;
+    }
+}
+
+
+### 🐘 Step 4: Enable PHP 8.3 (via Remi repo)
+
+#### a. Enable Remi Repository:
+sudo dnf install -y dnf-utils
+sudo dnf install -y https://rpms.remirepo.net/enterprise/remi-release-8.rpm or sudo dnf install -y https://rpms.remirepo.net/enterprise/remi-release-9.rpm
+#### b. Enable PHP 8.3 module:
+sudo dnf module reset php -y
+sudo dnf module enable php:remi-8.3 -y
+
+#### c. Install php-fpm:
+
+sudo dnf install -y php-fpm php-cli php-common
+
+### ⚙️ Step 5: Configure PHP-FPM to Use Custom Socket
+
+Edit PHP-FPM pool configuration:
+
+sudo vi /etc/php-fpm.d/www.conf
+
+Find and change the following lines:
+
+
+listen = /var/run/php-fpm/default.sock
+user = nginx
+group = nginx
+
+
+Also ensure these are uncommented or properly set:
+
+
+listen.owner = nginx
+listen.group = nginx
+listen.mode = 0660
+
+> ✅ Create the directory if it doesn’t exist:
+
+sudo mkdir -p /var/run/php-fpm
+
+### ▶️ Step 6: Start and Enable Services
+
+sudo systemctl enable php-fpm --now
+sudo systemctl enable nginx --now
+
+### ✅ Step 7: Verify and Test
+
+#### a. Ensure both services are running:
+sudo systemctl status php-fpm
+sudo systemctl status nginx
+
+#### b. From the **jump host**, test:
+
+curl http://stapp02:8095/index.php
 
 **Certification Test**
 Q1:

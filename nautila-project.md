@@ -49,6 +49,6 @@ Kubernetes Execrcise completed
 Ansible Execrcise completed
 Terraform is completed
 Jenkins is Pending
-Git is Pending
+Git is complted
 Linux is Pending
 

@@ -21,15 +21,15 @@ To complete the Jenkins setup on the `jenkins` server using `yum` and configure 
 
 ### 🖥️ Step 1: Connect to the Jenkins Server
 1. SSH into the jump host:
-   ```bash
+   
    ssh root@<jump_host_ip>
-   ```
+   
    Use password: `S3curePass`
 
 2. From the jump host, SSH into the Jenkins server:
-   ```bash
+   
    ssh root@jenkins
-   ```
+   
 
 ---
 
@@ -45,34 +45,34 @@ sudo yum install jenkins
 
 ### ▶️ Step 3: Start Jenkins Service
 1. Enable and start Jenkins:
-   ```bash
+   
    systemctl enable jenkins
    systemctl start jenkins
-   ```
+   
 
 2. If you face a timeout issue:
    - Check firewall settings:
-     ```bash
+     
      firewall-cmd --permanent --add-port=8080/tcp
      firewall-cmd --reload
-     ```
+     
    - Confirm Jenkins is running:
-     ```bash
+     
      systemctl status jenkins
-     ```
+     
 
 ---
 
 ### 🌐 Step 4: Access Jenkins UI
 1. Open a browser and go to:
-   ```
+   
    http://<jenkins_server_ip>:8080
-   ```
+   
 
 2. Retrieve the initial admin password:
-   ```bash
+   
    cat /var/lib/jenkins/secrets/initialAdminPassword
-   ```
+   
 
 3. Paste it into the Jenkins setup wizard.
 
@@ -176,6 +176,7 @@ Ans:
 - Enter the following shell script:
 
 ssh -o StrictHostKeyChecking=no natasha@ststor01.stratos.xfusioncorp.com "echo 'Bl@kW' | sudo -S yum install -y $PACKAGE"
+ssh natasha@ststor01 "echo 'Bl@kW' | sudo -S yum install -y $PACKAGE"
 
 > Replace `user@storage-server` with the actual SSH user and hostname/IP of the storage server in the Stratos Datacenter.
 
@@ -191,7 +192,7 @@ Click on the Jenkins button on the top bar to access the Jenkins UI. Login using
 
 1. Create a Jenkins job named datacenter-test-job.
 
-2. Configure this job to run a simple bash command i.e echo "hello world!!".
+2. Configure this job to run a simple  command i.e echo "hello world!!".
 
 3. Create a view named datacenter-crons (it must be a global view of type List View) and make sure datacenter-test-job and datacenter-cron-job (which is already present on Jenkins) jobs are listed under this new view.
 
@@ -554,7 +555,7 @@ ssh-copy-id peter@stdb01
 - Click **“Add build step” → “Execute shell”**
 - Paste the following shell script:
 
-#!/bin/bash
+#!/bin/
 set -e
 
 # Variables
@@ -636,10 +637,10 @@ Here’s how you can **create and configure the Jenkins job (`copy-logs`)** step
   `http://jenkins.stratos.xfusioncorp.com:8080`
 * Login using:
 
-  ```
+  
   Username: admin
   Password: Adm!n321
-  ```
+  
 
 ---
 
@@ -669,21 +670,21 @@ You’ll need SSH access for both servers (`stapp01` and `ststor01`).
 
 **For App Server 1 (Source):**
 
-```
+
 Name: stapp01
 Hostname: 172.16.238.10
 Username: tony
 Password: Ir0nM@n
-```
+
 
 **For Storage Server (Destination):**
 
-```
+
 Name: ststor01
 Hostname: 172.16.238.15
 Username: natasha
 Password: Bl@kW
-```
+
 
 ✅ Click **Test Configuration** to verify connections.
 ✅ Click **Save**.
@@ -696,9 +697,9 @@ Password: Bl@kW
 2. Click **“New Item”**.
 3. Enter:
 
-   ```
+   
    Item name: copy-logs
-   ```
+   
 4. Choose **Freestyle project** → Click **OK**.
 
 ---
@@ -707,15 +708,15 @@ Password: Bl@kW
 
 Under **Build Triggers**, check:
 
-```
+
 Build periodically
-```
+
 
 And enter this CRON expression:
 
-```
+
 */6 * * * *
-```
+
 
 ➡️ This runs every 6 minutes.
 
@@ -727,8 +728,8 @@ Under **Build → Add build step → Execute shell**
 
 Paste the following shell script:
 
-```bash
-#!/bin/bash
+
+#!/bin/
 # Temporary location on Jenkins
 WORKDIR=/tmp/apache_logs
 mkdir -p $WORKDIR
@@ -739,13 +740,13 @@ sshpass -p 'Ir0nM@n' scp -o StrictHostKeyChecking=no tony@172.16.238.10:/var/log
 
 # Copy logs to Storage Server
 sshpass -p 'Bl@kW' scp -o StrictHostKeyChecking=no $WORKDIR/* natasha@172.16.238.15:/usr/src/dba/
-```
+
 
 > 🧩 Note: If `sshpass` is not installed, install it with:
 >
-> ```bash
+> 
 > sudo yum install -y sshpass
-> ```
+> 
 
 ---
 
@@ -764,23 +765,23 @@ sshpass -p 'Bl@kW' scp -o StrictHostKeyChecking=no $WORKDIR/* natasha@172.16.238
 
 SSH into the storage server:
 
-```bash
+
 ssh natasha@172.16.238.15
 Password: Bl@kW
-```
+
 
 Check that logs are copied:
 
-```bash
+
 ls -l /usr/src/dba/
-```
+
 
 You should see:
 
-```
+
 access_log
 error_log
-```
+
 
 ---
 
@@ -1142,9 +1143,9 @@ Create a **Jenkins pipeline job** called `nginx-container` that:
    * **SCM:** Git
    * **Repository URL:** (from Gitea)
 
-     ```
+     
      http://gitea.stratos.xfusioncorp.com/sarah/web.git
-     ```
+     
    * **Credentials:** Select `gitea-cred`
    * **Branch Specifier:** `*/main` or `*/master` (verify in Gitea)
    * **Script Path:** `Jenkinsfile` (you’ll create this next)
@@ -1160,7 +1161,7 @@ Login to **Gitea** (`sarah / Sarah_pass123`):
 3. Name it: `Jenkinsfile`
 4. Paste the following content:
 
-```groovy
+
 pipeline {
     agent any
 
@@ -1187,7 +1188,7 @@ pipeline {
         }
     }
 }
-```
+
 
 5. Commit the file directly to the default branch (main/master).
 
@@ -1212,11 +1213,11 @@ Expected output:
 
 On **App Server 3**, verify with:
 
-```bash
+
 docker login stregi01.stratos.xfusioncorp.com:5000
 docker pull stregi01.stratos.xfusioncorp.com:5000/nginx:latest
 docker images
-```
+
 
 You should see the new image listed.
 
@@ -1227,10 +1228,10 @@ You should see the new image listed.
 * If `docker` command not found → install Docker on App Server 3.
 * If Jenkins can’t use Docker → ensure Jenkins user is in the `docker` group:
 
-  ```bash
+  
   sudo usermod -aG docker jenkins
   sudo systemctl restart jenkins
-  ```
+  
 * If authentication fails during push → double-check credentials for the registry.
 
 # *Q4 Jenkins Deploy Pipeline
@@ -1307,7 +1308,7 @@ sudo chmod -R 755 /var/www/html
 ### 4. **Configure Pipeline Script**
 In the **Pipeline** section, choose **Pipeline script** and paste the following:
 
-```groovy
+
 pipeline {
     agent { label 'ststor01' }
 
@@ -1325,7 +1326,7 @@ pipeline {
     }
 }
 
-```
+
 
 ### 5. **Install Required Plugins**
 - Go to **Manage Jenkins** → **Plugins**
@@ -1368,10 +1369,10 @@ sudo chmod -R 755 /var/www/html
 
 Ensure that the repository is already cloned under `/var/www/html`. You can verify this by logging into the Storage Server and running:
 
-```bash
+
 cd /var/www/html/
 git status
-```
+
 
 ---
 
@@ -1393,7 +1394,7 @@ git status
 
 Paste the following into the **Pipeline Script** section:
 
-```groovy
+
 pipeline {
     agent { label 'ststor01' }
 
@@ -1420,7 +1421,7 @@ pipeline {
         }
     }
 }
-```
+
 
 ---
 
@@ -1473,12 +1474,12 @@ You can do this manually or via Jenkins. Here's how to do it manually:
 
 1. **SSH into each app server**.
 2. Run the following commands:
-   ```bash
+   
    sudo yum install httpd -y
    sudo sed -i 's/Listen 80/Listen 8080/' /etc/httpd/conf/httpd.conf
    sudo systemctl enable httpd
    sudo systemctl start httpd
-   ```
+   
 
 ---
 
@@ -1495,22 +1496,22 @@ The first step is to ensure **HTTPD** is running on the specified port on all Ap
 You need to SSH into each App server and run these commands.
 
 1.  **Install `httpd`:**
-    ```bash
+    
     sudo yum install httpd -y
-    ```
+    
 2.  **Change the listening port to 8080:**
       * Edit the main configuration file: `sudo vi /etc/httpd/conf/httpd.conf`
       * Find the line that says `Listen 80` and change it to:
-        ```conf
+        conf
         Listen 8080
-        ```
+        
 3.  **Set the DocumentRoot:**
       * Find the line `DocumentRoot "/var/www/html"` and ensure it points to the correct shared directory. Since the requirement specifies deployment to **Storage Server's** `/var/www/html`, and this is a shared mount, this step should be correct by default.
 4.  **Start and Enable the `httpd` service:**
-    ```bash
+    
     sudo systemctl start httpd
     sudo systemctl enable httpd
-    ```
+    
 
 **Note:** Repeat these steps for **all App servers**.
 
@@ -1596,9 +1597,9 @@ Now, you need to tell Gitea to notify Jenkins when a push happens.
 3.  Go to **Repository Settings** $\rightarrow$ **Webhooks**.
 4.  Click **Add Webhook** $\rightarrow$ **Gitea**.
       * **Target URL:** The Jenkins URL with the webhook trigger. It should look like this:
-        ```
+        
         http://<JENKINS_IP_or_URL>/generic-webhook-trigger/invoke?token=nautilus_secret_token
-        ```
+        
         Replace `<JENKINS_IP_or_URL>` and use the token you set in the job (`nautilus_secret_token`).
       * **HTTP Method:** **POST**
       * **Content Type:** **application/json**
@@ -1614,20 +1615,20 @@ This is the final step where you make a change to initiate the pipeline.
 
 1.  SSH into the **Storage Server** using `sarah`/`Sarah_pass123`.
 2.  Navigate to the cloned repository:
-    ```bash
+    
     cd ~/web
-    ```
+    
 3.  Modify the `index.html` file:
-    ```bash
+    
     vi index.html
     # Update content to: Welcome to the xFusionCorp Industries
-    ```
+    
 4.  Stage, commit, and push the changes:
-    ```bash
+    
     git add .
     git commit -m "Updated main welcome message"
     git push origin master
-    ```
+    
 
 # *Q2 Jenkins Chained Builds
 The DevOps team was looking for a solution where they want to restart Apache service on all app servers if the deployment goes fine on these servers in Stratos Datacenter. After having a discussion, they came up with a solution to use Jenkins chained builds so that they can use a downstream job for services which should only be triggered by the deployment job. So as per the requirements mentioned below configure the required Jenkins jobs.
@@ -1659,10 +1660,6 @@ Note:
 4. For these kind of scenarios requiring changes to be done in a web UI, please take screenshots so that you can share it with us for review in case your task is marked incomplete. You may also consider using a screen recording software such as loom.com to record and share your work.
 
 Ans:
-Thanks for sharing the infrastructure details — that’s super helpful! Based on this, here’s how you can configure the Jenkins jobs to meet the deployment and service management requirements across your Stratos Datacenter:
-
----
-
 ## ✅ Job 1: `nautilus-app-deployment`
 
 ### 🎯 Goal:
@@ -1688,16 +1685,14 @@ Pull latest code from the `web` repository (hosted on Gitea) into `/var/www/html
    - Use SSH credentials or `sshpass` in shell script
 
 5. **Build Step: Execute Shell**
-   ```bash
+   
    sshpass -p 'Bl@kW' ssh -o StrictHostKeyChecking=no natasha@172.16.238.15 "cd /var/www/html && git pull origin master"
-   ```
+   
 
 6. **Post-build Actions**
    - Add **Build other projects**
    - Project to build: `manage-services`
    - Trigger only if build is **stable**
-
----
 
 ## ✅ Job 2: `manage-services`
 
@@ -1713,7 +1708,7 @@ Restart Apache (`httpd`) service on all app servers (`stapp01`, `stapp02`, `stap
    - Leave empty (triggered by upstream job)
 
 3. **Build Step: Execute Shell**
-   ```bash
+   
    for host in stapp01.stratos.xfusioncorp.com stapp02.stratos.xfusioncorp.com stapp03.stratos.xfusioncorp.com; do
      case $host in
        stapp01*) user="tony"; pass="Ir0nM@n" ;;
@@ -1722,7 +1717,7 @@ Restart Apache (`httpd`) service on all app servers (`stapp01`, `stapp02`, `stap
      esac
      sshpass -p "$pass" ssh -o StrictHostKeyChecking=no $user@$host "sudo systemctl restart httpd"
    done
-   ```
+   
 
 > 🔐 **Note:** Ensure `sshpass` is installed on the Jenkins server. Alternatively, configure SSH keys and use Jenkins credentials securely.
 
@@ -1747,10 +1742,167 @@ After setting up:
    - Visit: `https://stlb01.stratos.xfusioncorp.com`
    - Ensure latest content is visible (no `/web` subdirectory)
 
+# *Q3 Jenkins MR Jobs
+Click on the Jenkins button on the top bar to access the Jenkins UI. Login using username admin and password Adm!n321.
+
+
+Similarly, click on the Gitea button on the top bar to access the Gitea UI. Login using username sarah and password Sarah_pass123.
+
+There is a repository named sarah/mr_job in Gitea, which is cloned on the Storage server under /home/natasha/mr_job directory.
+
+Update the index.html file under dev branch, and change its content from Welcome to Nautilus Group! to Welcome to xFusionCorp Industries!. Remember to push your changes to the origin repository.
+
+After pushing the required changes, login to the Gitea server and you will find a pull request with title My First PR under mr_job repository. Merge this pull request.
+
+Create/configure a Jenkins pipeline job named nginx-container, configure a pipeline as per details given below and run the pipeline on server App Server 3.
+
+The pipeline must have two stages Build and Deploy (names are case sensitive).
+
+In the Build stage, first clone the sarah/mr_job repository, then build an image named stregi01.stratos.xfusioncorp.com:5000/nginx:latest using the Dockerfile present under the root of the repository. stregi01.stratos.xfusioncorp.com:5000 is the image registry server. After building the image push the same to the image registry server.
+
+In the Deploy stage, create a container named nginx-app using the image you built in the Build stage. Make sure to map container port to the host port 8080 and run the container in detached mode.
+
+Make sure to build a successful job at least once so that you have at least one successful build # in the job history. Further, you can test the app using command curl http://stapp03:8080 from the jump host.
+
+Note:
+
+1. You might need to install some plugins and restart Jenkins service. So, we recommend clicking on Restart Jenkins when installation is complete and no jobs are running on plugin installation/update page i.e update centre. Also, Jenkins UI sometimes gets stuck when Jenkins service restarts in the back end. In this case, please make sure to refresh the UI page.
+
+
+2. For these kind of scenarios requiring changes to be done in a web UI, please take screenshots so that you can share it with us for review in case your task is marked incomplete. You may also consider using a screen recording software such as loom.com to record and share your work.
+
+Ans:
+## 🛠️ Part 1: Update `index.html` in Gitea Repository
+
+### 1. Access Gitea UI
+- Click the **Gitea** button on the top bar.
+- Login with:
+  - **Username:** `sarah`
+  - **Password:** `Sarah_pass123`
+
+### 2. Modify the Repository
+- Navigate to the `sarah/mr_job` repository.
+- Switch to the **dev** branch.
+- Open `index.html` and click **Edit**.
+- Change the content:
+  html
+  Welcome to Nautilus Group!
+  
+  to:
+  html
+  Welcome to xFusionCorp Industries!
+  
+- Commit the change with a message like `"Updated welcome message"`.
+
+### 3. Push Changes
+- If working locally on the Storage server:
+  
+  cd /home/natasha/mr_job
+  git checkout dev
+  sed -i 's/Welcome to Nautilus Group!/Welcome to xFusionCorp Industries!/' index.html
+  git add index.html
+  git commit -m "Updated welcome message"
+  git push origin dev
+  
+
 ---
 
-Would you like a sample Jenkinsfile to convert this into a pipeline job instead of freestyle? Or help setting up SSH credentials securely in Jenkins?
-# *Q3 Jenkins MR Jobs
+## 🔀 Part 2: Merge Pull Request in Gitea
+
+- Go back to the Gitea UI.
+- Navigate to the `mr_job` repository.
+- You should see a pull request titled **My First PR**.
+- Open it and click **Merge**.
+
+---
+
+## 🚀 Part 3: Jenkins Pipeline Setup
+
+### 1. Access Jenkins UI
+- Click the **Jenkins** button on the top bar.
+- Login with:
+  - **Username:** `admin`
+  - **Password:** `Adm!n321`
+
+### 2. Install Required Plugins
+- Go to **Manage Jenkins > Plugins**.
+- Install:
+  - Docker Pipeline
+  - Git plugin
+  - SSH Build Agent
+- Restart Jenkins if prompted.
+**Add Slave Nodes**
+For app server3 , follow these steps:
+Install openjdk on stapp03
+##### 🔹 App_server_3
+- Go to: **Manage Jenkins → Nodes → New Node**
+- Name: `App_server_3`
+- Type: **Permanent Agent**
+- Configure:
+  - **Remote root directory:** `/home/banner/jenkins`
+  - **Labels:** `stapp03`
+  - **Launch method:** Launch agents via SSH
+  - **Host:** IP or hostname of App Server 1
+  - **Credentials:** Select `tony`'s SSH credentials
+  - Save and launch agent
+### 3. Create Pipeline Job
+- Go to **New Item**.
+- Name it: `nginx-container`
+- Select **Pipeline**, then click OK.
+
+### 4. Configure Pipeline Script
+Paste the following into the pipeline script section:
+
+pipeline {
+    agent { label 'stapp03' }
+
+    stages {
+        stage('Build') {
+            steps {
+                git branch: 'dev', credentialsId: 'git-pass', url: 'http://git.stratos.xfusioncorp.com/sarah/mr_job.git'
+                sh '''
+                    docker build -t stregi01.stratos.xfusioncorp.com:5000/nginx:latest .
+                    docker push stregi01.stratos.xfusioncorp.com:5000/nginx:latest
+                '''
+            }
+        }
+
+        stage('Deploy') {
+            steps {
+                sh '''
+                    docker run -d --name nginx-app -p 8080:80 stregi01.stratos.xfusioncorp.com:5000/nginx:latest
+                '''
+            }
+        }
+    }
+}
+
+> 🔧 Adjust the `git url` if needed based on your Gitea server address.
+
+### 5. Run the Pipeline
+- Click **Build Now**.
+- Wait for the job to complete successfully.
+
+---
+
+## ✅ Final Verification
+
+- From the **jump host**, run:
+  
+  curl http://stapp03:8080
+  
+- You should see:
+  
+  Welcome to xFusionCorp Industries!
+  
+
+---
+
+## 📸 Reminder
+
+Take screenshots or record your screen while performing these steps to document your work for review.
+
+Let me know if you'd like help writing the Dockerfile, troubleshooting Jenkins errors, or verifying the container setup!
 # *Q4 Jenkins Multistage Pipeline
 # *Q5 Jenkins Setup Node App
 

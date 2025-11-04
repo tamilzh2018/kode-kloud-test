@@ -412,8 +412,7 @@ Ans:
  1  apt update
     2  apt install apache2
     3  sed -i 's/^Listen 80$/Listen 3004/' /etc/apache2/ports.conf
-    4  srevice apache2 restart 
-    5  service apache2 restart 
+    4 service apache2 restart 
     * Restarting Apache httpd web server apache2                                                                                                                    AH00558: apache2: Could not reliably determine the server's fully qualified domain name, using 172.12.0.2. Set the 'ServerName' directive globally to suppress this message
                 
     6  echo "ServerName localhost" > /etc/apache2/conf-available/servername.conf

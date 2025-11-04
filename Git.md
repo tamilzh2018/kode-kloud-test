@@ -330,8 +330,6 @@ In /usr/src/kodekloudrepos/official git repository, reset the git commit history
 Also make sure to push your changes.
 
 Ans:
-To reset the Git commit history in `/usr/src/kodekloudrepos/cluster` so that only the **initial commit** and the commit with message **"add data.txt file"** remain, follow these steps carefully:
-
 ### 🛠️ Step-by-Step Instructions
 
 1. **Navigate to the repository:**
@@ -374,23 +372,14 @@ The Nautilus application development team was working on a git repository /usr/s
 
 Clean the /usr/src/kodekloudrepos/blog git repository without adding/pushing any new files, make sure git status is clean.
 Ans:
-Let's go step-by-step so you can **clean the Git repository** at `/usr/src/kodekloudrepos/blog` and make sure `git status` shows a **clean working tree** (no changes, untracked files, or pending commits).
-
----
 
 ### 🧭 Step 1: Navigate to the repository
 
-```bash
 cd /usr/src/kodekloudrepos/blog
-```
-
----
 
 ### 🧹 Step 2: Check the current status
 
-```bash
 git status
-```
 
 This will show you:
 
@@ -400,22 +389,18 @@ This will show you:
 
 You’ll probably see something like:
 
-```
+
 Untracked files:
   (use "git add <file>..." to include in what will be committed)
     file1.txt
     file2.log
-```
 
----
 
 ### 🗑️ Step 3: Remove **untracked files and directories**
 
 You can safely clean out all files that are not tracked by git (i.e., those that were mistakenly created):
 
-```bash
 git clean -fd
-```
 
 Explanation:
 
@@ -425,39 +410,25 @@ Explanation:
 This will **delete all untracked files and folders**.
 
 > ⚠️ **Warning:** This permanently deletes those files from disk (not to trash). Only run this if you’re sure they’re not needed.
-
----
-
 ### 🔁 Step 4: Discard any changes to tracked files
 
 If the developer also modified existing tracked files, revert them to their last committed version:
 
-```bash
 git restore .
-```
+ or the older equivalent:
 
-or the older equivalent:
-
-```bash
 git checkout -- .
-```
-
----
 
 ### ✅ Step 5: Confirm the repository is clean
 
 Finally, verify that the working tree is clean:
 
-```bash
 git status
-```
 
 You should now see:
 
-```
 On branch main
 nothing to commit, working tree clean
-```
 
 # Q5 Git Stash
 The Nautilus application development team was working on a git repository /usr/src/kodekloudrepos/cluster present on Storage server in Stratos DC. One of the developers stashed some in-progress changes in this repository, but now they want to restore some of the stashed changes. Find below more details to accomplish this task:
@@ -589,9 +560,6 @@ e. Copy a file story-index-max.txt from location /tmp/stories/ to the repository
 Note: For these kind of scenarios requiring changes to be done in a web UI, please take screenshots so that you can share it with us for review in case your task is marked incomplete. You may also consider using a screen recording software such as loom.com to record and share your work.
 
 Ans:
-Here's a step-by-step guide to help the new developer complete the task successfully:
-
----
 
 ### 🧩 Step-by-Step Instructions
 
@@ -609,64 +577,55 @@ Here's a step-by-step guide to help the new developer complete the task successf
 
 #### 2️⃣ SSH into the Storage Server and Clone the Repo
 - Open a terminal and SSH into the storage server:
-  ```bash
+  
   ssh max@<storage-server-ip>
-  ```
+  
   - Use password: `Max_pass123`
 - Navigate to the home directory:
-  ```bash
+  
   cd /home/max
-  ```
+  
 - Clone the newly created repository:
-  ```bash
+  
   git clone git@<gitea-server>:max/story_ecommerce.git
-  ```
-
----
-
+  
 #### 3️⃣ Copy Existing Data and Commit to Master
 - Copy all files from `/usr/itadmin`:
-  ```bash
+  
   cp -r /usr/itadmin/* /home/max/story_ecommerce/
   cd /home/max/story_ecommerce
-  ```
+  
 - Stage and commit the changes:
-  ```bash
+  
   git config --global user.name "max"
   git config --global user.email "max@stratos.xfusioncorp.com"
   git add .
   git commit -m "add stories"
   git branch --set-upstream-to=origin/master master
   git push origin master
-  ```
-
----
-
+  
 #### 4️⃣ Create a New Branch `max_games`
 - From the repo directory:
-  ```bash
+  
   Create new branch on remote repo and then locally pull that
   git checkout -b max_games
   git push origin max_games
-  ```
-
----
-
+  
 #### 5️⃣ Fix Typo in `story-index-max.txt` and Commit to `max_games`
 - Copy the file:
-  ```bash
+  
   cp /tmp/stories/story-index-max.txt /home/max/story_ecommerce/
-  ```
+  
 - Fix the typo using `sed`:
-  ```bash
+  
   sed -i 's/Mooose/Mouse/g' story-index-max.txt
-  ```
+  
 - Stage and commit:
-  ```bash
+  
   git add story-index-max.txt
   git commit -m "typo fixed for Mooose"
   git push origin max_games
-  ```
+  
 # Q3 Resolve Git Merge Conflicts
 Sarah and Max were working on writting some stories which they have pushed to the repository. Max has recently added some new changes and is trying to push them to the repository but he is facing some issues. Below you can find more details:
 
@@ -696,33 +655,25 @@ Finally remember to push your changes.
 Note: Perform this task using the natasha user, and ensure the repository or existing directory permissions are not altered.
 
 Ans:
-To complete this task as the `natasha` user on the Storage server in Stratos DC, follow these steps carefully:
-
----
 
 ### ✅ Step-by-Step Instructions
 
 #### 1. **Switch to the `natasha` user**
-```bash
+
 sudo su - natasha
-```
 
 #### 2. **Navigate to the cloned repository**
-```bash
 cd /usr/src/kodekloudrepos
-```
 
 #### 3. **Merge the feature branch into master**
 Assuming the feature branch is named `feature`:
-```bash
+
 git checkout master
 git merge feature
-```
 
 #### 4. **Create the `post-update` hook**
 Git hooks are stored in `.git/hooks`. Create a `post-update` hook that tags the latest commit on `master` with today’s date.
 
-```bash
  vi /opt/beta.git/hooks/post-update
  #!/bin/bash
 BRANCH=$(git for-each-ref --format='%(refname:short)' refs/heads/master)
@@ -735,29 +686,99 @@ fi
 
 chmod +x /opt/beta.git/hooks/post-update
 
-```
-
 #### 5. **Test the hook**
 Push the merged changes to trigger the hook:
-```bash
+
 cd /usr/src/kodekloudrepos
 git push origin master
 
-```
-
 Then verify the tag was created:
-```bash
+
 cd /opt/beta.git
 git tag
 
-```
-
 You should see a tag like:
-```
+
 release-2025-10-31
-```
 
 # Q5 Git Setup from Scratch
+Some new developers have joined xFusionCorp Industries and have been assigned Nautilus project. They are going to start development on a new application, and some pre-requisites have been shared with the DevOps team to proceed with. Please note that all tasks need to be performed on storage server in Stratos DC.
+
+a. Install git, set up any values for user.email and user.name globally and create a bare repository /opt/games.git.
+
+b. There is an update hook (to block direct pushes to the master branch) under /tmp on storage server itself; use the same to block direct pushes to the master branch in /opt/games.git repo.
+
+c. Clone /opt/games.git repo in /usr/src/kodekloudrepos/games directory.
+
+d. Create a new branch named xfusioncorp_games in repo that you cloned under /usr/src/kodekloudrepos directory.
+
+e. There is a readme.md file in /tmp directory on storage server itself; copy that to the repo, add/commit in the new branch you just created, and finally push your branch to the origin.
+
+f. Also create master branch from your branch and remember you should not be able to push to the master directly as per the hook you have set up.
+Ans:
+
+### 🛠️ a. Install Git and Set Up Global Config
+
+sudo yum install git -y   # For RHEL/CentOS
+# or
+sudo apt install git -y   # For Ubuntu/Debian
+
+git config --global user.name "Your Name"
+git config --global user.email "your.email@example.com"
+
+# Create a bare repository
+sudo git init --bare /opt/games.git
+
+### 🚫 b. Set Up Update Hook to Block Direct Pushes to Master
+
+# Copy the update hook from /tmp to the hooks directory of the bare repo
+sudo cp /tmp/update /opt/games.git/hooks/update
+
+# Make sure it's executable
+sudo chmod +x /opt/games.git/hooks/update
+
+cat update
+#!/bin/sh
+if [ "$1" == refs/heads/master ];
+then
+  echo "Manual pushes to the master branch is restricted!!"
+  exit 1
+fi
+
+### 📦 c. Clone the Bare Repository
+
+# Create the target directory
+sudo mkdir -p /usr/src/kodekloudrepos
+
+# Clone the repo
+git clone /opt/games.git /usr/src/kodekloudrepos/games
+
+### 🌿 d. Create a New Branch
+
+cd /usr/src/kodekloudrepos/games
+git checkout -b xfusioncorp_games
+
+### 📄 e. Add README and Push the New Branch
+
+# Copy the readme file
+cp /tmp/readme.md .
+
+# Add and commit
+git add readme.md
+git commit -m "Add readme.md to xfusioncorp_games branch"
+
+# Push the new branch
+git push origin xfusioncorp_games
+
+### 🔒 f. Create Master Branch and Test Hook
+
+# Create master branch from current branch
+git checkout -b master
+
+# Try pushing to master (should be blocked)
+git push origin master
+
+You should see an error message from the hook script preventing the push to `master`.
 
 **Certification Test**
 # Q1:
