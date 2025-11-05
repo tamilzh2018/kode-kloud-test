@@ -2226,28 +2226,28 @@ Ans:
 
 Run this on each **app server**:
 
-```bash
+
 sudo netstat -tulnp | grep nginx
-```
+
 
 or (if `netstat` not installed):
 
-```bash
+
 sudo ss -tuln | grep 80
-```
+
 
 If Nginx isn’t listening on port 80, edit its main config:
 
-```bash
+
 sudo sed -i 's/listen[[:space:]]*8084;/listen 80;/' /etc/nginx/nginx.conf
-```
+
 
 Then restart Nginx:
 
-```bash
+
 sudo systemctl restart nginx
 sudo systemctl status nginx
-```
+
 
 ---
 
@@ -2257,19 +2257,19 @@ Make sure the site points to the correct **document root** `/var/www/html/` and 
 
 Edit the config (usually one of these):
 
-```bash
+
 sudo vi /etc/nginx/sites-available/default
-```
+
 
 or sometimes:
 
-```bash
+
 sudo vi /etc/nginx/conf.d/default.conf
-```
+
 
 Ensure it has something like:
 
-```nginx
+nginx
 server {
     listen 80;
     server_name _;
@@ -2287,7 +2287,7 @@ server {
         fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
     }
 }
-```
+
 
 > ⚠️ Make sure `root` points to `/var/www/html` and that `fastcgi_pass` references the correct socket.
 
@@ -2295,22 +2295,22 @@ server {
 
 ### **3. Verify PHP-FPM service is running**
 
-```bash
+
 sudo systemctl status php-fpm
-```
+
 
 or (depending on distro):
 
-```bash
+
 sudo systemctl status php7.4-fpm
 sudo systemctl status php8.1-fpm
-```
+
 
 If stopped, start it:
 
-```bash
+
 sudo systemctl start php-fpm
-```
+
 
 ---
 
@@ -2318,28 +2318,28 @@ sudo systemctl start php-fpm
 
 Make sure your PHP page exists and is readable:
 
-```bash
+
 ls -l /var/www/html/
-```
+
 
 You should see something like:
 
-```bash
+
 -rw-r--r-- 1 root root 20 Oct 30 10:00 index.php
-```
+
 
 If not, create one to test:
 
-```bash
+
 echo "<?php phpinfo(); ?>" | sudo tee /var/www/html/index.php
-```
+
 
 Ensure correct permissions:
 
-```bash
+
 sudo chown -R nginx:nginx /var/www/html
 sudo chmod -R 755 /var/www/html
-```
+
 
 *(If you’re on Ubuntu, replace `nginx` with `www-data`.)*
 
@@ -2347,9 +2347,9 @@ sudo chmod -R 755 /var/www/html
 
 ### **5. Test locally**
 
-```bash
+
 curl http://localhost
-```
+
 
 You should see PHP output (HTML source of phpinfo or your page).
 
@@ -2366,10 +2366,10 @@ Use the **LBR URL** (from the top bar in your environment) and open it in a brow
 
 ### **7. Restart services (final sanity check)**
 
-```bash
+
 sudo systemctl restart nginx
 sudo systemctl restart php-fpm
-```
+
 
 ---
 
@@ -2381,15 +2381,15 @@ Run the same checks on **each app server** behind the load balancer, since at le
 
 If you’d like, you can paste here the output of:
 
-```bash
+
 sudo nginx -t
-```
+
 
 and
 
-```bash
+
 sudo systemctl status php-fpm
-```
+
 
 
 
@@ -2585,21 +2585,21 @@ Ans:
 ### 🛠️ Step A: Install and Configure MariaDB Server
 
 1. **Install MariaDB:**
-   ```bash
+   
    sudo apt update
    sudo apt install mariadb-server -y
-   ```
+   
 
 2. **Start and enable MariaDB service:**
-   ```bash
+   
    sudo systemctl start mariadb
    sudo systemctl enable mariadb
-   ```
+   
 
 3. **Secure the installation (optional but recommended):**
-   ```bash
+   
    sudo mysql_secure_installation
-   ```
+   
    Follow the prompts to set root password, remove anonymous users, disallow remote root login, and remove test database.
 
 ---
@@ -2607,38 +2607,38 @@ Ans:
 ### 🗄️ Step B: Create the Database
 
 1. **Log in to MariaDB:**
-   ```bash
+   
    sudo mysql
-   ```
+   
 
 2. **Create the database:**
-   ```sql
+   sql
    CREATE DATABASE kodekloud_db2;
-   ```
+   
 
 ---
 
 ### 👤 Step C: Create the User
 
-```sql
+sql
 CREATE USER 'kodekloud_cap'@'localhost' IDENTIFIED BY 'YchZHRcLkL';
-```
+
 
 ---
 
 ### 🔐 Step D: Grant Full Permissions
 
-```sql
+sql
 GRANT ALL PRIVILEGES ON kodekloud_db2.* TO 'kodekloud_cap'@'localhost';
 FLUSH PRIVILEGES;
-```
+
 
 ---
 
 Once done, you can verify the setup by logging in with the new user:
-```bash
+
 mysql -u kodekloud_cap -p
-```
+
 
 
 # Q7 Install and Configure Web Application
@@ -2672,6 +2672,90 @@ ls /var/www/html/
    13  curl http://localhost:6100/beta/
    15  curl http://localhost:6100/cluster/
 # Q8 Install and Configure PHP-FPM
+The Nautilus application development team is planning to launch a new PHP-based application, which they want to deploy on Nautilus infra in Stratos DC. The development team had a meeting with the production support team and they have shared some requirements regarding the infrastructure. Below are the requirements they shared:
+
+a. Install nginx on app server 1 , configure it to use port 8091 and its document root should be /var/www/html.
+
+b. Install php-fpm version 8.2 on app server 1, it should listen on port 9000.
+
+c. Configure php-fpm and nginx to work together.
+
+d. Once configured correctly, you can test the website using curl http://stapp01:8091/index.php command from jump host. Please note that if the URL is displaying index.php in plain text, meaning you see <?php etc in the output, it indicates that either PHP-FPM is not installed or Nginx is not properly configured to work with PHP-FPM.
+
+Ans:
+Thanks for the clarification! Here's how to set up **Nginx and PHP-FPM 8.2** on **CentOS Stream 9** to meet the Nautilus team's requirements:
+
+---
+
+## 🛠 Step-by-Step Setup for CentOS 9
+
+### 1️⃣ Install Nginx
+
+sudo dnf install nginx -y
+- Configure Nginx to listen on **port 8091** and use `/var/www/html` as the document root:
+
+sudo vi /etc/nginx/conf.d/app.conf
+
+Add this configuration:
+
+server {
+    listen 8091;
+    server_name localhost;
+
+    root /var/www/html;
+    index index.php index.html;
+
+    location / {
+        try_files $uri $uri/ =404;
+    }
+
+    location ~ \.php$ {
+        include fastcgi_params;
+        fastcgi_pass 127.0.0.1:9000;
+        fastcgi_index index.php;
+        fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+    }
+}
+
+Enable and start Nginx:
+
+sudo systemctl enable nginx
+sudo systemctl start nginx
+---
+### 2️⃣ Install PHP-FPM 8.2
+
+Enable the Remi repository:
+
+sudo dnf install -y https://rpms.remirepo.net/enterprise/remi-release-9.rpm
+sudo dnf module reset php -y
+sudo dnf module enable php:remi-8.2 -y
+sudo dnf install php php-fpm -y
+- Configure PHP-FPM to listen on **port 9000**:
+
+sudo nano /etc/php-fpm.d/www.conf
+
+listen = /run/php-fpm/www.sock
+Change to:
+
+listen = 127.0.0.1:9000
+
+Enable and start PHP-FPM:
+
+sudo systemctl enable php-fpm
+sudo systemctl start php-fpm
+---
+
+### 4️⃣ Test the Setup
+
+From the **jump host**, run:
+
+curl http://stapp01:8091/index.php
+
+
+✅ If you see PHP info output, everything is working.  
+❌ If you see raw PHP code, double-check the Nginx and PHP-FPM integration.
+
+
 # Q9 Configure Nginx + PHP-FPM Using Unix Sock
 The Nautilus application development team is planning to launch a new PHP-based application, which they want to deploy on Nautilus infra in Stratos DC. The development team had a meeting with the production support team and they have shared some requirements regarding the infrastructure. Below are the requirements they shared:
 
@@ -2743,7 +2827,7 @@ server {
 
 #### a. Enable Remi Repository:
 sudo dnf install -y dnf-utils
-sudo dnf install -y https://rpms.remirepo.net/enterprise/remi-release-8.rpm or sudo dnf install -y https://rpms.remirepo.net/enterprise/remi-release-9.rpm
+sudo dnf install -y https://rpms.remirepo.net/enterprise/remi-release-9.rpm
 #### b. Enable PHP 8.3 module:
 sudo dnf module reset php -y
 sudo dnf module enable php:remi-8.3 -y

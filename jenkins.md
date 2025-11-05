@@ -1904,6 +1904,138 @@ Take screenshots or record your screen while performing these steps to document 
 
 Let me know if you'd like help writing the Dockerfile, troubleshooting Jenkins errors, or verifying the container setup!
 # *Q4 Jenkins Multistage Pipeline
+The development team of xFusionCorp Industries is working on to develop a new static website and they are planning to deploy the same on Nautilus App Servers using Jenkins pipeline. They have shared their requirements with the DevOps team and accordingly we need to create a Jenkins pipeline job. Please find below more details about the task:
+
+
+Click on the Jenkins button on the top bar to access the Jenkins UI. Login using username admin and password Adm!n321.
+
+
+Similarly, click on the Gitea button on the top bar to access the Gitea UI. Login using username sarah and password Sarah_pass123.
+
+
+There is a repository named sarah/web in Gitea that is already cloned on Storage server under /var/www/html directory.
+
+
+Update the content of the file index.html under the same repository to Welcome to xFusionCorp Industries and push the changes to the origin into the master branch.
+
+
+Apache is already installed on all app Servers its running on port 8080.
+
+
+Create a Jenkins pipeline job named deploy-job (it must not be a Multibranch pipeline job) and pipeline should have two stages Deploy and Test ( names are case sensitive ). Configure these stages as per details mentioned below.
+
+
+a. The Deploy stage should deploy the code from web repository under /var/www/html on the Storage Server, as this location is already mounted to the document root /var/www/html of all app servers.
+
+
+b. The Test stage should just test if the app is working fine and website is accessible. Its up to you how you design this stage to test it out, you can simply add a curl command as well to run a curl against the LBR URL (http://stlb01:8091) to see if the website is working or not. Make sure this stage fails in case the website/app is not working or if the Deploy stage fails.
+
+
+Click on the App button on the top bar to see the latest changes you deployed. Please make sure the required content is loading on the main URL http://stlb01:8091 i.e there should not be a sub-directory like http://stlb01:8091/web etc.
+
+
+Note:
+
+
+You might need to install some plugins and restart Jenkins service. So, we recommend clicking on Restart Jenkins when installation is complete and no jobs are running on plugin installation/update page i.e update centre. Also, Jenkins UI sometimes gets stuck when Jenkins service restarts in the back end. In this case, please make sure to refresh the UI page.
+
+
+For these kind of scenarios requiring changes to be done in a web UI, please take screenshots so that you can share it with us for review in case your task is marked incomplete. You may also consider using a screen recording software such as loom.com to record and share your work.
+Ans:
+Here’s a step-by-step guide to help you complete the Jenkins pipeline deployment task for xFusionCorp Industries:
+
+---
+
+## 🛠️ Step-by-Step Instructions
+
+### 1. 🔐 Login to Gitea
+- Go to the Gitea UI via the top bar.
+- Login with:
+  - **Username:** `sarah`
+  - **Password:** `Sarah_pass123`
+
+### 2. 📝 Update `index.html`
+- Navigate to the `sarah/web` repository.
+- Edit the `index.html` file.
+- Change its content to:
+  ```
+  Welcome to xFusionCorp Industries
+  ```
+- Commit the changes to the **master** branch.
+
+### 3. 🔧 Verify File on Storage Server
+- SSH into the Storage Server.
+- Navigate to `/var/www/html`.
+- Confirm the updated `index.html` file reflects the new content.
+
+### 4. 🔐 Login to Jenkins
+- Go to the Jenkins UI via the top bar.
+- Login with:
+  - **Username:** `admin`
+  - **Password:** `Adm!n321`
+
+### 5. 🔌 Install Required Plugins
+- Go to **Manage Jenkins > Plugins**.
+- Install:
+  - **Pipeline**
+  - **Git**
+  - Any other required plugins for Git integration and pipeline execution.
+- Restart Jenkins if prompted.
+
+### 6. 🚀 Create Pipeline Job
+- Go to **New Item**.
+- Name it: `deploy-job`
+- Select **Pipeline** (not Multibranch).
+- Click OK.
+
+### 7. 🧱 Configure Pipeline Script
+Go to the **Pipeline** section and paste the following script:
+
+pipeline {
+    agent any
+    stages {
+        stage('Deploy') {
+            steps {
+                // Get code from Gitea repository
+                git credentialsId: 'git-cred', url: 'http://git.stratos.xfusioncorp.com/sarah/web.git'
+
+                // Deploy remotely via SSH
+                sh '''
+                    ssh natasha@ststor01 "
+                        echo 'Bl@kW'
+                        cd /var/www/html && git pull origin master
+                    "
+                '''
+            }
+        }
+        stage('Test') {
+            steps {
+                echo 'Testing website accessibility...'
+                sh '''
+                    STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://stlb01:8091)
+                    if [ "$STATUS" -ne 200 ]; then
+                        echo "Website not accessible. Status code: $STATUS"
+                        exit 1
+                    fi
+                '''
+            }
+        }
+    }
+}
+
+
+### 8. ✅ Save and Run
+- Save the job.
+- Click **Build Now** to trigger the pipeline.
+
+### 9. 🔍 Verify Deployment
+- Click the **App** button on the top bar.
+- Visit: [http://stlb01:8091](http://stlb01:8091)
+- Confirm the page shows: `Welcome to xFusionCorp Industries`
+- Ensure there’s no subdirectory like `/web`.
+
+---
+
 # *Q5 Jenkins Setup Node App
 
 **Certificateion Test**
