@@ -1898,53 +1898,35 @@ pipeline {
 
 ---
 
-## 📸 Reminder
 
-Take screenshots or record your screen while performing these steps to document your work for review.
-
-Let me know if you'd like help writing the Dockerfile, troubleshooting Jenkins errors, or verifying the container setup!
 # *Q4 Jenkins Multistage Pipeline
 The development team of xFusionCorp Industries is working on to develop a new static website and they are planning to deploy the same on Nautilus App Servers using Jenkins pipeline. They have shared their requirements with the DevOps team and accordingly we need to create a Jenkins pipeline job. Please find below more details about the task:
 
-
 Click on the Jenkins button on the top bar to access the Jenkins UI. Login using username admin and password Adm!n321.
-
 
 Similarly, click on the Gitea button on the top bar to access the Gitea UI. Login using username sarah and password Sarah_pass123.
 
-
 There is a repository named sarah/web in Gitea that is already cloned on Storage server under /var/www/html directory.
-
 
 Update the content of the file index.html under the same repository to Welcome to xFusionCorp Industries and push the changes to the origin into the master branch.
 
-
 Apache is already installed on all app Servers its running on port 8080.
-
 
 Create a Jenkins pipeline job named deploy-job (it must not be a Multibranch pipeline job) and pipeline should have two stages Deploy and Test ( names are case sensitive ). Configure these stages as per details mentioned below.
 
-
 a. The Deploy stage should deploy the code from web repository under /var/www/html on the Storage Server, as this location is already mounted to the document root /var/www/html of all app servers.
-
 
 b. The Test stage should just test if the app is working fine and website is accessible. Its up to you how you design this stage to test it out, you can simply add a curl command as well to run a curl against the LBR URL (http://stlb01:8091) to see if the website is working or not. Make sure this stage fails in case the website/app is not working or if the Deploy stage fails.
 
-
 Click on the App button on the top bar to see the latest changes you deployed. Please make sure the required content is loading on the main URL http://stlb01:8091 i.e there should not be a sub-directory like http://stlb01:8091/web etc.
-
 
 Note:
 
-
 You might need to install some plugins and restart Jenkins service. So, we recommend clicking on Restart Jenkins when installation is complete and no jobs are running on plugin installation/update page i.e update centre. Also, Jenkins UI sometimes gets stuck when Jenkins service restarts in the back end. In this case, please make sure to refresh the UI page.
-
 
 For these kind of scenarios requiring changes to be done in a web UI, please take screenshots so that you can share it with us for review in case your task is marked incomplete. You may also consider using a screen recording software such as loom.com to record and share your work.
 Ans:
 Here’s a step-by-step guide to help you complete the Jenkins pipeline deployment task for xFusionCorp Industries:
-
----
 
 ## 🛠️ Step-by-Step Instructions
 
@@ -2034,9 +2016,144 @@ pipeline {
 - Confirm the page shows: `Welcome to xFusionCorp Industries`
 - Ensure there’s no subdirectory like `/web`.
 
+# *Q5 Jenkins Setup Node App
+The Nautilus application development team is working on to develop a Node app. They are still in the development phase however they want to deploy and test their app on a containerized environment and using a Jenkins pipeline. Please find below more details to complete this task.
+
+Click on the Jenkins button on the top bar to access the Jenkins UI. Login using username admin and password Adm!n321.
+
+Similarly, click on the Gitea button on the top bar to access the Gitea UI. Login using username sarah and password Sarah_pass123.
+
+There is a repository named sarah/web in Gitea, which is cloned on the Storage server under /home/sarah/web directory.
+
+A Dockerfile is already present under the git repository, please push the same to the origin repo if not pushed already.
+
+Create a jenkins pipeline job named node-app and configure it as below:
+
+Configure it to deploy the app on App Server 1
+
+The pipeline must have two stages Build and Deploy (names are case sensitive)
+
+In the Build stage, build an image named stregi01.stratos.xfusioncorp.com:5000/node-app:latest using the Dockerfile present under the Git repository. stregi01.stratos.xfusioncorp.com:5000 is the image registry server. After building the image push the same to the image registry server.
+
+In the Deploy stage, create a container named node-app using the image you build it the Build stage. Make sure to map the container port with host port 8080.
+
+Note:
+
+You might need to install some plugins and restart Jenkins service. So, we recommend clicking on Restart Jenkins when installation is complete and no jobs are running on plugin installation/update page i.e update centre. Also, Jenkins UI sometimes gets stuck when Jenkins service restarts in the back end. In this case, please make sure to refresh the UI page.
+
+For these kind of scenarios requiring changes to be done in a web UI, please take screenshots so that you can share it with us for review in case your task is marked incomplete. You may also consider using a screen recording software such as loom.com to record and share your work.
+
+Ans:
+Here’s a step-by-step guide to help you complete the Jenkins pipeline setup for the Nautilus Node.js application:
+
 ---
 
-# *Q5 Jenkins Setup Node App
+## 🚀 Step-by-Step Deployment Guide
+
+### 1. ✅ Push Dockerfile to Gitea Repository
+Ensure the Dockerfile is committed and pushed to the `sarah/web` repository:
+
+```bash
+cd /home/sarah/web
+git add Dockerfile
+git commit -m "Add Dockerfile for Node app"
+git push origin main
+```
+
+---
+
+### 2. 🔧 Jenkins Setup
+
+#### a. Login to Jenkins
+- URL: Click the **Jenkins** button on the top bar
+- Username: `admin`
+- Password: `Adm!n321`
+
+#### b. Install Required Plugins
+Go to **Manage Jenkins → Plugins** and install:
+- Docker Pipeline
+- Git plugin
+- Pipeline
+- sshagent
+- dockerpipeline
+Restart Jenkins after installation.
+add credentials of git and jenkins-appserver communication private key
+---
+
+### 3. 🛠️ Create Pipeline Job
+
+#### a. Create Job
+- Go to **New Item**
+- Name: `node-app`
+- Type: **Pipeline**
+- Click OK
+
+#### b. Configure Pipeline
+In the **Pipeline** section, use the following script:
+
+pipeline {
+    agent any
+
+    environment {
+        IMAGE_NAME = "stregi01.stratos.xfusioncorp.com:5000/node-app:latest"
+        APP_CONTAINER = "node-app"
+        APP_SERVER = "tony@stapp01" // Replace with actual user@host
+    }
+
+    stages {
+        stage('Build') {
+            steps {
+                git credentialsId: 'git-cred', url: 'http://git.stratos.xfusioncorp.com/sarah/web.git'
+                sshagent(['appserver-ssh']) {
+                    sh """
+                    ssh -o StrictHostKeyChecking=no $APP_SERVER '
+                        rm -rf /tmp/web &&
+                        git clone http://git.stratos.xfusioncorp.com/sarah/web.git /tmp/web &&
+                        cd /tmp/web &&
+                        docker build -t $IMAGE_NAME . &&
+                        docker push $IMAGE_NAME
+                    '
+                    """
+                }
+            }
+        }
+
+        stage('Deploy') {
+            steps {
+                sshagent(['appserver-ssh']) {
+                    sh """
+                    ssh -o StrictHostKeyChecking=no $APP_SERVER '
+                        docker rm -f $APP_CONTAINER || true &&
+                        docker run -d --name $APP_CONTAINER -p 8080:8080 $IMAGE_NAME
+                    '
+                    """
+                }
+            }
+        }
+    }
+}
+## 🧪 Next Steps
+
+To verify the app is running:
+
+1. **SSH into App Server 1**:
+   ```bash
+   ssh tony@stapp01
+   ```
+
+2. **Check running container**:
+   ```bash
+   docker ps | grep node-app
+   ```
+
+3. **Test the app endpoint**:
+   ```bash
+   curl http://localhost:8080
+   ```
+
+Or open a browser and visit:  
+**`http://stapp01:8080`** (or the server’s public IP if available)
+
 
 **Certificateion Test**
 Q1:

@@ -93,6 +93,27 @@ The private key file should be saved under /home/bob/nautilus-kp.pem.
 
 The Terraform working directory is /home/bob/terraform. Create the main.tf file (do not create a different .tf file) to accomplish this task.
 
+Ans:
+
+# Generate a new RSA private key
+resource "tls_private_key" "nautilus_key" {
+  algorithm = "RSA"
+  rsa_bits  = 4096
+}
+
+# Create AWS key pair using the generated public key
+resource "aws_key_pair" "nautilus_kp" {
+  key_name   = "nautilus-kp"
+  public_key = tls_private_key.nautilus_key.public_key_openssh
+}
+
+# Save the private key locally
+resource "local_file" "private_key" {
+  content              = tls_private_key.nautilus_key.private_key_pem
+  filename             = "/home/bob/nautilus-kp.pem"
+  file_permission      = "0600"
+}
+
 2. **Create Security Group Using Terraform**
 
 
@@ -108,12 +129,70 @@ d) Add another inbound rule of type SSH, with a port range of 22, and source CID
 
 Ensure that the security group is created in the us-east-1 region using Terraform. The Terraform working directory is /home/bob/terraform. Create the main.tf file (do not create a different .tf file) to accomplish this task.
 
+Ans:
+
+provider "aws" {
+  region = "us-east-1"
+}
+
+data "aws_vpc" "main" {
+  default = true
+}
+
+resource "aws_security_group" "xfusion_sg" {
+  name        = "xfusion-sg"
+  description = "Security group for Nautilus App Servers"
+  vpc_id      = data.aws_vpc.main.id
+
+  tags = {
+    Name = "xfusion-sg"
+  }
+}
+
+resource "aws_vpc_security_group_ingress_rule" "allow_http_ipv4" {
+  security_group_id = aws_security_group.xfusion_sg.id
+  cidr_ipv4         = "0.0.0.0/0"
+  from_port         = 80
+  ip_protocol       = "tcp"
+  to_port           = 80
+}
+
+resource "aws_vpc_security_group_ingress_rule" "allow_ssh_ipv4" {
+  security_group_id = aws_security_group.xfusion_sg.id
+  cidr_ipv4         = "0.0.0.0/0"
+  from_port         = 22
+  ip_protocol       = "tcp"
+  to_port           = 22
+}
+
+resource "aws_vpc_security_group_egress_rule" "allow_all_traffic_ipv4" {
+  security_group_id = aws_security_group.xfusion_sg.id
+  cidr_ipv4         = "0.0.0.0/0"
+  ip_protocol       = "-1"
+}
+
+
 3. **Create VPC Using Terraform**
 
 Create a VPC named xfusion-vpc in region us-east-1 with any IPv4 CIDR block through terraform.
 
 The Terraform working directory is /home/bob/terraform. Create the main.tf file (do not create a different .tf file) to accomplish this task.
 
+Ans:
+# main.tf
+provider "aws" {
+  region = "us-east-1"
+}
+
+# Create a new VPC
+resource "aws_vpc" "xfusion_vpc" {
+  cidr_block           = "10.0.0.0/16"
+  enable_dns_support   = true
+  enable_dns_hostnames = true
+  tags = {
+    Name = "xfusion-vpc"
+  }
+}
 
 4. **Create VPC with CIDR Using Terraform**
 
