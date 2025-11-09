@@ -211,21 +211,21 @@ resource "aws_vpc" "nautilus_vpc" {
 }
 
 5. **Create VPC with IPv6 Using Terraform**
+The Nautilus DevOps team is strategically planning the migration of a portion of their infrastructure to the AWS cloud. Acknowledging the magnitude of this endeavor, they have chosen to tackle the migration incrementally rather than as a single, massive transition. Their approach involves creating Virtual Private Clouds (VPCs) as the initial step, as they will be provisioning various services under different VPCs.
 
-resource "aws_vpc" "ipv6_vpc" {
+For this task, create a VPC named xfusion-vpc in the us-east-1 region with the Amazon-provided IPv6 CIDR block using terraform.
+
+The Terraform working directory is /home/bob/terraform. Create the main.tf file (do not create a different .tf file) to accomplish this task.
+Ans:
+resource "aws_vpc" "xfusion" {
   cidr_block           = "10.0.0.0/16"          # IPv4 CIDR
   assign_generated_ipv6_cidr_block = true       # Enable IPv6
   enable_dns_support   = true
   enable_dns_hostnames = true
 
   tags = {
-    Name = "ipv6-vpc"
+    Name = "xfusion-vpc"
   }
-}
-
-# Optional: output the IPv6 CIDR
-output "ipv6_cidr_block" {
-  value = aws_vpc.ipv6_vpc.ipv6_cidr_block
 }
 
 6. **Create Elastic IP Using Terraform**
