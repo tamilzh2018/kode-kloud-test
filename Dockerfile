@@ -39,3 +39,37 @@ EXPOSE 3003
 CMD ["python", "server.py"]
 
 ---
+# Stage 1: Build React app. Uses Node.js to install dependencies and run the React build.
+FROM node:18-alpine AS builder
+
+# Set working directory
+WORKDIR /app
+
+# Copy package.json and package-lock.json
+COPY package*.json ./
+
+# Install dependencies
+RUN npm install
+
+# Copy source code
+COPY . .
+
+# Build the React app .Produces static files in /app/build.
+RUN npm run build
+
+---
+
+# Stage 2: Serve with nginx. Uses nginx (tiny, fast web server).
+FROM nginx:alpine AS production
+
+# Copy built React files from builder stage.Copies only the built static files
+COPY --from=builder /app/build /usr/share/nginx/html
+
+# Copy custom nginx config (optional)
+# COPY nginx.conf /etc/nginx/conf.d/default.conf
+
+# Expose port
+EXPOSE 80
+
+# Start nginx
+CMD ["nginx", "-g", "daemon off;"]

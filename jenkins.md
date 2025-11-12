@@ -1545,13 +1545,12 @@ This section involves installing necessary plugins, configuring SSH credentials,
 
 ### 2.1 Install Required Plugins
 
-You will likely need the **Git Plugin** (usually installed by default) and the **Pipeline Plugin** (also often default). Most critically, you will need the **Generic Webhook Trigger Plugin** for Gitea to trigger the job, and the **Publish Over SSH Plugin** for deployment.
+You will likely need the **Git Plugin** (usually installed by default) and the **Pipeline Plugin** (also often default). Most critically, you will need the **Generic Webhook Trigger Plugin** for Gitea to trigger the job.
 
 1.  Log in to Jenkins with `admin`/`Adm!n321`.
 2.  Go to **Manage Jenkins** $\rightarrow$ **Manage Plugins**.
 3.  Go to the **Available** tab and search for and install:
       * **Generic Webhook Trigger Plugin**
-      * **Publish Over SSH** (if not already installed)
 4.  After installation, click the **Restart Jenkins** checkbox and wait for the service to restart.
 
 ### 2.2 Configure SSH for Deployment
@@ -1598,15 +1597,11 @@ http://<JENKINS_IP_or_URL>/generic-webhook-trigger/invoke?token=nautilus_secret_
 
 First, you need a step to **set the ownership** of the deployment directory on the Storage Server.
 
-1.  Click **Add build step** $\rightarrow$ **Send files or execute commands over SSH**.
+1.  Click **build Execute shell**.
 
-      * **Name:** `Storage-Server`
-      * **Transfers:**
-          * **Source files:** `**/*` (To deploy the entire repository content recursively)
-          * **Remove prefix:** (Leave blank)
-          * **Remote directory:** `(Leave blank)` (Alreay we configured globally)
-          * **Exec command:** (Leave blank, as the files are simply copied).
-    Click **Save**.
+sshpass -p 'Sarah_pass123' ssh -o StrictHostKeyChecking=no sarah@<Storage-Server-IP> << EOF
+cp -r ~/web/* /var/www/html/
+EOF
 
 -----
 
