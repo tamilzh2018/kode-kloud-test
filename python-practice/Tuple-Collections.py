@@ -3,3 +3,4 @@
 #packing and Unpacking- syntax: start_element, *remaining_element, stop_elemnet
 # count(), index()
 #Tuples looping- in, len(), range(), enumerate()
+# empty_tuple_define = (),# Single_element_tuple_define = (value,)
