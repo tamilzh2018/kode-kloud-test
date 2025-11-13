@@ -1732,7 +1732,7 @@ Restart Apache (`httpd`) service on all app servers (`stapp01`, `stapp02`, `stap
        stapp02*) user="steve"; pass="Am3ric@" ;;
        stapp03*) user="banner"; pass="BigGr33n" ;;
      esac
-     sshpass -p "$pass" ssh -o StrictHostKeyChecking=no $user@$host "sudo systemctl restart httpd"
+     sshpass -p "$pass" ssh -o StrictHostKeyChecking=no $user@$host " echo $pass | sudo -S systemctl restart httpd"
    done
    
 
