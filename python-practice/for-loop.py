@@ -1,3 +1,7 @@
+#A for loop is used for iterating over a sequence (that is either a list, a tuple, a dictionary, a set, or a string).
+#The for loop does not require an indexing variable to set beforehand. 
+
+#
 #1. Print 2 table using for loop
 """ table_num = int(input("Enter a number to dispaly multiplication table"))
 
@@ -119,6 +123,27 @@ for i in range(n, 0, -1):
     for k in range(i):
         print("*", end=" ")
     print()  # move to next line
+#With the break statement we can stop the loop before it has looped through all the items:
+#Exit the loop when x is "banana":
+fruits = ["apple", "banana", "cherry"]
+for x in fruits:
+  print(x)
+  if x == "banana":
+    break
 
+#With the continue statement we can stop the current iteration of the loop, and continue with the next:
 
+#The else keyword in a for loop specifies a block of code to be executed when the loop is finished:
+#Print all numbers from 0 to 5, and print a message when the loop has ended.
+for x in range(6):
+  print(x)
+else:
+  print("Finally finished!")
 
+#Note: The else block will NOT be executed if the loop is stopped by a break statement.
+#Break the loop when x is 3, and see what happens with the else block:
+for x in range(6):
+  if x == 3: break
+  print(x)
+else:
+  print("Finally finished!")

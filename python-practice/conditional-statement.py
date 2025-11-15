@@ -1,5 +1,19 @@
-#If Condition met do this else do that
-""" Python supports the usual logical conditions from mathematics:
+#Conditions can be used in several ways, most commonly in "if statements" and loops.If Condition met do this else do that
+#The if statement evaluates a condition (an expression that results in True or False). If the condition is true, the code block inside the if statement is executed. If the condition is false, the code block is skipped.
+#Python can evaluate many types of values as True or False in an if statement.
+#Zero (0), empty strings (""), None, and empty collections are treated as False. Everything else is treated as True.
+#This includes positive numbers (5), negative numbers (-3), and any non-empty string (even "False" is treated as True because it's a non-empty string).
+#Short Hand If:If you have only one statement to execute, you can put it on the same line as the if statement.
+# Example
+"""
+  = 5 
+b = 2
+if a > b: print("a is greater than b") """
+
+#pass Statement
+# if statements cannot be empty, but if you for some reason have an if statement with no content, put in the pass statement to avoid getting an error. if b > a:   pass
+""" 
+Python supports the usual logical conditions from mathematics:
 
 Equals: a == b
 Not Equals: a != b
