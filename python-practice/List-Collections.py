@@ -1,3 +1,4 @@
+#collection of element
 #Ordered(created list order will be maintained), Changable(Item elements can change),Allows Duplicates, List can have items that are of different data types
 # count(elements-occuring),reverse(), sort(),copy(duplicate existing list and stres in different m/y address), index(element first occurence position)
 # empty_list_define = []

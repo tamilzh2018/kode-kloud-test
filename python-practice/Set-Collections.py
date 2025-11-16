@@ -1,3 +1,4 @@
+# collections of unique and unordered items
 #UnOrdered, Un Changable, Item Assignment not Allowed, No index logic, Duplicates Not Allowed(If ducplicates there, auto removed), 
 # Add new items: add(), update(iterables),
 # Remove old Items: remove(removes specific value incase the value dosen't exist will throw error),pop(removes randomly and also print those value),clear(),del keyword,discard(gracefully removes specific value incase the value dosen't exist will not throw error)
