@@ -1,7 +1,7 @@
 #A lambda function is a small anonymous function.A lambda function can take any number of arguments, but can only have one expression.Use lambda functions when an anonymous function is required for a short period of time.
 # Syntax: lambda arguments : expression
 #Example Get your own Python Server
-A#dd 10 to argument a, and return the result:
+#Add 10 to argument a, and return the result:
 
 x = lambda a : a + 10
 print(x(5))

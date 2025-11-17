@@ -1,4 +1,4 @@
-#surrounded by either single quotation marks, or double quotation marks.
+#String:- Surrounded by either single quotation marks, or double quotation marks.
 #Multiline Strings-assign a multiline string to a variable by using three quotes either double os single quotes:
 #Python does not have a character data type
 #To access elements of the string-Square brackets ex:a[index-value]
@@ -97,7 +97,8 @@ x = txt.startswith("wel", 7, 20)
 print(x) """
 
 #6.Fill the string with zeros until it is 10 characters long:
-""" a = "hello"
+""" 
+a = "hello"
 b = "welcome to the jungle"
 c = "10.000"
 
@@ -106,8 +107,34 @@ print(b.zfill(10)) #no fill bacause string length exceeds
 print(c.zfill(10)) """
 
 #7. Replace the word S to J":
-txt = "I like bananas"
+""" txt = "I like bananas"
 
 x = txt.replace("s", "j")
-
 print(x)
+ """
+
+
+
+#8. String Concatenation means bring into single string
+a = "Hello"
+b = "welcome to the jungle"
+c = a+ " "+ b
+print(c) 
+print(a+ "", b)
+
+#9. String Repetition
+""" a = "Hello"
+b = a*3
+print(b) """
+
+#10. String Postive Indexing(0,1, etc)/Negative(-1,-2, etc), to access each charactor from the string
+""" a = "Hello world"
+print(a[4]) 
+print(a[-5])
+"""
+
+#11. String slicing, starts from specific character end with from string to access ex: [start, end, step]
+a = "Hello world"
+print(a[::2])
+print(a[::-2]) #start from backside
+print(a[-5:-8:-2]) # negative index slicing
