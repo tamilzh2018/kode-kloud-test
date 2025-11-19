@@ -117,7 +117,42 @@ print(a.keys())
 print(a.values()) """
 
 #d. Accessing Dict by get()
-a= {'express': 'happy', 'learning': 'book', 'python': 'langauge'}
+""" a= {'express': 'happy', 'learning': 'book', 'python': 'langauge'}
 print(a.get('learning')) 
 print(a.get('nothing')) # there is no such a key avail inside dict but get will not throw error, but we can set some display if the keys not avail inside dictionary
-print(a.get('nothing', 'expected key not available')) #get() check matchable keys avail or not if there gives else default message give as output if we set
+print(a.get('nothing', 'expected key not available')) #get() check matchable keys avail or not if there gives else default message give as output if we set """
+
+#e. adding dict with dict or dict witn new element
+""" a= {'express': 'happy', 'learning': 'book', 'python': 'langauge'}
+a.update(write='any') #new item adding on existing dict iems
+print(a)
+b= {'location': 'trichy', 'kavai':'high school'}
+a.update(b) # dict addtion
+print(a) """
+#f. copy()-duplicate existing dict but diffrent store in diff memory location
+""" a= {'express': 'happy', 'learning': 'book', 'python': 'langauge'}
+b = a.copy()
+print(b) """
+#g.Different keys but common values 
+""" name=("aazhini","raj","viyan","vinodha")
+com_value=(20)
+empty_dict={}
+print(empty_dict.fromkeys(name,com_value)) """
+
+#h. if keys not exist then add items in the dictionary else don't set default value or new value
+""" name={"aazhini":5,"raj":40,"viyan":2,"vinodha":32}
+print(name.setdefault('total',4))
+print(name) """
+
+#I. To remove specified key from a dictionary and dispaly the removed value
+""" name={"aazhini":5,"raj":40,"viyan":2,"vinodha":32,'total_member':4,'planning':'onemore'}
+print(name.pop('total_member')) """
+
+#j. To remove last key from a dictionary and dispaly the removed value
+""" name={"aazhini":5,"raj":40,"viyan":2,"vinodha":32,'total_member':4,'planning':'onemore'}
+print(name.popitem()) """
+
+#k. To remove entire itesm but don't delete dict variable
+name={"aazhini":5,"raj":40,"viyan":2,"vinodha":32,'total_member':4,'planning':'onemore'}
+name.clear()
+print(name) #output empty dictionary
