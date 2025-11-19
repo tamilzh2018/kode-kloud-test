@@ -1,5 +1,5 @@
 # We cannot set our own index value for list and tuple elements, but we can set our own index value for each element in a dictionary. That's "Key".
-# Ordered, Changable(values can change), Duplicates not Allowed because accessing bu keys if its there it will overwrite the exisitng value, Index starts from zero.
+# Ordered, Changable(values can change), Duplicates not Allowed because accessing by keys if duplicated keys there it will overwrite the exisitng value.
 # Dictionary are key:value pair,Accessing dict is Using keys, values, like .key(), .values(), .items(provide keys:value pair tuple), .get(key)-to access specific value without throw error
 # Add new items: use dictname[key]=value, .update(update/add specified key:value), 
 # Remove old Items: pop(removes specific key), popitem(removes last insreted pairs),del keyword,pop(), clear()
@@ -44,5 +44,80 @@ print(len(a)) """
 print( 'express' in a) # Check with key
 print( 'express' not in a) # Check with key """
 # 5. Accessing dictionary elements
-a = {'express': 'happy', 'learning': 'book', 'python': 'langauge'}
+""" a = {'express': 'happy', 'learning': 'book', 'python': 'langauge','python': 'snake'} # Duplicates not Allowed because accessing by keys if duplicated keys there it will overwrite the exisitng value.
 print(a ['express'])
+print(a['python']) #output snake becuase value overwritten
+ """
+#6 Nested Dictionary Accessing or Json Accessing
+""" nest_data = {'name': 'sivam', 'class': 10,
+              'interest':['playing hockey', 'playing basketball'],
+              'location': {'trichy': 'ponmalai', 'kavai':'high school'}
+             
+             }
+print(nest_data["location"]['kavai']) # dict inside list so use key with subkey to access value
+print(nest_data["interest"][1]) #dict inside list so use key with index to access value
+data = {
+    "menu": {
+        "header": "SVG Viewer",
+        "items": [
+            {"id": "Open"},
+            {"id": "OpenNew", "label": "Open New"},
+            None,
+            {"id": "ZoomIn", "label": "Zoom In"},
+            {"id": "ZoomOut", "label": "Zoom Out"},
+            {"id": "OriginalView", "label": "Original View"},
+            None,
+            {"id": "Quality"},
+            {"id": "Pause"},
+            {"id": "Mute"},
+            None,
+            {"id": "Find", "label": "Find..."},
+            {"id": "FindAgain", "label": "Find Again"},
+            {"id": "Copy"},
+            {"id": "CopyAgain", "label": "Copy Again"},
+            {"id": "CopySVG", "label": "Copy SVG"},
+            {"id": "ViewSVG", "label": "View SVG"},
+            {"id": "ViewSource", "label": "View Source"},
+            {"id": "SaveAs", "label": "Save As"},
+            None,
+            {"id": "Help"},
+            {"id": "About", "label": "About Adobe CVG Viewer..."}
+        ]
+    }
+}
+
+print(data["menu"]["items"][13]["id"]) #dict inside list inside dict so use combination of key,key,index,key since you know the position of list
+print(data["menu"]["items"][17]["label"]) ##dict inside list inside dict so use combination of key,key,index,key since you know the position of list """
+
+#7. modifying dictionary elements value
+""" nest_data = {'name': 'sivam', 'class': 10,
+              'interest':['playing hockey', 'playing basketball'],
+              'location': {'trichy': 'ponmalai', 'kavai':'high school'}
+             
+             }
+nest_data["location"]["kavai"]="Higher Secondary School" #existing value modified
+nest_data['dist']='ariyalur' # whether the key and value is exist in the dictinary if yes overwrites new value else create new key value pair
+print(nest_data) """
+
+#8.Deleting dict elemetns and entire dictionary
+""" 
+a= {'express': 'happy', 'learning': 'book', 'python': 'langauge'}
+del a['python'] #key name
+print(a)
+del a # dictionary variable name
+print(a) #error: 'a' is not defined """
+
+#9. Built-in Functions
+#a. items()- whatever we are giving key:values inside dictionaries called item.it will give ouput as tuple
+""" a= {'express': 'happy', 'learning': 'book', 'python': 'langauge'}
+print(a.items())
+#b. keys()- provide available keys inside dict only
+print(a.keys())
+#c. values()-provide available valuess inside dict only
+print(a.values()) """
+
+#d. Accessing Dict by get()
+a= {'express': 'happy', 'learning': 'book', 'python': 'langauge'}
+print(a.get('learning')) 
+print(a.get('nothing')) # there is no such a key avail inside dict but get will not throw error, but we can set some display if the keys not avail inside dictionary
+print(a.get('nothing', 'expected key not available')) #get() check matchable keys avail or not if there gives else default message give as output if we set
