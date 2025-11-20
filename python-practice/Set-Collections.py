@@ -72,15 +72,22 @@ print(new_set)
 """ colors_vibgyor = {'Violet', 'Indigo', 'Blue', 'Green', 'Yellow', 'Orange', 'Red'}
 colors_rgb = {'Blue', 'Green', 'Red','White', 'Pink'}
 more_colors = {'Brown','Black','Grey','Green'}
-u = colors_vibgyor.union(colors_rgb,more_colors) # removes common values and adds non-common values, output comes with new set()
-d = colors_vibgyor.difference(colors_rgb,more_colors) # removes common values from colors_vibgyor,more_colors output comes with new set()
-i = colors_vibgyor.intersection(colors_rgb,more_colors) # keeps only common values,output comes with new set()
-sd = colors_vibgyor.symmetric_difference(colors_rgb) # removes common values from colors but keeps remaining values of both set  
-#colors_vibgyor.difference_update(colors_rgb,more_colors) # removes common values from colors_vibgyor, output overwrites existing set colors_vibgyor new-o/p:{'Orange', 'Violet', 'Yellow', 'Indigo'}
+u = colors_vibgyor.union(colors_rgb,more_colors) # All unique elements from all sets.
+d = colors_vibgyor.difference(colors_rgb,more_colors) # Elements in colors_vibgyor that are NOT in the other sets.
+i = colors_vibgyor.intersection(colors_rgb,more_colors) # Elements common to all sets.
+sd = colors_vibgyor.symmetric_difference(colors_rgb) # removes common values between the sets but will create new set to display 
+#colors_vibgyor.difference_update(colors_rgb,more_colors) # removes common elements b/w the sets, output overwrites existing set colors_vibgyor new-o/p:{'Orange', 'Violet', 'Yellow', 'Indigo'}
 #colors_vibgyor.intersection_update(colors_rgb) # keeps only common values,output overwrites existing set colors_vibgyor new o/p: {'Red', 'Green', 'Blue'}
-colors_vibgyor.symmetric_difference_update(colors_rgb)
+colors_vibgyor.symmetric_difference_update(colors_rgb) # removes common values between the sets but will not create new set to display it overwrites first set
 print(u)
 print(d)
 print(i)
 print(sd)
 print(colors_vibgyor) """
+
+#issubset() and issuperset() isdisjoint()
+colors_rgb = {'Blue', 'Green', 'Red','White', 'Pink'}
+more_colors = {'Brown','Black','Grey','Green'}
+print(colors_rgb.issubset(more_colors)) # Returns True if all elements of set1 are contained in set2.subset means set1 ⊆ set2 (set2 may have extra elements)
+print(colors_rgb.issuperset(more_colors)) #Returns True if set1 contains all elements of set2. not allowed to have extra elements
+print(colors_rgb.isdisjoint(more_colors)) # Returns True if the two sets have no elements in common.
