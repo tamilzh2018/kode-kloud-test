@@ -1,7 +1,9 @@
-#Use when number of iteration is unknown
+#Use when number of iteration is unknown, While loop is ocndition based if condition fails then loops ends
 #With the while loop we can execute a set of statements as long as a condition is true.
 #Note: remember to increment/decrement counter ex:num, or else the loop will continue forever.
 # Syntax: counter(initial value), while (runs until given condition is true), increment/decrement
+
+
 #1. Print a number from 1 to 5 using while loop
 """ num = 1
 while (num <= 5):
@@ -55,11 +57,11 @@ else:
   print("i is no longer less than 6") """
 
 #Nested While
-i = 1
+""" i = 1
 j = 3
 while i < 6:
   while j < 8:
     print(i,j)
     i += 1
     j = j+1
-    
+     """
