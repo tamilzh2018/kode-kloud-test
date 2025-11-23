@@ -2,7 +2,7 @@
 #With the while loop we can execute a set of statements as long as a condition is true.
 #Note: remember to increment/decrement counter ex:num, or else the loop will continue forever.
 # Syntax: counter(initial value), while (runs until given condition is true), increment/decrement
-
+#break(termnate) and continue(skip) statement works with loop iteration
 
 #1. Print a number from 1 to 5 using while loop
 """ num = 1
@@ -37,7 +37,14 @@ while i < 6:
   if i == 3:
     break
   i += 1 """
-
+#break with else
+a = 0
+while a<=5:
+    if a ==3:
+        break
+    else:
+        print(a)
+        a=a+1
 #6.With the continue statement we can stop the current iteration, and continue with the next:
 #Continue to the next iteration if i is 3:
 """ i = 0

@@ -2,6 +2,7 @@
 #The for loop does not require an indexing variable to set beforehand. 
 # to generate a sequence of numbers. use range(start, stop,step-size) 
 # Execute still sequence(chain of characters, numbers,etc வரிசை) ends
+#break(termnate) and continue(skip) statement works with loop iteration
 #Syntax: for variable_name in sequence:
 # String using for loop
 """ a = "python learning"
@@ -109,11 +110,11 @@ for i in range(1,key_input+1):
         print(f"Day{j}:")
  """
 #Nested for loop withg List
-food = ["idli", "dosai", "parota", "puri"]
+""" food = ["idli", "dosai", "parota", "puri"]
 flour = ['rice','wheat']
 for item in food:
     for made_flour in flour:
-        print(item, made_flour)
+        print(item, made_flour) """
         
 #10 Write a program to display right angle triangle and inverted triangles using * symbol
 """ for i in range (1,5+1):
@@ -180,7 +181,12 @@ else:
   print("Finally finished!") """
 
 #With the continue statement we can stop the current iteration of the loop, and continue with the next:
-
+#Continue to the next iteration if i is 3:
+""" for i in range(5):
+    if i ==3:
+        continue
+    else:
+        print(i) """
 # Print Even/Odd number but use for with If and else:
 """ for i in range(15):
     if (i%2==0):
