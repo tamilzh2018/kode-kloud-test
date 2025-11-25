@@ -213,3 +213,79 @@ else:
         print(f0, end=",")
         f0,f1 = f1,f0+f1
         counter+=1 """
+#How to find whether a year is leap year or not:Divisible by 400 but not by 100 and divisible by 4 is leap year
+""" get_year=int(input("Enter a year: "))
+if (get_year%4==0) and (get_year % 400 == 0) or (get_year % 100 != 0):
+    print("Leap year")
+else:
+    print("Not a leap year") """
+
+#How to find whether a string is palindrome or not A palindrome is a number/string that reads the same forward and backward. Ex:121, madam
+""" palindrome = input("Enter a string to find palindrome: ")
+
+# Make it case-insensitive
+palindrome_clean = palindrome.lower()
+
+rev = palindrome_clean[::-1]
+
+if palindrome_clean == rev:
+    print("Entered string is Palindrome")
+else:
+    print("Not Palindrome string") """
+
+
+#How to print certain range of Armstrong Numbers:number that is equal to the sum of its own digits each raised to the power of the number of digits.
+# Ex:123=1^3+2^3+3^3=36 36 is not equal 123 so not armstrong
+""" num = input("Enter a number to check armstrong: ")
+length = len(num)
+total = 0
+
+for each_digit in num:
+    power_value = int(each_digit) ** length
+    total = total + power_value
+
+if total == int(num):
+    print("Armstrong Number")
+else:
+    print("Not Armstrong") """
+
+#How to Print Calendar 
+""" import calendar
+print(calendar.month(2026,1)) #module name(calendar) and method name(month)
+print(calendar.calendar(2026,2,2,3,4)) #year,width,length,space b/w, column with screen
+print(calendar.weekday(2026,1,14)) #year,month,date(which week the date falls)
+print(calendar.isleap(2024))
+print(calendar.leapdays(2000,2024)) #leap year b/w=starting year, ending year """
+#Sorting Operations (ascending/descending or alphabetical)
+""" names=['rajmohan','vinodha','aazhini','viyan']
+age=[40,32,2020,2022]
+names.sort()
+age.sort()
+print(names)
+print(age) 
+names.reverse()
+print(names)
+print()
+print("Alphabet wise name sorting: ",list(reversed(sorted(names))))
+print("Ascending Number wise sorting: ",sorted(age)) """
+
+#How to Remove Punctuations: symbols that we use to separate written sentences and parts ex: commas, full stop, question mark, or exclamation mark.
+""" punct = "It uses symbols like periods, commas, question marks, and exclamation points to guide readers on how to interpret text, indicating pauses, stops, and emphasis"
+punctuation = ".,!?:;'-\"()[]{}"
+clean_word=""
+for char in punct:
+    if char not in punctuation:
+        clean_word=clean_word+char
+
+#import re
+#clean_word=re.sub(r'[^\w\s]', '', punct)
+print(clean_word) """
+#How to Count Number of Digits in a Number
+""" digits=int(input("Enter a number to check digits: "))
+total_digits=0
+while (digits!=0):
+    digits=digits//10
+    total_digits+=1
+print(total_digits) 
+#len()
+print("Total digits: ", len(str(digits))) """
