@@ -8,22 +8,22 @@ print(f"Name: {name}, Age: {age}, Address: {address}") """
 """ num1 = int(input("Enter Number1: "))
 num2 = int(input("Enter Number2: "))
 def add(num1, num2):
-    return num1 + num2
+    reterms num1 + num2
 
 def sub(num1, num2):
-    return num1 - num2
+    reterms num1 - num2
 
 def mul(num1, num2):
-    return num1 * num2
+    reterms num1 * num2
 
 def div(num1, num2):
-    return num1 / num2
+    reterms num1 / num2
 
 def mod(num1, num2):
-    return num1 % num2
+    reterms num1 % num2
 
 def flor(num1, num2):
-    return num1 // num2
+    reterms num1 // num2
 
 add = add(num1, num2)
 sub = sub(num1, num2)
@@ -42,7 +42,7 @@ score = int(input("Enter your score: "))
 department = input("Which Department from: ")
 
 def div():
-    return score/10
+    reterms score/10
 div = div()
 print(f"Name: {name}, Score: {div}/10, Department: {department}")   """
 
@@ -159,4 +159,57 @@ print("Semi-Perimeter value is: ", s)
 area=s*(s-a)*(s-b)*(s-c)**0.5
 print("Area of triangle is: ",area) """
 # How to find Largest among three inputs
-# Find sum of Natural numbers
+""" a= int(input("Enter first number: "))
+b= int(input("Enter second number: "))
+c= int(input("Enter third number: "))
+
+if a>=b and a>=c:
+    print("Largest number is:",a)
+elif b>=a and b>=c:
+    print("Largest number is:",b)
+else: 
+    print("Largest number is:",c)
+
+#altermethod: max()
+d= max(a,b,c)
+print("largets number is:", d) """
+# Find sum of Natural numbers means if number  > 0 natural
+""" num_terms=int(input("Enter numbers terms: "))
+sum = 0
+if num_terms>0:
+    for sum_natural in range(1,num_terms+1):
+        sum = sum+sum_natural
+        #sum += sum_natural
+print(f"Sum of this natural: {sum}") """
+
+#Find Factorial of a Number Ex: 5! = 5*4*3*2*1 =120 logic here Start with the given number, multiply it by each whole number in descending order down to 1, and take the final product as the result.
+""" fact_num=int(input("Enter numbers to find factorial: "))
+factorial=1
+for i in range(fact_num,0,-1):
+    factorial=factorial*i
+print(f"Factorial of {fact_num} is: {factorial}")
+#while loop
+while fact_num>0:
+    factorial=factorial*fact_num 
+    fact_num=fact_num-1
+    
+print(f"Factorial value is: {factorial}") """
+    
+#How to generate Fibonacci Series: sequence of numbers where each number after the first two is the sum of the two preceding ones. Ex:F(0) = 0, F(1) = 1 ,then F(2) = F(1) + F(0) = 1 + 0 = 1
+""" fib_num = int(input("Enter number to find Fibnacci: "))
+f0,f1 = 0,1
+if fib_num<=0:
+    print("Enter the postive numbers")
+elif fib_num==1:
+    print(f"Fibonacci Series of {fib_num} is :{f0}")
+else:
+    for i in range(fib_num):
+        print(f0, end=",")
+        f0,f1 = f1,f0+f1
+
+# while
+    counter=0
+    while counter<fib_num:
+        print(f0, end=",")
+        f0,f1 = f1,f0+f1
+        counter+=1 """

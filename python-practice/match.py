@@ -1,6 +1,8 @@
 #The 'match' statement is used to perform different actions based on different conditions.
 #Instead of writing many if..else statements, you can use the match statement.
-#The match statement selects one of many code blocks to be executed.
+#The match expression is evaluated once.
+#The value of the expression is compared with the values of each case.
+#If there is a match, the associated block of code is executed.
 #syntax:
 """ 
 match expression:
