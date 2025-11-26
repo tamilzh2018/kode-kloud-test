@@ -289,3 +289,31 @@ while (digits!=0):
 print(total_digits) 
 #len()
 print("Total digits: ", len(str(digits))) """
+
+# How to count Number of occurrence of Character in a String
+""" string1 = "It uses symbols like periods, commas, question marks, and exclamation points to guide readers on how to interpret text, indicating pauses, stops, and emphasis"
+letter_find = "i"
+total=0
+for char in string1:
+    if char == letter_find:
+        total = total+1
+print(total)
+# built-in function
+num_terms=string1.count(letter_find)
+print(num_terms) """
+
+# How to count Number of occurrence of each character in a String
+""" string1 = "It uses symbols like periods, commas, question marks, and exclamation points to guide readers on how to interpret text, indicating pauses, stops, and emphasis"
+frequency= {}
+
+for char in string1:
+    if char == frequency:
+        frequency[char] = frequency[char]+1
+    else:
+        frequency[char] = 1
+print(frequency)
+# collection module
+from collections import Counter
+freq = Counter(string1)
+print(freq) """
+
