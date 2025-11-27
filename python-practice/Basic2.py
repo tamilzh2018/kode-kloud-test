@@ -85,3 +85,114 @@ print("Randomly selected an element from secret module: ", secrets.choice(list1)
 for mul in range(3):
     print("Randomly selected 3 elements from random module: ", random.choice(list1))
     print("Randomly selected 3 elements from secret module: ", secrets.choice(list1)) """
+
+#How to Remove Duplicates From a List
+""" points = [1, 4, 2, 9, 7, 8, 9, 3, 1]
+without_dupe= set(points)
+print("No duplicate list: ",without_dupe) """
+#How to Copy a File
+""" import shutil
+from shutil import copyfile, copyfileobj
+#Copies the contents of the file  not metadata(permission,timestamps). syntax: shutil.copy("source.txt", "destination.txt")
+shutil.copy("D:/Devops/kode-kloud-test/python-practice/create_new.txt","D:/Devops/kode-kloud-test/python-practice/create_copy.txt")
+shutil.copy2() #Copies the file with metadata.
+shutil.copytree("source_folder", "destination_folder") #to copy the entire folder
+copyfile("source.txt", "destination.txt")
+copyfileobj("source.txt", "destination.txt") """
+
+#How to use List Methods
+""" fruits = ['apple', 'banana', 'cherry', 'kiwi', 'mango', 'orange', 'cherry']
+points = [156, 4, 2, 99, 72, 8, 89, 3, 19]
+#length
+print("Length of the list: ",len(fruits))
+ """
+""" num_of_student=int(input("Enter number of student in the class: "))
+student_list=[]
+
+for marks in range(1,num_of_student+1):
+    student_list.append(int(input(f"Enter student {marks} marks: ")))
+print(f"Total students: {num_of_student} maximum marks secured: {max(student_list)} and Minimum marks secured: {min(student_list)}") """
+    
+#How To Find Anagram :-checking whether two words (or 2 strings) contain the same letters andsame length in any order(but letter arrangemnet varies). 
+# ex: listen ↔ silent,night ↔ thing,evil ↔ vile,dusty ↔ study
+""" word1 = input("Enter the first word: ")
+word2 = input("Enter the Second word: ")
+if sorted(word1.lower()) == sorted(word2.lower()): #sort in ascending order and compare
+    print("Both words are Anagram")
+else:
+    print("Both words are not Anagram")
+
+#another method: import counter
+from collections import Counter
+if Counter(word1.lower()) == Counter(word2.lower()):
+     print("Both words are Anagram")
+else:
+    print("Both words are not Anagram")   """
+# How To Find Valid Date(dd/mm/yyyy):-Day(1-31),Month(1-12),Year(>0),Leap year rules are applied for February
+""" day = int(input("Enter the day: "))
+month = int(input("Enter the month: "))
+year = int(input("Enter the year: "))
+
+# Check year
+if year < 1:
+    print("invalid year")
+
+# Check month
+elif month < 1 or month > 12:
+    print("invalid month")
+
+else:
+    # Determine max days in month
+    if month in (1, 3, 5, 7, 8, 10, 12):
+        max_days = 31
+    elif month in (4, 6, 9, 11):
+        max_days = 30
+    else:  # February
+        if (year % 4 == 0 and year % 100 != 0) or (year % 400 == 0):
+            max_days = 29
+        else:
+            max_days = 28
+
+    # Validate day
+    if day < 1 or day > max_days:
+        print("invalid day")
+    else:
+        print("valid date") """
+
+# How to find second largest Number:Sort the list in descending order and Pick the second element.
+""" nums = [100, 340, 50, 79, 28, 160, 412, 340, 120, 100, 340]
+n = int(input("Enter the nth largest number to check: "))
+
+unique_nums = sorted(set(nums), reverse=True)
+nth_largest = unique_nums[n-1] #indexing
+
+print(f"{n}th largest number is {nth_largest}") """
+
+# How to Perform String Concatenation
+str1= "valid date"
+str2="or invalid date"
+print("concatenation of strings:", str1+ " "+str2)
+print(" ".join([str1,str2]))
+# How to Replace a Character in a String
+""" txt = "I like bananas"
+print(txt.replace('an','on'))
+ """
+# How to Count Number of Words in a Sentence:Split the sentence by spaces and Count each separated part.
+""" count_str="Enter the nth largest number to check"
+print("Number of words: ", len(count_str.split()))
+total=0
+for count_words in count_str.split():
+    total+=1
+print("Number of words: ", total)
+ """
+# How to toggle(converting) Character Case
+""" toggle="enter the nth largest number to check"
+print("First letter in capital: ", toggle.capitalize())
+print("Each words first latter in capital: ", toggle.title())
+print("if string is in small letter then change to capital: ", toggle.swapcase()) """
+# How to Perform List Concatenation 
+# How to Access Index Value of List Elements
+# How to Merge Dictionaries
+# How to Access Dictionary Key and Values 
+# How to convert List into Dictionary
+# How to Flatten Nested List  
