@@ -4111,6 +4111,345 @@ This setup ensures that:
 - Outputs show the names of created resources per workspace.
 
 **Level 4**
+## Q1: The Nautilus DevOps team has been tasked to build a real-time data pipeline on AWS. The pipeline must collect streaming data, stage it in S3, monitor delivery failures, and alert via email. Your task is to implement this end-to-end using Terraform.
+
+Pipeline Requirements:
+
+1.) Kinesis Firehose:
+
+Create a delivery stream named datacenter-firehose.
+It should deliver data to an S3 bucket as a staging area.
+2.) S3 Bucket:
+
+Create a bucket named datacenter-staging-4650 (value to come from variables).
+Set private ACL and allow Firehose to write objects into it.
+3.) IAM Role and Policy:
+
+Create a role datacenter-firehose-role and a policy datacenter-firehose-policy with least privilege to allow Firehose to write to the staging bucket.
+4.) CloudWatch Alarm:
+
+Create a cloudwatch Alarm named datacenter-firehose-failures.
+Monitor the Firehose delivery failures metric (DeliveryToS3.Failures) and trigger when failures occur.
+5.) SNS Topic:
+
+Create a topic datacenter-alert-topic and link the CloudWatch alarm to it.
+6.) SES Email Identity:
+
+Create an SES email identity named datacenter@example.comand verify an SES email identity using an email address provided in the variables.
+7.) SNS Subscription:
+
+Subscribe the verified SES email identity to the SNS topic to receive notifications.
+8.) Use main.tf file to define all AWS resources and to ensure a clean and modular setup.
+
+9.) Use variables.tf file with the following variables:
+
+KKE_STAGING_BUCKET_NAME: Name of the S3 bucket for staging data.
+KKE_FIREHOSE_ROLE_NAME: Name of the IAM role for the Firehose delivery stream.
+KKE_FIREHOSE_POLICY_NAME: Name of the IAM policy for the Firehose delivery stream.
+KKE_FIREHOSE_NAME: Name of the Kinesis Firehose delivery stream.
+KKE_SNS_TOPIC_NAME: Name of the SNS topic for alerts.
+KKE_CLOUDWATCH_ALARM_NAME: Name of the CloudWatch alarm to monitor Firehose delivery failures.
+KKE_ALERT_EMAIL: Email address to receive SNS alerts through SES.
+10.) Use terraform.tfvarsto input the value of the variables used in the variables.tf.
+
+11.) Use outputs.tf file to output the following:
+
+kke_staging_bucket_name:name of the bucket used.
+kke_firehose_name:name of the firehose delivery stream used.
+kke_sns_topic_name:name of the sns topic used.
+kke_cloudwatch_alarm_name:name of the cloudwatch used.
+kke_ses_identity:name of the ses identity used.
+
+Notes:
+
+The Terraform working directory is /home/bob/terraform.
+
+Right-click under the EXPLORER section in VS Code and select Open in Integrated Terminal to launch the terminal.
+
+Before submitting the task, ensure that terraform plan returns `No changes. Your infrastructure matches the configuration
+Ans:
+
+**main.tf**
+# -------------------------
+# S3: Staging bucket
+# -------------------------
+resource "aws_s3_bucket" "staging" {
+  bucket = var.KKE_STAGING_BUCKET_NAME
+
+  tags = {
+    Name        = var.KKE_STAGING_BUCKET_NAME
+    Environment = "staging"
+    ManagedBy   = "terraform"
+  }
+}
+
+# Explicit private ACL
+resource "aws_s3_bucket_ownership_controls" "staging" {
+  bucket = aws_s3_bucket.staging.id
+
+  rule {
+    object_ownership = "BucketOwnerPreferred"
+  }
+}
+
+resource "aws_s3_bucket_acl" "staging" {
+  bucket = aws_s3_bucket.staging.id
+  acl    = "private"
+
+  depends_on = [aws_s3_bucket_ownership_controls.staging]
+}
+
+# Optional: Block public access (defense-in-depth)
+resource "aws_s3_bucket_public_access_block" "staging" {
+  bucket                  = aws_s3_bucket.staging.id
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}
+
+# -------------------------
+# IAM: Role and policy for Firehose
+# -------------------------
+data "aws_iam_policy_document" "firehose_trust" {
+  statement {
+    sid     = "FirehoseTrust"
+    effect  = "Allow"
+    actions = ["sts:AssumeRole"]
+
+    principals {
+      type        = "Service"
+      identifiers = ["firehose.amazonaws.com"]
+    }
+  }
+}
+
+resource "aws_iam_role" "firehose_role" {
+  name               = var.KKE_FIREHOSE_ROLE_NAME
+  assume_role_policy = data.aws_iam_policy_document.firehose_trust.json
+
+  tags = {
+    Name      = var.KKE_FIREHOSE_ROLE_NAME
+    ManagedBy = "terraform"
+  }
+}
+
+# Least-privilege policy to write objects to the staging bucket
+data "aws_iam_policy_document" "firehose_s3" {
+  statement {
+    sid     = "AllowPutToBucket"
+    effect  = "Allow"
+    actions = [
+      "s3:PutObject",
+      "s3:AbortMultipartUpload",
+      "s3:ListBucketMultipartUploads",
+      "s3:ListMultipartUploadParts"
+    ]
+    resources = [
+      "${aws_s3_bucket.staging.arn}/*"
+    ]
+  }
+
+  statement {
+    sid     = "BucketReadMeta"
+    effect  = "Allow"
+    actions = [
+      "s3:GetBucketLocation",
+      "s3:ListBucket"
+    ]
+    resources = [
+      aws_s3_bucket.staging.arn
+    ]
+  }
+}
+
+resource "aws_iam_policy" "firehose_policy" {
+  name   = var.KKE_FIREHOSE_POLICY_NAME
+  policy = data.aws_iam_policy_document.firehose_s3.json
+
+  tags = {
+    Name      = var.KKE_FIREHOSE_POLICY_NAME
+    ManagedBy = "terraform"
+  }
+}
+
+resource "aws_iam_role_policy_attachment" "firehose_attach" {
+  role       = aws_iam_role.firehose_role.name
+  policy_arn = aws_iam_policy.firehose_policy.arn
+}
+
+# -------------------------
+# Kinesis Firehose: Delivery stream to S3
+# -------------------------
+resource "aws_kinesis_firehose_delivery_stream" "firehose" {
+  name        = var.KKE_FIREHOSE_NAME
+  destination = "extended_s3"
+
+  extended_s3_configuration {
+    role_arn           = aws_iam_role.firehose_role.arn
+    bucket_arn         = aws_s3_bucket.staging.arn
+    buffering_size     = 5          # MiB
+    buffering_interval = 300        # seconds
+    compression_format = "GZIP"
+    cloudwatch_logging_options {
+      enabled         = true
+      log_group_name  = "/aws/kinesisfirehose/${var.KKE_FIREHOSE_NAME}"
+      log_stream_name = "S3Delivery"
+    }
+  }
+
+  tags = {
+    Name      = var.KKE_FIREHOSE_NAME
+    ManagedBy = "terraform"
+  }
+
+  depends_on = [
+    aws_iam_role_policy_attachment.firehose_attach,
+    aws_s3_bucket_acl.staging
+  ]
+}
+
+# -------------------------
+# SNS: Alerting topic
+# -------------------------
+resource "aws_sns_topic" "alerts" {
+  name = var.KKE_SNS_TOPIC_NAME
+
+  tags = {
+    Name      = var.KKE_SNS_TOPIC_NAME
+    ManagedBy = "terraform"
+  }
+}
+
+# -------------------------
+# SES: Email identity for alerts
+# -------------------------
+resource "aws_ses_email_identity" "alert_identity" {
+  email = var.KKE_ALERT_EMAIL
+
+
+}
+
+# -------------------------
+# SNS: Subscription (email)
+# -------------------------
+resource "aws_sns_topic_subscription" "email_sub" {
+  topic_arn = aws_sns_topic.alerts.arn
+  protocol  = "email"
+  endpoint  = var.KKE_ALERT_EMAIL
+
+  depends_on = [aws_ses_email_identity.alert_identity]
+}
+
+# -------------------------
+# CloudWatch Alarm: Firehose delivery failures
+# -------------------------
+resource "aws_cloudwatch_metric_alarm" "firehose_failures" {
+  alarm_name          = var.KKE_CLOUDWATCH_ALARM_NAME
+  alarm_description   = "Triggers when Firehose delivery to S3 reports failures."
+  namespace           = "AWS/Firehose"
+  metric_name         = "DeliveryToS3.Failures"
+  statistic           = "Sum"
+  period              = 60
+  evaluation_periods  = 1
+  threshold           = 0
+  comparison_operator = "GreaterThanThreshold"
+  treat_missing_data  = "notBreaching"
+
+  dimensions = {
+    DeliveryStreamName = aws_kinesis_firehose_delivery_stream.firehose.name
+  }
+
+  alarm_actions = [aws_sns_topic.alerts.arn]
+  ok_actions    = [aws_sns_topic.alerts.arn]
+
+  tags = {
+    Name      = var.KKE_CLOUDWATCH_ALARM_NAME
+    ManagedBy = "terraform"
+  }
+}
+
+**variables.tf**
+
+variable "aws_region" {
+  description = "AWS region to deploy resources"
+  type        = string
+  default     = "us-east-1"
+}
+
+variable "KKE_STAGING_BUCKET_NAME" {
+  description = "Name of the S3 bucket for staging data."
+  type        = string
+}
+
+variable "KKE_FIREHOSE_ROLE_NAME" {
+  description = "Name of the IAM role for the Firehose delivery stream."
+  type        = string
+}
+
+variable "KKE_FIREHOSE_POLICY_NAME" {
+  description = "Name of the IAM policy for the Firehose delivery stream."
+  type        = string
+}
+
+variable "KKE_FIREHOSE_NAME" {
+  description = "Name of the Kinesis Firehose delivery stream."
+  type        = string
+}
+
+variable "KKE_SNS_TOPIC_NAME" {
+  description = "Name of the SNS topic for alerts."
+  type        = string
+}
+
+variable "KKE_CLOUDWATCH_ALARM_NAME" {
+  description = "Name of the CloudWatch alarm to monitor Firehose delivery failures."
+  type        = string
+}
+
+variable "KKE_ALERT_EMAIL" {
+  description = "Email address to receive SNS alerts through SES."
+  type        = string
+}
+**terraform.tfvars**
+KKE_STAGING_BUCKET_NAME  = "datacenter-staging-4650"
+KKE_FIREHOSE_ROLE_NAME   = "datacenter-firehose-role"
+KKE_FIREHOSE_POLICY_NAME = "datacenter-firehose-policy"
+KKE_FIREHOSE_NAME        = "datacenter-firehose"
+
+KKE_SNS_TOPIC_NAME       = "datacenter-alert-topic"
+KKE_CLOUDWATCH_ALARM_NAME= "datacenter-firehose-failures"
+
+KKE_ALERT_EMAIL          = "datacenter@example.com"
+**outputs.tf**
+output "kke_staging_bucket_name" {
+  description = "Name of the bucket used."
+  value       = aws_s3_bucket.staging.bucket
+}
+
+output "kke_firehose_name" {
+  description = "Name of the firehose delivery stream used."
+  value       = aws_kinesis_firehose_delivery_stream.firehose.name
+}
+
+output "kke_sns_topic_name" {
+  description = "Name of the sns topic used."
+  value       = aws_sns_topic.alert_topic.name
+}
+
+output "kke_cloudwatch_alarm_name" {
+  description = "Name of the CloudWatch alarm used."
+  value       = aws_cloudwatch_metric_alarm.firehose_failures.alarm_name
+}
+
+output "kke_ses_identity" {
+  description = "SES identity email used."
+  value       = aws_ses_email_identity.alert_email_identity.email
+}
+
+
+
+
 ***Certifcation Test***
 Q1:
 The Nautilus DevOps team is strategizing the migration of a portion of their infrastructure to the AWS cloud. Recognizing the scale of this undertaking, they have opted to approach the migration in incremental steps rather than as a single massive transition. To achieve this, they have segmented large tasks into smaller, more manageable units. This granular approach enables the team to execute the migration in gradual phases, ensuring smoother implementation and minimizing disruption to ongoing operations. By breaking down the migration into smaller tasks, the Nautilus DevOps team can systematically progress through each stage, allowing for better control, risk mitigation, and optimization of resources throughout the migration process.

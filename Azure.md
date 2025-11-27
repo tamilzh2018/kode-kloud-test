@@ -3,10 +3,74 @@
 ### **Q1: Create SSH Key Pair for Azure Virtual Machine**
 
 > *Your company has a policy to allow only SSH key-based access to virtual machines. Generate a secure SSH key pair for Linux VM deployment in Azure using CLI. How would you securely store the private key and share access with team members?*
+## Q21: For this task, create an SSH key pair with the following requirements:
 
+The name of the SSH key pair should be xfusion-kp.
+
+The key pair type must be rsa.
 ### **Q2: Create an Azure Virtual Machine**
 
 > *Deploy a Linux-based Azure VM in the `East US` region with a Standard B2s size and a new resource group. Ensure it uses SSH for authentication and is placed in a custom virtual network. What are the minimal required configurations?*
+## Q2
+The Nautilus DevOps team is planning to migrate a portion of their infrastructure to the Azure cloud incrementally. As part of this migration, you are tasked with creating an Azure Virtual Machine (VM). The requirements are: 1) Use the existing resource group. 2) The VM name must be devops-vm, it should be in West US region. 3) Use the Ubuntu 22.04 LTS image for the VM. 4) The VM size must be Standard_B1s. 5) Attach a default Network Security Group (NSG) that allows inbound SSH (port 22). 6) Attach a 30 GB storage disk of type Standard HDD. 7) The rest of the configurations should remain as default. After completing these steps, make sure you can SSH into the virtual machine.
+
+Ans:
+
+## 🖥️ Step‑by‑Step in Azure Portal
+
+1. **Log in to Azure Portal**
+   - Go to [https://portal.azure.com](https://portal.azure.com).
+   - Sign in with your Microsoft account.
+
+2. **Navigate to Virtual Machines**
+   - In the left menu, click **Virtual Machines**.
+   - Select **+ Create → Azure Virtual Machine**.
+
+3. **Basics Tab**
+   - **Subscription**: Choose your subscription.
+   - **Resource Group**: Select your existing resource group.
+   - **Virtual Machine Name**: Enter `devops-vm`.
+   - **Region**: Choose **West US**.
+   - **Image**: Select **Ubuntu Server 22.04 LTS**.
+   - **Size**: Pick **Standard_B1s**.
+
+4. **Administrator Account**
+   - Choose **SSH public key** authentication (recommended).
+   - Enter a username (e.g., `azureuser`).
+   - Upload your public SSH key or let Azure generate one.
+
+5. **Disks Tab**
+   - OS Disk type: Select **Standard HDD**.
+   - OS Disk size: Set to **30 GB**.
+   - Leave other options as default.
+
+6. **Networking Tab**
+   - Virtual Network: Use default or existing.
+   - Subnet: Default.
+   - Public IP: Enabled.
+   - Network Security Group: Select **Basic** and allow **SSH (port 22)** inbound.
+
+7. **Management, Monitoring, Advanced Tabs**
+   - Leave defaults unless you need extra monitoring or backup.
+
+8. **Review + Create**
+   - Azure will validate your configuration.
+   - Click **Create** to deploy the VM.
+
+---
+
+## 🔑 Connect via SSH
+
+Once deployment finishes:
+1. Go back to the **Virtual Machines** blade.
+2. Select `devops-vm`.
+3. Copy the **Public IP address**.
+4. From your terminal:
+
+```bash
+ssh azureuser@<PUBLIC_IP>
+```
+
 
 ### **Q3: Create a Virtual Network (VNet) in Azure**
 

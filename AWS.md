@@ -5,6 +5,11 @@ Here’s a set of **scenario-based questions** mapped to each of the topics you'
 **Q1: Create Key Pair**
 
 > *You are tasked with deploying EC2 instances for a new application. For secure SSH access, you need a new key pair that will be used by all developers. What steps would you take to create a key pair using the AWS Console and CLI?*
+## Q1:For this task, create a key pair with the following requirements:
+
+Name of the key pair should be devops-kp.
+
+Key pair type must be rsa
 
 **Q2: Create Security Group**
 
