@@ -76,6 +76,68 @@ ssh azureuser@<PUBLIC_IP>
 
 > *You are setting up an isolated environment for a three-tier application. Create a virtual network with a /16 CIDR range and explain how you would subdivide it into subnets for web, app, and database tiers.*
 
+The Nautilus DevOps team is in the process of migrating some of their workloads to Azure. One of the tasks involves creating a new Virtual Machine (VM) using the Azure CLI. The team does not have access to the Azure portal but can manage Azure resources via the azure-client host (the landing host for this lab).
+
+1) Create a new Azure Virtual Machine named xfusion-vm using the Azure CLI.
+
+2) Use the Ubuntu2204 image and set the VM size to Standard_B2s.
+
+3) Make sure the admin username is set to azureuser and SSH keys are generated for secure access.
+
+4) Use Standard_LRS storage account, disk size must be 30GB and ensure the VM xfusion-vm is in the running state after creation.
+
+Ans:
+# If you don’t know the resource group name:List all resource groups with their regions
+az group list --query "[].{name:name, location:location}" -o table
+output: Name                          Location
+----------------------------  ----------
+kml_rg_main-22d6db0709e14b45  westus
+
+
+## ✅ **1. Create a Resource Group i fnot avail**
+
+```bash
+az group create \
+  --name $RESOURCE_GROUP \
+  --location $LOCATION
+```
+
+---
+
+## ✅ **3. Create the VM**
+
+This command automatically generates SSH keys and creates the VM with:
+
+* **Ubuntu 22.04 (Ubuntu2204)**
+* **Standard_B2s size**
+* **Standard_LRS OS disk**
+* **30GB OS disk size**
+
+```bash
+az vm create \
+  --resource-group kml_rg_main-22d6db0709e14b45 \
+  --name xfusion-vm \
+  --image Ubuntu2204 \
+  --size Standard_B2s \
+  --admin-username azureuser \
+  --generate-ssh-keys \
+  --os-disk-size-gb 30 \
+  --storage-sku Standard_LRS
+```
+
+---
+
+## ✅ **4. Verify VM is running**
+
+```bash
+az vm get-instance-view \
+  --resource-group kml_rg_main-22d6db0709e14b45 \
+  --name xfusion-vm \
+  --query "instanceView.statuses[?starts_with(code, 'PowerState')].displayStatus" \
+  --output table
+```
+
+
 ### **Q4: Create a Virtual Network (IPv4) in Azure**
 
 > *A legacy system requires IPv4-only communication. Create a VNet that supports only IPv4 addressing and launch a VM in it. How do you ensure the VM can access external services securely?*

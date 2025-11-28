@@ -191,8 +191,45 @@ print("First letter in capital: ", toggle.capitalize())
 print("Each words first latter in capital: ", toggle.title())
 print("if string is in small letter then change to capital: ", toggle.swapcase()) """
 # How to Perform List Concatenation 
-# How to Access Index Value of List Elements
+""" f1 = ['apple', 'banana', 'cherry']
+f2 = ['kiwi', 'mango', ]
+f3= ['orange', 'cherry']
+print("concate with plus oprator: ", f1+f2)
+f1.extend(f2)
+print("concate with extend method: ", f1)
+f1.append(f3)
+print("concate with appaend method give us nested list: ",f1) """
+# How to Access Index Value of List Elements:fetch element/modify/delete
+""" fruits = ['apple', 'banana', 'cherry', 'kiwi', 'mango', 'orange', 'cherry']
+
+print("Known Element name use index method: ",fruits.index("cherry"))
+print("Unknown Element name use index method: ", fruits[3])
+print("Slice the old list create new list chunks: ", fruits[1::2])
+f1= slice(0, 7, 2)
+print("Using slice method:", fruits[f1])
+print("Remove the element: ",fruits.pop(4))
+fruits.remove("banana")
+print("Updated list:", fruits)
+ """
+
 # How to Merge Dictionaries
+dict1 = {'Shimla': 'apple', 'Puvalur': 'banana', 'Ooty': 'cherry', 'Salem': 'mango', 'Dharmapuri': 'orange'}
+dict2 = {'Delhi': 'grapes', 'Mumbai': 'papaya', 'Chennai': 'pineapple'}
+
+# Method 1: Using update()
+dict1.update(dict2)
+print(dict1)
+# {'Shimla': 'apple', 'Puvalur': 'banana', 'Ooty': 'cherry', 'Salem': 'mango', 'Dharmapuri': 'orange',
+#  'Delhi': 'grapes', 'Mumbai': 'papaya', 'Chennai': 'pineapple'}
+
+# Method 2: Using dictionary unpacking (Python 3.5+)
+merged = {**dict1, **dict2}
+print(merged)
+
+
 # How to Access Dictionary Key and Values 
 # How to convert List into Dictionary
+f1 = ['Shimla', 'Puvalur','Ooty','Salem','Dharmapuri']
+f2 = ['apple', 'banana', 'cherry','mango', 'orange']
+print("Dict from 2 list: ", dict(zip(f1,f2)))
 # How to Flatten Nested List  

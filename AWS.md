@@ -14,7 +14,13 @@ Key pair type must be rsa
 **Q2: Create Security Group**
 
 > *Your web application requires HTTP and SSH access from the internet. Design and create a security group that meets these requirements. What rules would you configure?*
+1) The name of the security group must be devops-sg.
 
+2) The description must be Security group for Nautilus App Servers.
+
+3) Add an inbound rule of type HTTP, with a port range of 80, and source CIDR range 0.0.0.0/0.
+
+4) Add another inbound rule of type SSH, with a port range of 22, and source CIDR range 0.0.0.0/0.
 **Q3: Create GP3 Volume**
 
 > *A developer needs a high-performance volume for database storage. Create a GP3 volume with 200 GiB and 3000 IOPS in a specific AZ. How do you proceed?*
@@ -22,6 +28,8 @@ Key pair type must be rsa
 **Q4: Create Subnet**
 
 > *You are setting up a 3-tier architecture. As part of this, you need to create a subnet in a given VPC with CIDR `10.0.1.0/24`. How would you do this and why might you choose a specific AZ?*
+
+1).For this task, create one subnet named datacenter-subnet under default VPC.
 
 **Q5: Allocate Elastic IP**
 
