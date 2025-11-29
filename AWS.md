@@ -35,7 +35,7 @@ Key pair type must be rsa
 
 > *A legacy application requires a static IP to allowlist in external firewalls. Allocate an Elastic IP that can be used with a new EC2 instance.*
 
-
+For this task, allocate an Elastic IP address, name it as nautilus-eip.
 
 ### 💻 **EC2 Management**
 

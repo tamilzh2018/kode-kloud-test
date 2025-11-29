@@ -305,7 +305,7 @@ resource "local_file" "private_key" {
   filename = "${path.module}/devops-kp.pem"
   file_permission = "0400"
 
-
+}
 8. **Create AMI Using Terraform**
 For this task, create an AMI from an existing EC2 instance named devops-ec2 using Terraform.
 
@@ -4519,96 +4519,111 @@ kke_sns_topic_arn: arn of the sns-topic created.
 kke_sqs_queue_url: url of the sqs-queue created
 
 Ans: 
-# variables.tf
-#############################
-# Variables and Validations
-#############################
+## variables.tf
 
 variable "KKE_AWS_REGION" {
-  description = "AWS region used."
+  description = "AWS region used for deployment."
   type        = string
+  default     = "us-east-1"
 
   validation {
-    condition     = var.KKE_AWS_REGION == "us-east-1"
-    error_message = "Only 'us-east-1' is allowed for KKE_AWS_REGION."
+    condition     = contains(["us-east-1"], var.KKE_AWS_REGION)
+    error_message = "The KKE_AWS_REGION must be set to 'us-east-1'."
   }
 }
 
 variable "KKE_QUEUE_DEPTH_THRESHOLD" {
-  description = "CloudWatch alarm threshold for queue depth."
+  description = "CloudWatch alarm threshold for SQS queue depth (number of messages)."
   type        = number
   default     = 50
 
   validation {
     condition     = var.KKE_QUEUE_DEPTH_THRESHOLD >= 1 && var.KKE_QUEUE_DEPTH_THRESHOLD <= 1000
-    error_message = "KKE_QUEUE_DEPTH_THRESHOLD must be between 1 and 1000."
+    error_message = "The KKE_QUEUE_DEPTH_THRESHOLD must be between 1 and 1000 messages."
   }
 }
 
 variable "KKE_IAM_ACTIONS" {
-  description = "IAM actions allowed in the dynamic inline policy."
+  description = "IAM actions to allow in the dynamic inline policy."
   type        = list(string)
-  default     = [
+  default = [
     "sqs:ReceiveMessage",
     "dynamodb:PutItem",
     "sns:Publish"
   ]
 }
-# main.tf
-#################################
-# Providers
-#################################
+
+## main.tf
+
+# ----------------------------------------------------
+# AWS Provider Configuration
+# ----------------------------------------------------
 provider "aws" {
   region = var.KKE_AWS_REGION
 }
 
-#################################
-# Locals
-#################################
+# ----------------------------------------------------
+# Local Values for Standardization
+# ----------------------------------------------------
 locals {
-  project     = "devops"
-  environment = "dev"
-
-  common_prefix = "${local.project}-${local.environment}"
+  project_name      = "devops"
+  environment       = "dev"
+  common_name_prefix = "${local.project_name}-${local.environment}"
 
   default_tags = {
-    Project     = local.project
+    Project     = local.project_name
     Environment = local.environment
-    Owner       = "DevOps Team"
-    Team        = "Platform Engineering"
+    Owner       = "platform-engineering"
+    Team        = "devops"
   }
 }
 
-#################################
-# SNS Topic
-#################################
+# ----------------------------------------------------
+# 1. SNS Topic
+# ----------------------------------------------------
 resource "aws_sns_topic" "event_topic" {
-  name = "${local.common_prefix}-topic"
+  # Naming: project_name-environment-topic
+  name = "${local.common_name_prefix}-topic"
   tags = local.default_tags
 }
 
-#################################
-# SQS Queue
-#################################
+# ----------------------------------------------------
+# 2. SQS Queue
+# ----------------------------------------------------
 resource "aws_sqs_queue" "event_queue" {
-  name = "${local.common_prefix}-queue"
+  # Naming: project_name-environment-queue
+  name = "${local.common_name_prefix}-queue"
   tags = local.default_tags
 }
 
-#################################
-# SQS Queue Policy (allow SNS publish)
-#################################
-resource "aws_sqs_queue_policy" "allow_sns" {
+# ----------------------------------------------------
+# 3. SQS Subscription to SNS Topic
+# ----------------------------------------------------
+resource "aws_sns_topic_subscription" "queue_subscription" {
+  topic_arn = aws_sns_topic.event_topic.arn
+  protocol  = "sqs"
+  endpoint  = aws_sqs_queue.event_queue.arn
+
+  # Mandatory: Grant the SNS topic permission to send messages to the SQS queue
+  # This block is required for the subscription to function correctly.
+  # The SQS policy must be applied on the SQS queue resource.
+  depends_on = [
+    aws_sns_topic.event_topic
+  ]
+}
+
+# SQS Queue Policy to allow the SNS topic to publish
+resource "aws_sqs_queue_policy" "queue_policy" {
   queue_url = aws_sqs_queue.event_queue.id
 
   policy = jsonencode({
     Version = "2012-10-17",
     Statement = [
       {
-        Effect = "Allow",
+        Effect    = "Allow",
         Principal = "*",
-        Action = "SQS:SendMessage",
-        Resource = aws_sqs_queue.event_queue.arn,
+        Action    = "sqs:SendMessage",
+        Resource  = aws_sqs_queue.event_queue.arn,
         Condition = {
           ArnEquals = {
             "aws:SourceArn" = aws_sns_topic.event_topic.arn
@@ -4619,116 +4634,111 @@ resource "aws_sqs_queue_policy" "allow_sns" {
   })
 }
 
-##############################################
-# SNS → SQS Subscription
-##############################################
-resource "aws_sns_topic_subscription" "sns_to_sqs" {
-  topic_arn = aws_sns_topic.event_topic.arn
-  protocol  = "sqs"
-  endpoint  = aws_sqs_queue.event_queue.arn
-
-  depends_on = [aws_sqs_queue_policy.allow_sns]
-
-  raw_message_delivery = true
-}
-
-#################################
-# DynamoDB Table
-#################################
-resource "aws_dynamodb_table" "event_table" {
-  name         = "${local.common_prefix}-events"
-  billing_mode = "PROVISIONED"
-
+# ----------------------------------------------------
+# 4. DynamoDB Table
+# ----------------------------------------------------
+resource "aws_dynamodb_table" "events_table" {
+  # Naming: project_name-environment-events
+  name           = "${local.common_name_prefix}-events"
+  billing_mode   = "PROVISIONED"
   read_capacity  = 5
   write_capacity = 5
-
-  hash_key = "event_id"
+  hash_key       = "event_id"
 
   attribute {
     name = "event_id"
-    type = "S"
+    type = "S" # String type
   }
 
   tags = local.default_tags
 }
 
-#################################
-# IAM Role with Dynamic Inline Policy
-#################################
-resource "aws_iam_role" "event_role" {
-  name = "${local.common_prefix}-role"
-
+# ----------------------------------------------------
+# 5. IAM Role and Dynamic Policy
+# ----------------------------------------------------
+resource "aws_iam_role" "event_processor_role" {
+  # Naming: project_name-environment-role
+  name               = "${local.common_name_prefix}-role"
   assume_role_policy = jsonencode({
     Version = "2012-10-17",
-    Statement = [{
-      Effect = "Allow",
-      Principal = {
-        Service = "lambda.amazonaws.com"
+    Statement = [
+      {
+        Action    = "sts:AssumeRole",
+        Effect    = "Allow",
+        Principal = {
+          Service = "lambda.amazonaws.com" # Common service principal for event processing roles
+        }
       },
-      Action = "sts:AssumeRole"
-    }]
+    ],
   })
-
   tags = local.default_tags
 }
 
-resource "aws_iam_role_policy" "dynamic_policy" {
-  name = "${local.common_prefix}-policy"
-  role = aws_iam_role.event_role.name   # safer than .id
+resource "aws_iam_role_policy" "inline_policy" {
+  name = "event-processor-inline-policy"
+  role = aws_iam_role.event_processor_role.id
 
   policy = jsonencode({
     Version = "2012-10-17",
-    Statement = [{
-      Effect = "Allow",
-      Action = var.KKE_IAM_ACTIONS,
-      Resource = "*"
-    }]
+    Statement = [
+      {
+        Effect   = "Allow",
+        Resource = "*",
+        # Use dynamic block to generate actions from the variable
+        Action = var.KKE_IAM_ACTIONS
+      },
+    ],
   })
 }
 
-#################################
-# CloudWatch Alarm for SQS Depth
-#################################
+# ----------------------------------------------------
+# 6. CloudWatch Alarm for SQS Queue Depth
+# ----------------------------------------------------
 resource "aws_cloudwatch_metric_alarm" "queue_depth_alarm" {
-  alarm_name          = "${local.common_prefix}-alarm"
+  # Naming: project_name-environment-alarm
+  alarm_name          = "${local.common_name_prefix}-alarm"
   comparison_operator = "GreaterThanThreshold"
-  evaluation_periods  = 1
-  threshold           = var.KKE_QUEUE_DEPTH_THRESHOLD
+  evaluation_periods  = "1"
   metric_name         = "ApproximateNumberOfMessagesVisible"
   namespace           = "AWS/SQS"
-  statistic           = "Average"
-  period              = 60
+  period              = "60"
+  statistic           = "Maximum"
+  threshold           = var.KKE_QUEUE_DEPTH_THRESHOLD # Configurable threshold
 
   dimensions = {
     QueueName = aws_sqs_queue.event_queue.name
   }
 
+  alarm_description = "Alarm when SQS queue depth exceeds ${var.KKE_QUEUE_DEPTH_THRESHOLD} messages."
+  
   tags = local.default_tags
 }
 
-# output.tf
-#############################
-# Outputs
-#############################
+## outputs.tf
 
 output "kke_cloudwatch_alarm_name" {
-  value = aws_cloudwatch_metric_alarm.queue_depth_alarm.alarm_name
+  description = "Name of the CloudWatch alarm created."
+  value       = aws_cloudwatch_metric_alarm.queue_depth_alarm.alarm_name
 }
 
 output "kke_dynamodb_table_name" {
-  value = aws_dynamodb_table.event_table.name
+  description = "Name of the DynamoDB table created."
+  value       = aws_dynamodb_table.events_table.name
 }
 
 output "kke_iam_role_arn" {
-  value = aws_iam_role.event_role.arn
+  description = "ARN of the IAM role created."
+  value       = aws_iam_role.event_processor_role.arn
 }
 
 output "kke_sns_topic_arn" {
-  value = aws_sns_topic.event_topic.arn
+  description = "ARN of the SNS topic created."
+  value       = aws_sns_topic.event_topic.arn
 }
 
 output "kke_sqs_queue_url" {
-  value = aws_sqs_queue.event_queue.url
+  description = "URL of the SQS queue created."
+  value       = aws_sqs_queue.event_queue.id
 }
 
 
@@ -5471,7 +5481,7 @@ output "KKE_bucket_name" {
   value       = aws_s3_bucket.xfusion_bucket.bucket
 }
 
-**Level3 Certification Test**
+**Level 3 Certification Test**
 Q1:
 The DevOps team needs to create a data ingestion pipeline using AWS Kinesis Firehose to deliver streaming data into an S3 bucket. The Firehose delivery stream must assume an IAM role using STS, deliver data to an S3 bucket, and add a newline delimiter after each record. Buffering settings should be configured to deliver data either when the buffer reaches 5 MB or after 300 seconds, whichever comes first.
 
