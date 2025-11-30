@@ -169,10 +169,10 @@ nth_largest = unique_nums[n-1] #indexing
 print(f"{n}th largest number is {nth_largest}") """
 
 # How to Perform String Concatenation
-str1= "valid date"
+""" str1= "valid date"
 str2="or invalid date"
 print("concatenation of strings:", str1+ " "+str2)
-print(" ".join([str1,str2]))
+print(" ".join([str1,str2])) """
 # How to Replace a Character in a String
 """ txt = "I like bananas"
 print(txt.replace('an','on'))
@@ -213,7 +213,7 @@ print("Updated list:", fruits)
  """
 
 # How to Merge Dictionaries
-dict1 = {'Shimla': 'apple', 'Puvalur': 'banana', 'Ooty': 'cherry', 'Salem': 'mango', 'Dharmapuri': 'orange'}
+""" dict1 = {'Shimla': 'apple', 'Puvalur': 'banana', 'Ooty': 'cherry', 'Salem': 'mango', 'Dharmapuri': 'orange'}
 dict2 = {'Delhi': 'grapes', 'Mumbai': 'papaya', 'Chennai': 'pineapple'}
 
 # Method 1: Using update()
@@ -225,11 +225,47 @@ print(dict1)
 # Method 2: Using dictionary unpacking (Python 3.5+)
 merged = {**dict1, **dict2}
 print(merged)
-
+ """
 
 # How to Access Dictionary Key and Values 
-# How to convert List into Dictionary
-f1 = ['Shimla', 'Puvalur','Ooty','Salem','Dharmapuri']
+""" dict1={'Shimla': 'apple', 'Puvalur': 'banana', 'Ooty': 'cherry', 'Salem': 'mango', 'Dharmapuri': 'orange', 'Delhi': 'grapes', 'Mumbai': 'papaya', 'Chennai': 'pineapple'}
+print("keys: ",dict1.keys())
+print("values: ",dict1.values())
+print("values: ",dict1.items())
+print("removed value:",dict1.pop('Chennai'))
+print("removed last key,value:",dict1.popitem()) """
+# How to convert List,string,tuple into Dictionary
+""" f1 = ['Shimla', 'Puvalur','Ooty','Salem','Dharmapuri']
 f2 = ['apple', 'banana', 'cherry','mango', 'orange']
-print("Dict from 2 list: ", dict(zip(f1,f2)))
-# How to Flatten Nested List  
+print("Dict from 2 list: ", dict(zip(f1,f2))) #zip method always return tuple"""
+# How to Flatten Nested List : if you give any types of nested list, return each elements in new list
+""" nest_list = [[1], [True],[2,3],[1.4,2.3],['raj']]
+flat_list=[]
+for i in nest_list:
+    for j in i:
+        flat_list.append(j)
+print("Flatten list:", flat_list)
+#module based
+import itertools
+print("Flatten list: ",list(itertools.chain(*nest_list))) """
+
+#Pyramid Pattern: to achive we need to use row and columns logic
+rows=int(input("Enter Number of Rows: "))
+for column in range(1, rows+1):
+    for col in range(1,column+1):
+        print("*", end="")
+    print()
+for column in range(rows,0,-1):
+    for col in range(column):
+        print(column, end="")
+    print()
+
+for i in range(rows):
+    # print spaces first
+    for j in range(i ,rows):
+        print(" ", end=" ")
+    # then print stars
+    for k in range(i+1):
+        print("*", end=" ") 
+    print()
+
