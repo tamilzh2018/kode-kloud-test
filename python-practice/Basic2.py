@@ -249,23 +249,20 @@ print("Flatten list:", flat_list)
 import itertools
 print("Flatten list: ",list(itertools.chain(*nest_list))) """
 
-#Pyramid Pattern: to achive we need to use row and columns logic
+#Pyramid Pattern: to achive we need to use rows and columns logic
 rows=int(input("Enter Number of Rows: "))
-for column in range(1, rows+1):
-    for col in range(1,column+1):
-        print("*", end="")
+for row in range(1, rows+1):
+    for col in range(1,row+1):
+        print("*", end=" ")
     print()
-for column in range(rows,0,-1):
-    for col in range(column):
-        print(column, end="")
+for row in range(rows,0,-1):
+    for col in range(row):
+        print(row, end=" ")
     print()
 
-for i in range(rows):
-    # print spaces first
-    for j in range(i ,rows):
-        print(" ", end=" ")
-    # then print stars
-    for k in range(i+1):
-        print("*", end=" ") 
+for row in range(1,rows+1):    
+    for col in range(1,row+1):
+        print(col, end=" ")
     print()
+
 
