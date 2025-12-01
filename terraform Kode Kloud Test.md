@@ -579,33 +579,27 @@ Create an IAM policy named iampolicy_james in us-east-1 region using Terraform. 
 The Terraform working directory is /home/bob/terraform. Create the main.tf file (do not create a different .tf file) to accomplish this task.
 Ans:
 
-data "aws_iam_policy_document" "ec2_read_only" {
-  statement {
-    effect = "Allow"
-
-    actions = [
-      "ec2:DescribeInstances",
-      "ec2:DescribeImages",
-      "ec2:DescribeSnapshots",
-      "ec2:DescribeVolumes",
-      "ec2:DescribeTags",
-      "ec2:DescribeSecurityGroups",
-      "ec2:DescribeKeyPairs",
-      "ec2:DescribeVpcs",
-      "ec2:DescribeSubnets",
-      "ec2:DescribeNetworkInterfaces",
-    ]
-
-    resources = ["*"]
-  }
-}
-
 resource "aws_iam_policy" "iampolicy_james" {
   name        = "iampolicy_james"
-  description = "Read-only access to EC2 console - view instances, AMIs, and snapshots"
-  policy      = data.aws_iam_policy_document.ec2_read_only.json
-}
+  path        = "/"
+  description = "allow read-only access to the EC2 console"
 
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "ec2:DescribeInstances",
+          "ec2:DescribeImages",
+          "ec2:DescribeTags",
+          "ec2:DescribeSnapshots"
+        ]
+        Resource = "*"
+      }
+    ]
+  })
+}
 
 17. **Create DynamoDB Table Using Terraform**
 The Nautilus DevOps team needs to set up a DynamoDB table for storing user data. They need to create a DynamoDB table with the following specifications:
@@ -1314,10 +1308,6 @@ kke_subnet_name: The name of the Subnet.
 Ans:
 ### ✅ 1. `main.tf`
 
-provider "aws" {
-  region = "us-east-1" # Change if needed
-}
-
 resource "aws_vpc" "nautilus_vpc" {
   cidr_block = "10.0.0.0/16"
   tags = {
@@ -1414,74 +1404,78 @@ provider "aws" {
   region = "us-east-1" # Change this to your preferred region
 }
 
+############################################
 # Create the VPC
-resource "aws_vpc" "xfusion_priv_vpc" {
-  cidr_block = var.KKE_VPC_CIDR
-  enable_dns_support = true
+############################################
+resource "aws_vpc" "datacenter_priv_vpc" {
+  cidr_block           = var.KKE_VPC_CIDR
+  enable_dns_support   = true
   enable_dns_hostnames = true
+
   tags = {
-    Name = "xfusion-priv-vpc"
+    Name = "datacenter-priv-vpc"
   }
 }
 
-# Create the subnet within the VPC
-resource "aws_subnet" "xfusion_priv_subnet" {
-  vpc_id                  = aws_vpc.xfusion_priv_vpc.id
+############################################
+# Create the private subnet
+############################################
+resource "aws_subnet" "datacenter_priv_subnet" {
+  vpc_id                  = aws_vpc.datacenter_priv_vpc.id
   cidr_block              = var.KKE_SUBNET_CIDR
-  availability_zone       = "us-east-1a" # You can change the availability zone as needed
+  availability_zone       = "us-east-1a"
   map_public_ip_on_launch = false
+
   tags = {
-    Name = "xfusion-priv-subnet"
+    Name = "datacenter-priv-subnet"
   }
 }
 
-# Create a security group that allows access only from within the VPC CIDR block
-resource "aws_security_group" "xfusion_priv_sg" {
-  vpc_id = aws_vpc.xfusion_priv_vpc.id
+############################################
+# Create the security group
+############################################
+resource "aws_security_group" "datacenter_priv_sg" {
+  vpc_id = aws_vpc.datacenter_priv_vpc.id
 
   ingress {
+    description = "Allow all TCP from inside VPC CIDR"
     from_port   = 0
     to_port     = 65535
     protocol    = "tcp"
-    cidr_blocks = [var.KKE_VPC_CIDR] # Allow access only from the VPC's CIDR block
+    cidr_blocks = [var.KKE_VPC_CIDR]
   }
 
   egress {
+    description = "Allow all outbound traffic"
     from_port   = 0
-    to_port     = 65535
-    protocol    = "tcp"
+    to_port     = 0
+    protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
 
   tags = {
-    Name = "xfusion-priv-sg"
+    Name = "datacenter-priv-sg"
   }
 }
 
-# Create an EC2 instance inside the private subnet
-resource "aws_instance" "xfusion_priv_ec2" {
-  ami           = "ami-0c55b159cbfafe1f0" # Replace with the Amazon Linux 2 AMI in your region
+############################################
+# Create EC2 instance inside private subnet
+############################################
+resource "aws_instance" "datacenter_priv_ec2" {
+  ami           = "ami-0c55b159cbfafe1f0" # Amazon Linux 2 for us-east-1
   instance_type = "t2.micro"
-  subnet_id     = aws_subnet.xfusion_priv_subnet.id
-  key_name      = "datacenter-key" # Replace with your actual key name
-  security_groups = [aws_security_group.xfusion_priv_sg.name]
+  subnet_id     = aws_subnet.datacenter_priv_subnet.id
+
+  # IMPORTANT: Use security_group_ids instead of security_groups
+  vpc_security_group_ids = [
+    aws_security_group.datacenter_priv_sg.id
+  ]
+
   tags = {
-    Name = "xfusion-priv-ec2"
+    Name = "datacenter-priv-ec2"
   }
 }
 
-# Output the names of the created resources
-output "KKE_vpc_name" {
-  value = aws_vpc.xfusion_priv_vpc.tags["Name"]
-}
-
-output "KKE_subnet_name" {
-  value = aws_subnet.xfusion_priv_subnet.tags["Name"]
-}
-
-output "KKE_ec2_private" {
-  value = aws_instance.xfusion_priv_ec2.tags["Name"]
-}
 
 
 ### **2. `variables.tf`**
@@ -4519,12 +4513,11 @@ kke_sns_topic_arn: arn of the sns-topic created.
 kke_sqs_queue_url: url of the sqs-queue created
 
 Ans: 
-## variables.tf
-
+# variables.tf
 variable "KKE_AWS_REGION" {
   description = "AWS region used for deployment."
   type        = string
-  default     = "us-east-1"
+ default = "us-east-1"
 
   validation {
     condition     = contains(["us-east-1"], var.KKE_AWS_REGION)
@@ -4553,169 +4546,132 @@ variable "KKE_IAM_ACTIONS" {
   ]
 }
 
-## main.tf
 
-# ----------------------------------------------------
-# AWS Provider Configuration
-# ----------------------------------------------------
-provider "aws" {
-  region = var.KKE_AWS_REGION
-}
-
-# ----------------------------------------------------
-# Local Values for Standardization
-# ----------------------------------------------------
 locals {
-  project_name      = "devops"
-  environment       = "dev"
-  common_name_prefix = "${local.project_name}-${local.environment}"
+  project_name = "nautilus"
+  environment  = "dev"
+  common_name  = "${local.project_name}-${local.environment}"
 
   default_tags = {
     Project     = local.project_name
     Environment = local.environment
-    Owner       = "platform-engineering"
-    Team        = "devops"
+    Owner       = "iptcp"
+    Team        = "IT"
   }
 }
 
-# ----------------------------------------------------
-# 1. SNS Topic
-# ----------------------------------------------------
-resource "aws_sns_topic" "event_topic" {
-  # Naming: project_name-environment-topic
-  name = "${local.common_name_prefix}-topic"
+# SNS topic
+resource "aws_sns_topic" "sns_topic" {
+  name = "${local.common_name}-topic"
   tags = local.default_tags
 }
 
-# ----------------------------------------------------
-# 2. SQS Queue
-# ----------------------------------------------------
-resource "aws_sqs_queue" "event_queue" {
-  # Naming: project_name-environment-queue
-  name = "${local.common_name_prefix}-queue"
+# SQS queue
+resource "aws_sqs_queue" "sqs_queue" {
+  name = "${local.common_name}-queue"
   tags = local.default_tags
 }
 
-# ----------------------------------------------------
-# 3. SQS Subscription to SNS Topic
-# ----------------------------------------------------
+# SNS topic subscription to SQS
 resource "aws_sns_topic_subscription" "queue_subscription" {
-  topic_arn = aws_sns_topic.event_topic.arn
-  protocol  = "sqs"
-  endpoint  = aws_sqs_queue.event_queue.arn
+  endpoint             = aws_sqs_queue.sqs_queue.arn
+  protocol             = "sqs"
+  topic_arn            = aws_sns_topic.sns_topic.arn
+  raw_message_delivery = true
 
-  # Mandatory: Grant the SNS topic permission to send messages to the SQS queue
-  # This block is required for the subscription to function correctly.
-  # The SQS policy must be applied on the SQS queue resource.
   depends_on = [
-    aws_sns_topic.event_topic
+    aws_sns_topic.sns_topic,
+    aws_sqs_queue.sqs_queue
   ]
 }
 
-# SQS Queue Policy to allow the SNS topic to publish
-resource "aws_sqs_queue_policy" "queue_policy" {
-  queue_url = aws_sqs_queue.event_queue.id
+# SQS queue policy to allow SNS -> SQS
+resource "aws_sqs_queue_policy" "sqs_queue_policy" {
+  queue_url = aws_sqs_queue.sqs_queue.url
+  policy    = data.aws_iam_policy_document.sqs_policy.json
+}
+
+data "aws_iam_policy_document" "sqs_policy" {
+  statement {
+    actions   = ["SQS:SendMessage"]
+    resources = [aws_sqs_queue.sqs_queue.arn]
+    principals {
+      type        = "Service"
+      identifiers = ["sns.amazonaws.com"]
+    }
+  }
+}
+
+# DynamoDB Table
+resource "aws_dynamodb_table" "dynamo_table" {
+  name           = "${local.common_name}-events"
+  hash_key       = "event_id"
+  billing_mode   = "PROVISIONED"
+  read_capacity  = 5
+  write_capacity = 5
+
+  attribute {
+    name = "event_id"
+    type = "S"
+  }
+
+  tags = local.default_tags
+}
+
+# IAM role
+resource "aws_iam_role" "iam_role" {
+  name = "${local.common_name}-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect = "Allow"
+      Principal = {
+        Service = "sns.amazonaws.com"
+      }
+      Action = "sts:AssumeRole"
+    }]
+  })
+
+  tags = local.default_tags
+}
+
+resource "aws_iam_role_policy" "inline_policy" {
+  name = "${local.common_name}-policy"
+  role = aws_iam_role.iam_role.id
 
   policy = jsonencode({
-    Version = "2012-10-17",
+    Version = "2012-10-17"
     Statement = [
-      {
-        Effect    = "Allow",
-        Principal = "*",
-        Action    = "sqs:SendMessage",
-        Resource  = aws_sqs_queue.event_queue.arn,
-        Condition = {
-          ArnEquals = {
-            "aws:SourceArn" = aws_sns_topic.event_topic.arn
-          }
-        }
+      for action in var.KKE_IAM_ACTIONS : {
+        Effect   = "Allow"
+        Action   = action
+        Resource = "*"
       }
     ]
   })
 }
 
-# ----------------------------------------------------
-# 4. DynamoDB Table
-# ----------------------------------------------------
-resource "aws_dynamodb_table" "events_table" {
-  # Naming: project_name-environment-events
-  name           = "${local.common_name_prefix}-events"
-  billing_mode   = "PROVISIONED"
-  read_capacity  = 5
-  write_capacity = 5
-  hash_key       = "event_id"
-
-  attribute {
-    name = "event_id"
-    type = "S" # String type
-  }
-
-  tags = local.default_tags
-}
-
-# ----------------------------------------------------
-# 5. IAM Role and Dynamic Policy
-# ----------------------------------------------------
-resource "aws_iam_role" "event_processor_role" {
-  # Naming: project_name-environment-role
-  name               = "${local.common_name_prefix}-role"
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17",
-    Statement = [
-      {
-        Action    = "sts:AssumeRole",
-        Effect    = "Allow",
-        Principal = {
-          Service = "lambda.amazonaws.com" # Common service principal for event processing roles
-        }
-      },
-    ],
-  })
-  tags = local.default_tags
-}
-
-resource "aws_iam_role_policy" "inline_policy" {
-  name = "event-processor-inline-policy"
-  role = aws_iam_role.event_processor_role.id
-
-  policy = jsonencode({
-    Version = "2012-10-17",
-    Statement = [
-      {
-        Effect   = "Allow",
-        Resource = "*",
-        # Use dynamic block to generate actions from the variable
-        Action = var.KKE_IAM_ACTIONS
-      },
-    ],
-  })
-}
-
-# ----------------------------------------------------
-# 6. CloudWatch Alarm for SQS Queue Depth
-# ----------------------------------------------------
+# CloudWatch alarm
 resource "aws_cloudwatch_metric_alarm" "queue_depth_alarm" {
-  # Naming: project_name-environment-alarm
-  alarm_name          = "${local.common_name_prefix}-alarm"
-  comparison_operator = "GreaterThanThreshold"
-  evaluation_periods  = "1"
+  alarm_name          = "${local.common_name}-alarm"
+  comparison_operator = "GreaterThanOrEqualToThreshold"
+  evaluation_periods  = 1
   metric_name         = "ApproximateNumberOfMessagesVisible"
   namespace           = "AWS/SQS"
-  period              = "60"
+  period              = 60
   statistic           = "Maximum"
-  threshold           = var.KKE_QUEUE_DEPTH_THRESHOLD # Configurable threshold
+  threshold           = var.KKE_QUEUE_DEPTH_THRESHOLD
+  alarm_description   = "Alarm for SQS queue depth exceeding threshold"
 
   dimensions = {
-    QueueName = aws_sqs_queue.event_queue.name
+    QueueName = aws_sqs_queue.sqs_queue.name
   }
 
-  alarm_description = "Alarm when SQS queue depth exceeds ${var.KKE_QUEUE_DEPTH_THRESHOLD} messages."
-  
   tags = local.default_tags
 }
 
 ## outputs.tf
-
 output "kke_cloudwatch_alarm_name" {
   description = "Name of the CloudWatch alarm created."
   value       = aws_cloudwatch_metric_alarm.queue_depth_alarm.alarm_name
@@ -4723,23 +4679,301 @@ output "kke_cloudwatch_alarm_name" {
 
 output "kke_dynamodb_table_name" {
   description = "Name of the DynamoDB table created."
-  value       = aws_dynamodb_table.events_table.name
+  value       = aws_dynamodb_table.dynamo_table.name
 }
 
 output "kke_iam_role_arn" {
   description = "ARN of the IAM role created."
-  value       = aws_iam_role.event_processor_role.arn
+  value       = aws_iam_role.iam_role.arn
 }
 
 output "kke_sns_topic_arn" {
   description = "ARN of the SNS topic created."
-  value       = aws_sns_topic.event_topic.arn
+  value       = aws_sns_topic.sns_topic.arn
 }
 
 output "kke_sqs_queue_url" {
   description = "URL of the SQS queue created."
-  value       = aws_sqs_queue.event_queue.id
+  value       = aws_sqs_queue.sqs_queue.url
 }
+
+# Q3:
+The Nautilus DevOps team is implementing a production-grade, event-driven system using Terraform with workspaces and modules. The goal is to teach advanced Terraform concepts. The requirements are as follows:
+
+1) Use two Terraform workspaces: dev and prod.
+
+2) Implement two Terraform modules:
+
+network module to create a VPC and a subnet.
+
+compute module to create an EC2 instance in the subnet.
+
+3) Use a locals block in the root moduleto define:
+
+A common name prefix: devops-${terraform.workspace}.
+
+Default tags with keys Project = devops and Environment = terraform.workspace.
+
+4) Use main.tf file to define all resources in a structured and modular way, ensuring clarity and maintainability across modules and workspaces.
+
+5) Use variables.tf file from the root module with the following variable names:
+
+KKE_VPC_CIDR:cidr block for the vpc.(10.0.0.0/16)
+
+KKE_INSTANCE_TYPE: EC2 instance type.
+
+6) Use validation in the variables.tf file to ensure that KKE_INSTANCE_TYPE only acceptst3.micro or t3.large, and display an appropriate error message if any other value is provided.
+
+7) The modules must merge the incoming tags with resource-specific Name tags.
+
+8) Use dev.tfvarsand prod.tfvars files with the following:
+
+In dev.tfvars: KKE_INSTANCE_TYPE= t3.micro
+In prod.tfvars: KKE_INSTANCE_TYPE =t3.large
+9) Use outputs.tf file from the root module with the following output names:
+
+kke_vpc_name: Name of the created VPC.
+kke_subnet_name: Name of the created Subnet.
+kke_instance_name: Name of the created EC2 instance.
+10) Network Module:
+
+Use variables.tf file from the network module with the following variable names:
+
+KKE_NAME_PREFIX: Name prefix to use for network resources.
+
+KKE_VPC_CIDR: CIDR block for the VPC.
+
+KKE_TAGS: Common tags map for network resources.
+
+11) Use outputs.tf file from the network module with the following output names:
+
+kke_vpc_name: Name of the created VPC.
+
+kke_subnet_name: Name of the created Subnet.
+
+12) Compute Module:
+
+Use the Amazon Linux 2 AMI image with ID ami-0c94855ba95c71c99 for the EC2 instance in the compute module.
+
+13) Use variables.tf file from the compute module with the following variable names:
+
+KKE_NAME_PREFIX: Name prefix to use for compute resources.
+KKE_SUBNET_ID: Subnet ID where the instance will be created.
+KKE_INSTANCE_TYPE: EC2 instance type.
+KKE_TAGS: Common tags map for compute resources.
+14) Use outputs.tf file from the compute module with the following output names:
+
+kke_instance_name: Name of the created EC2 instance.
+
+ Ans:
+ # Project structure
+ /home/bob/terraform
+├── main.tf
+├── variables.tf
+├── outputs.tf
+├── dev.tfvars
+├── prod.tfvars
+└── modules
+    ├── network
+    │   ├── main.tf
+    │   ├── variables.tf
+    │   └── outputs.tf
+    └── compute
+        ├── main.tf
+        ├── variables.tf
+        └── outputs.tf
+
+# Root Module Files
+The root module orchestrates the environment, defines variables, and calls the child modules.
+
+providers.tf (Root)
+Defines the AWS provider and region.
+
+# variables.tf (Root) :- Defines root variables, including the validation for KKE_INSTANCE_TYPE
+variable "KKE_VPC_CIDR" {
+  description = "CIDR block for the VPC"
+  type        = string
+  default     = "10.0.0.0/16"
+}
+
+variable "KKE_INSTANCE_TYPE" {
+  description = "EC2 instance type"
+  type        = string
+  validation {
+    condition     = contains(["t3.micro", "t3.large"], var.KKE_INSTANCE_TYPE)
+    error_message = "The KKE_INSTANCE_TYPE must be either 't3.micro' or 't3.large'."
+  }
+}
+# dev.tfvars and prod.tfvars (Root) :- These files provide the instance type for each workspace.
+**dev.tfvars:**
+KKE_INSTANCE_TYPE = "t3.micro"
+**prod.tfvars:**
+KKE_INSTANCE_TYPE = "t3.large"
+
+# main.tf (Root):- Contains the locals block for dynamic naming/tags and calls the network and compute modules.
+locals {
+  common_name_prefix = "devops-${terraform.workspace}"
+  default_tags = {
+    Project     = "devops"
+    Environment = terraform.workspace
+  }
+}
+
+# --- Network Module Call ---
+module "network" {
+  source = "./modules/network"
+
+  KKE_NAME_PREFIX = local.common_name_prefix
+  KKE_VPC_CIDR    = var.KKE_VPC_CIDR
+  KKE_TAGS        = local.default_tags
+}
+
+# --- Compute Module Call ---
+module "compute" {
+  source = "./modules/compute"
+
+  KKE_NAME_PREFIX   = local.common_name_prefix
+  KKE_SUBNET_ID     = module.network.kke_subnet_id # Pass subnet ID from network module output
+  KKE_INSTANCE_TYPE = var.KKE_INSTANCE_TYPE
+  KKE_TAGS          = local.default_tags
+}
+# outputs.tf (Root):- Exposes the required resource names from the child module outputs.
+output "kke_vpc_name" {
+  description = "Name of the created VPC."
+  value       = module.network.kke_vpc_name
+}
+
+output "kke_subnet_name" {
+  description = "Name of the created Subnet."
+  value       = module.network.kke_subnet_name
+}
+
+output "kke_instance_name" {
+  description = "Name of the created EC2 instance."
+  value       = module.compute.kke_instance_name
+}
+
+# Network Module: modules/network/variables.tf
+variable "KKE_NAME_PREFIX" {
+  description = "Name prefix to use for network resources."
+  type        = string
+}
+
+variable "KKE_VPC_CIDR" {
+  description = "CIDR block for the VPC."
+  type        = string
+}
+
+variable "KKE_TAGS" {
+  description = "Common tags map for network resources."
+  type        = map(string)
+}
+
+# modules/network/main.tf:-Creates the VPC and Subnet, merging the incoming tags with the Name tag.
+
+resource "aws_vpc" "kke_vpc" {
+  cidr_block = var.KKE_VPC_CIDR
+  tags = merge(
+    var.KKE_TAGS,
+    {
+      Name = "${var.KKE_NAME_PREFIX}-vpc"
+    }
+  )
+}
+
+resource "aws_subnet" "kke_subnet" {
+  vpc_id     = aws_vpc.kke_vpc.id
+  cidr_block = cidrsubnet(var.KKE_VPC_CIDR, 8, 0) # e.g., 10.0.0.0/24
+  tags = merge(
+    var.KKE_TAGS,
+    {
+      Name = "${var.KKE_NAME_PREFIX}-subnet"
+    }
+  )
+}
+
+# modules/network/outputs.tf
+output "kke_vpc_name" {
+  description = "Name of the created VPC."
+  value       = aws_vpc.kke_vpc.tags.Name
+}
+
+output "kke_subnet_name" {
+  description = "Name of the created Subnet."
+  value       = aws_subnet.kke_subnet.tags.Name
+}
+
+output "kke_subnet_id" {
+  description = "ID of the created Subnet for use in other modules."
+  value       = aws_subnet.kke_subnet.id
+}
+
+# Compute Module:- modules/compute/variables.tf
+variable "KKE_NAME_PREFIX" {
+  description = "Name prefix to use for compute resources."
+  type        = string
+}
+
+variable "KKE_SUBNET_ID" {
+  description = "Subnet ID where the instance will be created."
+  type        = string
+}
+
+variable "KKE_INSTANCE_TYPE" {
+  description = "EC2 instance type."
+  type        = string
+}
+
+variable "KKE_TAGS" {
+  description = "Common tags map for compute resources."
+  type        = map(string)
+}
+
+# modules/compute/main.tf:- Creates the EC2 instance using the specified AMI and merging tags.
+resource "aws_instance" "kke_instance" {
+  ami           = "ami-0c94855ba95c71c99" # Amazon Linux 2 AMI ID
+  instance_type = var.KKE_INSTANCE_TYPE
+  subnet_id     = var.KKE_SUBNET_ID
+
+  tags = merge(
+    var.KKE_TAGS,
+    {
+      Name = "${var.KKE_NAME_PREFIX}-instance"
+    }
+  )
+}
+
+# modules/compute/outputs.tf
+
+output "kke_instance_name" {
+  description = "Name of the created EC2 instance."
+  value       = aws_instance.kke_instance.tags.Name
+}
+
+# Execution Steps:
+cd /home/bob/terraform
+terraform init
+
+terraform workspace new dev
+terraform workspace new prod
+
+# Use the dev workspace
+terraform workspace select dev
+terraform plan -var-file=dev.tfvars
+terraform apply -var-file=dev.tfvars -auto-approve
+
+# Re-check that config and state match
+terraform plan -var-file=dev.tfvars
+# Expect: No changes. Your infrastructure matches the configuration.
+
+# Use the prod workspace
+terraform workspace select prod
+terraform plan -var-file=prod.tfvars
+terraform apply -var-file=prod.tfvars -auto-approve
+
+terraform plan -var-file=prod.tfvars
+# Expect: No changes. Your infrastructure matches the configuration.
+
 
 
 ***Certifcation Test***

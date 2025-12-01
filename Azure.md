@@ -142,10 +142,11 @@ az vm get-instance-view \
 
 > *A legacy system requires IPv4-only communication. Create a VNet that supports only IPv4 addressing and launch a VM in it. How do you ensure the VM can access external services securely?*
 Create a Virtual Network (VNet) named xfusion-vnet in the East US region with any IPv4 CIDR block.
+Create a Virtual Network (VNet) named datacenter-vnet in the East US region with 192.168.0.0/24 IPv4 CIDR.
 ### **Q5: Create a Virtual Network (IPv6) in Azure**
 
 > *Your organization is migrating to IPv6 to future-proof its infrastructure. Create a dual-stack (IPv4 + IPv6) VNet. What address prefixes, subnets, and route configurations are required to enable IPv6 traffic?*
-
+For this task, create a Virtual Network (VNet) named datacenter-vnet and one subnet named datacenter-subnet within the VNet in the East US region. Make sure the IPv4 address range is 10.0.0.0/16.
 ### **Q6: Create a Subnet in Azure Virtual Network**
 
 > *Add a subnet named `web-subnet` (CIDR: 10.0.1.0/24) to an existing VNet. How do you ensure this subnet is later associated with a network security group and routing table?*

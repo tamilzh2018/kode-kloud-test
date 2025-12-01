@@ -24,7 +24,14 @@ Key pair type must be rsa
 **Q3: Create GP3 Volume**
 
 > *A developer needs a high-performance volume for database storage. Create a GP3 volume with 200 GiB and 3000 IOPS in a specific AZ. How do you proceed?*
+Create a volume with the following requirements:
 
+Name of the volume should be devops-volume.
+
+Volume type must be gp3.
+
+Volume size must be 2 GiB.
+Create a GP3 volume with 2 GiB named as devops-volume
 **Q4: Create Subnet**
 
 > *You are setting up a 3-tier architecture. As part of this, you need to create a subnet in a given VPC with CIDR `10.0.1.0/24`. How would you do this and why might you choose a specific AZ?*
@@ -42,7 +49,17 @@ For this task, allocate an Elastic IP address, name it as nautilus-eip.
 **Q6: Launch EC2 Instance**
 
 > *You are deploying a testing environment and need a t3.micro Amazon Linux instance in a specific subnet with a new key pair and security group. How would you configure and launch it?*
+For this task, create an EC2 instance with following requirements:
 
+1) The name of the instance must be datacenter-ec2.
+
+2) You can use the Amazon Linux AMI to launch this instance.
+
+3) The Instance type must be t2.micro.
+
+4) Create a new RSA key pair named datacenter-kp.
+
+5) Attach the default (available by default) security group.
 **Q7: Change EC2 Instance Type**
 
 > *A t2.micro instance you launched is underperforming. You need to upgrade it to t3.medium. Walk through the steps to do this with minimal downtime.*
