@@ -1571,7 +1571,25 @@ Ans:
    17  cat user.yaml 
    18  cat mysql-svc.yaml 
    19  kubectl get svc -o wide
-   20  kubectl patch svc lamp-service -p '{"spec":{"ports":[{"port":8080,"targetPort":80,"nodePort":30008}]}}'
+   20  kubectl patch svc lamp-service -p '{
+  "spec": {
+    "ports": [
+      {
+        "name": "http-port",
+        "port": 8080,
+        "targetPort": 80,
+        "nodePort": 30008
+      },
+      {
+        "name": "http-port-old",
+        "port": 80,
+        "nodePort": 30009,
+        "protocol": "TCP"
+      }
+    ]
+  }
+}'
+
    21  kubectl edit svc lamp-service 
    22  kubectl get po
    23  kubectl exec -it lamp-wp-56c7c454fc-s4gb6 -- /bin/bash

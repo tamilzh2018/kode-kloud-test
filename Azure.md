@@ -154,7 +154,22 @@ For this task, create a Virtual Network (VNet) named datacenter-vnet and one sub
 ### **Q7: Create a Public IP Address for Azure VM**
 
 > *Your customer wants a public-facing application. Allocate a static public IP address and assign it to a new or existing VM. Should you choose Basic or Standard SKU, and why?*
+For this task, allocate a Public IP address, name it as nautilus-pip.
+Go to Azure Portal → search Public IP addresses
 
+Click Create
+
+Fill out:
+
+Name: nautilus-pip
+
+SKU: Basic or Standard (your choice)
+
+Assignment: Static or Dynamic
+
+Region: Choose your region
+
+Click Review + Create → Create
 ### **Q8: Delete Azure Virtual Machine Using Console**
 
 > *A developer VM is no longer in use. Delete the VM and optionally remove associated resources (NIC, disk, IP) from the Azure portal. What precautions should you take to avoid orphaned or shared resources being deleted?*

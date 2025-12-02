@@ -63,6 +63,9 @@ For this task, create an EC2 instance with following requirements:
 **Q7: Change EC2 Instance Type**
 
 > *A t2.micro instance you launched is underperforming. You need to upgrade it to t3.medium. Walk through the steps to do this with minimal downtime.*
+1) Change the instance type from t2.micro to t2.nano for xfusion-ec2 instance.
+
+2) Make sure the ec2 instance xfusion-ec2 is in running state after the change.
 
 **Q8: Enable Stop Protection for EC2 Instance**
 
