@@ -17,7 +17,7 @@ Sign in with the credentials provided.
 #### **Step 2: Navigate to SSH Keys**
 - In the top search bar, type **SSH keys**.
 - Select **SSH keys** from the Services list.
-- ![search bar image](../assets/day1_01.png)
+![search bar image](assets/day1_01.png)
 
 #### **Step 3: Create a New SSH Key**
 - Click **Create** at the top of the SSH keys page.
@@ -28,7 +28,7 @@ Provide the following values:
 - **Resource Group:** Select an existing one 
 - **Key pair name:** `xfusion-kp`
 - **SSH Key Type:** Select `RSA SSH Format`
-- ![details image](../assets/day1_02.png)
+![details image](assets/day1_02.png)
 
 You can leave other fields as default.
 
