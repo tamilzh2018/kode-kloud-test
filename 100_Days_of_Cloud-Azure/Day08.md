@@ -1,4 +1,4 @@
-## Task
+## Task: Attach Managed Disk to Azure Virtual Machine
 The Nautilus DevOps team is migrating services to Azure. They are breaking down tasks to ensure better control and optimization. You are tasked with attaching an existing data disk to a virtual machine (VM).
 
 An existing VM named `datacenter-vm` and a managed disk named `datacenter-disk` already exist in the East US region.
@@ -45,9 +45,9 @@ In the data disk configuration:
 #### **Step 8: Verify Disk Attachment**
 Once the operation completes:
 
-1. Stay on the **Disks** page of **datacenter-vm**  
-2. Verify that **datacenter-disk** appears under the **Data disks** section  
-3. Check that the disk status shows as **Attached**  
+- Stay on the **Disks** page of **datacenter-vm**  
+- Verify that **datacenter-disk** appears under the **Data disks** section  
+- Check that the disk status shows as **Attached**  
 ![verify attachment](assets/day8_05.png)
 
 #### **Step 9: Verify VM State**

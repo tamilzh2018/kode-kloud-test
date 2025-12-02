@@ -1,4 +1,4 @@
-## Task
+## Task: Create VM using Azure CLI
 The Nautilus DevOps team is in the process of migrating some of their workloads to Azure. One of the tasks involves creating a new Virtual Machine (VM) using the Azure CLI. The team does not have access to the Azure portal but can manage Azure resources via the `azure-client` host (the landing host for this lab).
 
 1) Create a new Azure Virtual Machine named `datacenter-vm` using the Azure CLI.  
