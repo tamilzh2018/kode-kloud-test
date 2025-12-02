@@ -1,4 +1,4 @@
-## Task
+## Task: Attach Network Interface Card (NIC) to Azure Virtual Machine
 The Nautilus DevOps team is migrating services to Azure. They are breaking down tasks to ensure better control and optimization. You are tasked with attaching an existing network interface (NIC) to a virtual machine (VM).
 
 An existing VM named `datacenter-vm` and a network interface named `datacenter-nic` already exist in the `West US` region.
@@ -56,8 +56,7 @@ Once the operation completes:
 - Wait for the VM to start successfully  
 ![start vm](assets/day9_05.png)
 
-## Important Notes
-
+**Important Notes:**
 - **VM must be stopped** before attaching additional network interfaces
 - The network interface must be in the **same region and VNet** as the VM
 - After attaching, remember to **start the VM** to use the new network interface
