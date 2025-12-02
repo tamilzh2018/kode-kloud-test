@@ -33,9 +33,10 @@ In the **IP Addresses** tab:
 
 - **IPv4 address space:** Use the default CIDR block (e.g., `10.0.0.0/16`) or specify your own IPv4 CIDR block  
 - **Subnet:** A default subnet will be created automatically (e.g., `default` with `10.0.0.0/24`)  
+![ip address space](assets/day4_03.png)
 
 You can keep the default subnet settings or modify as needed.  
-![ip address space](assets/day4_03.png)
+
 
 #### **Step 6: Review and Create**
 - Review all the configuration settings  
