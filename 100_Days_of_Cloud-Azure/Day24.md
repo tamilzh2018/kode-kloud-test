@@ -1,4 +1,4 @@
-## Task
+## Task: Securing Virtual Machine SSH Access
 The Nautilus DevOps team needs to set up a new Virtual Machine (VM) on the Azure cloud that can be accessed securely from their landing host (`azure-client`). 
 
 1. **Create an SSH Key:** On the `azure-client` host, check if an SSH key already exists. If it doesn't exist, create a new SSH key on the `azure-client` host that will be used for password-less SSH access.
