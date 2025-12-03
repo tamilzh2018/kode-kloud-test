@@ -2767,28 +2767,29 @@ KKE_alarm_name for the CloudWatch alarm name.
 
 Ans:
 **outputs.tf**
-output KKE_instance_name {
-  value = ""
+output "KKE_instance_name" {
+  value = aws_instance.datacenter_ec2.tags["Name"]
 }
-output KKE_alarm_name {
-  value = ""
+
+output "KKE_alarm_name" {
+  value = aws_cloudwatch_metric_alarm.datacenter_alarm.alarm_name
 }
 
 **main.tf**
 resource "aws_sns_topic" "sns_topic" {
-  name = "nautilus-sns-topic"
+  name = "devops-sns-topic"
 }
 
-resource "aws_instance" "nautilus_ec2" {
+resource "aws_instance" "devops_ec2" {
   ami           = "ami-0c02fb55956c7d316"
   instance_type = "t2.micro"
   tags = {
-    Name = "nautilus-ec2"
+    Name = "devops-ec2"
   }
 }
 
-resource "aws_cloudwatch_metric_alarm" "nautilus_alarm" {
-  alarm_name          = "nautilus-alarm"
+resource "aws_cloudwatch_metric_alarm" "devops_alarm" {
+  alarm_name          = "devops-alarm"
   comparison_operator = "GreaterThanOrEqualToThreshold"
   evaluation_periods  = 1
   metric_name         = "CPUUtilization"
@@ -2798,12 +2799,12 @@ resource "aws_cloudwatch_metric_alarm" "nautilus_alarm" {
   threshold           = 90
   alarm_description   = "Alarm when CPU exceeds 90% for 5 minutes"
   alarm_actions = [
-    "arn:aws:sns:us-east-1:123456789012:nautilus-sns-topic" // Replace with your actual SNS topic ARN
+    "arn:aws:sns:us-east-1:123456789012:devops-sns-topic" // Replace with your actual SNS topic ARN
   ]
   dimensions = {
-    InstanceId = aws_instance.nautilus_ec2.id
+    InstanceId = aws_instance.devops_ec2.id
   }
-  depends_on = [aws_instance.nautilus_ec2]
+  depends_on = [aws_instance.devops_ec2]
 }
 
 # Q19 Configure CloudWatch to Trigger SNS Alerts Using Terraform
