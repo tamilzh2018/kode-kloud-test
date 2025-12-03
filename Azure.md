@@ -198,6 +198,12 @@ Click Review + Create → Create
 
 > *Your VM needs additional storage for data logging. Create and attach a 128 GB managed disk. Format and mount it on a Linux instance. What performance tier would you choose for medium I/O workloads?*
 
+An existing VM named devops-vm and a managed disk named devops-disk already exist in the East US region.
+
+Attach the disk devops-disk to the VM devops-vm as a data disk.
+Ensure the disk is attached to the VM devops-vm.
+Make sure that the virtual machine initialization has been completed before submitting this task.
+
 ### **Q14: Attach Network Interface Card (NIC) to Azure Virtual Machine**
 
 > *To improve network throughput, add a second NIC to your VM. What are the prerequisites, and how does this impact VM size and OS-level configuration?*

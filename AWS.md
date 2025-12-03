@@ -71,6 +71,8 @@ For this task, create an EC2 instance with following requirements:
 
 > *Your production EC2 instance is mission-critical and must not be stopped accidentally. Enable stop protection for this instance. Explain how it helps.*
 
+There is an EC2 instance named xfusion-ec2 under us-east-1 region, enable the stop protection for this instance.
+
 **Q9: Enable Termination Protection for EC2 Instance**
 
 > *You want to protect an EC2 instance from accidental deletion during a clean-up script. Enable termination protection and explain the implications.*
