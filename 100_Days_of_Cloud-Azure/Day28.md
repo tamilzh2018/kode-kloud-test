@@ -27,11 +27,11 @@ Sign in with the credentials provided.
     - 0.0.0.0/0 → Next hop: Virtual appliance (unless intentional)  
 ![check routes](assets/day28_01.png)
 
-### **Step 2: Attach Public IP to the VM**
+### **Step 3: Attach Public IP to the VM**
 Refer [Day10](Day10.md) to check how to attach public IP.  
 ![ip configurations](assets/day28_02.png)
 
-### **Step 3: Verify Public IP Assignment**
+### **Step 4: Verify Public IP Assignment**
 Once the operation completes:
 
 - Go back to **Virtual Machines** → **devops-vm**  
@@ -39,7 +39,26 @@ Once the operation completes:
 - Verify that it now shows the IP address from **devops-pip**  
 ![verify public ip](assets/day28_03.png)
 
-### **Step 4: Update Inbound rules to Allow HTTP traffic**
+### **Step 5: Update Inbound rules to Allow HTTP traffic**
 - Go to **Settings** → **Inbound security rules** of the NSG attached to the VM
 - Add inbound rule to allow HTTP traffic  
 ![add inbound rule](assets/day28_04.png)
+
+### **Step 6: Verify setup**
+- SSH to the VM from the `azure-client` host's terminal:
+```bash
+ssh azureuser@<Public_IP>
+```
+
+- Install and start `nginx` service on `devops-vm`:
+```bash
+sudo apt update -y
+sudo apt install nginx -y
+sudo systemctl start nginx
+sudo systemctl enable nginx
+```
+
+- Test the web server accessibility from your `azure-client` host's terminal:
+```bash
+curl http://<PUBLIC_IP>
+```
