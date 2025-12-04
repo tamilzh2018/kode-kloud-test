@@ -956,30 +956,41 @@ resource "aws_s3_bucket_versioning" "versioning_s3_ran_bucket" {
 29. **Delete Backup from S3 Using Terraform**
 The Nautilus DevOps team is currently engaged in a cleanup process, focusing on removing unnecessary data and services from their AWS account. As part of the migration process, several resources were created for one-time use only, necessitating a cleanup effort to optimize their AWS environment.
 
-A S3 bucket named devops-bck-27254 already exists.
+A S3 bucket named devops-bck-12547 already exists.
 
-1) Copy the contents of devops-bck-27254 S3 bucket to /opt/s3-backup/ directory on terraform-client host (the landing host once you load this lab).
+1) Copy the contents of devops-bck-12547 S3 bucket to /opt/s3-backup/ directory on terraform-client host (the landing host once you load this lab).
 
-2) Delete the S3 bucket devops-bck-27254.
+2) Delete the S3 bucket devops-bck-12547.
 
 3) Use the AWS CLI through Terraform to accomplish this task—for datacenter_logs, by running AWS CLI commands within Terraform. The Terraform working directory is /home/bob/terraform. Update the main.tf file (do not create a separate .tf file) to accomplish this task.
 
 Ans:
-# Step 1: Use the local-exec provisioner to run AWS CLI commands and copy S3 bucket contents to the local filesystem
-resource "null_resource" "copy_s3_to_local" {
+
+# Step 1: Copy contents of S3 bucket to local directory
+resource "null_resource" "s3_backup" {
   provisioner "local-exec" {
-    command = "aws s3 sync s3://devops-bck-27254 /opt/s3-backup/"
+    command = "aws s3 cp s3://datacenter-bck-12547 /opt/s3-backup/ --recursive"
   }
 }
 
-# Step 2: Delete the S3 bucket after copying the contents
+# Step 2: Delete all objects inside the bucket
+resource "null_resource" "empty_bucket" {
+  depends_on = [null_resource.s3_backup]
+
+  provisioner "local-exec" {
+    command = "aws s3 rm s3://datacenter-bck-12547 --recursive"
+  }
+}
+
+# Step 3: Delete the bucket itself
 resource "null_resource" "delete_bucket" {
-  depends_on = [null_resource.copy_s3_to_local]  # Ensures the bucket is deleted only after the copy
+  depends_on = [null_resource.empty_bucket]
 
   provisioner "local-exec" {
-    command = "aws s3 rb s3://devops-bck-27254 --force"  # Deletes the bucket after it is emptied
+    command = "aws s3api delete-bucket --bucket datacenter-bck-12547 --region us-east-1"
   }
 }
+
 30. **Delete EC2 Instance Using Terraform**
 During the migration process, several resources were created under the AWS account. Some of these test resources are no longer needed at the moment, so we need to clean them up temporarily. One such instance is currently unused and should be deleted.
 
@@ -4982,15 +4993,14 @@ Requirements:
 
 Create modules under modules/ named:
 
-dynamodb:Provision a DynamoDB table named datacenter-<env>-table (based on the environment)(dev & prod), using id as the HASH key.
-secretsmanager: to provision a Secrets Manager secret named datacenter-<env>-secret.
-elasticsearch: to provision an Elasticsearch domain named datacenter-<env>-es.
-Create a secret value datacenter-<env>-value.(dev & prod).
+dynamodb:Provision a DynamoDB table named xfusion-<env>-table (based on the environment)(dev & prod), using id as the HASH key.
+secretsmanager: to provision a Secrets Manager secret named xfusion-<env>-secret.
+elasticsearch: to provision an Elasticsearch domain named xfusion-<env>-es.
+Create a secret value xfusion-<env>-value.(dev & prod).
 
-Use symbolic links to reuse the mainTerraform configuration across both dev and prod environments.
+Use symbolic links in each environment dev/prod for the shared Terraform files main.tf, variables.tf, and shared modules.
 
-The terraform_config.tf file in each environment is used to define environment-specific modules and link to the shared main.tf and variables.tf
-Ensure environment isolation by using symbolic links for modules and shared configuration, avoiding code duplication.
+Keep a separate terraform_config.tf in each environment to define environment-specific configuration modules, environment variables, overrides. This file should NOT be a symlink.
 Use main.tf file to define all shared resources and environment-specific modules, ensuring clarity, modularity, and maintainability.
 
 Use the variables.tf file with the following variables:
@@ -5007,158 +5017,514 @@ Use the following variables to output the following:
 kke_dynamodb_table_name:exposes the name of the created DynamoDB table
 kke_secret_arn :provides the ARN of the Secrets Manager secret
 kke_elasticsearch_domain_endpoint: returns the endpoint of the Elasticsearch domain
+Ans: 
 
-Notes:
-The Terraform working directory is /home/bob/terraform.
+### 📜 Shell Script for Directory and File Creation
 
-Right-click under the EXPLORER section in VS Code and select Open in Integrated Terminal to launch the terminal.
+This script will set up the specified directory structure, create the base files, and establish the required symbolic links.
 
-Ensure all modules use symlinks and no duplication.
+```bash
+#!/bin/bash
 
-Ensure that the variables.tf and main.tf files in each module uses an absolute path for the symlink.
+# Define the base directory
+BASE_DIR="/home/bob/terraform"
 
-Resources must be named uniquely per environment.
+# Clean up previous setup if it exists
+echo "Cleaning up existing structure in $BASE_DIR..."
+rm -rf "$BASE_DIR"
 
-Before submitting the task, ensure that terraform plan returns No changes. Your infrastructure matches the configuration.
+# 1. Create the base directory and shared files
+echo "Creating base directories..."
+# Nested environment directories and modules
+mkdir -p "$BASE_DIR"/{env/{dev,prod},modules/{dynamodb,secretsmanager,elasticsearch}}
 
-Below is a **complete, production-grade Terraform layout** that satisfies all your requirements:
+# Change to the base directory
+cd "$BASE_DIR"
 
-✔ Environment isolation (dev & prod)
-✔ Symbolic links for shared files (no code duplication)
-✔ Modules for DynamoDB, Secrets Manager, and Elasticsearch
-✔ Shared `main.tf` and `variables.tf`
-✔ Environment-specific tfvars
-✔ Outputs for table name, secret ARN, and ES endpoint
+# 2. Create shared base files in the root (These will be symlinked)
+echo "Creating shared root files (main.tf, variables.tf, outputs.tf)..."
+touch main.tf variables.tf outputs.tf
 
----
+# 3. Create module base files (These are the source files)
+echo "Creating module files (main.tf, variables.tf, outputs.tf)..."
+touch modules/dynamodb/{main.tf,variables.tf,outputs.tf}
+touch modules/secretsmanager/{main.tf,variables.tf,outputs.tf}
+touch modules/elasticsearch/{main.tf,variables.tf,outputs.tf}
 
-# ✅ **Directory Structure**
+# 4. Create environment-specific files (in the new env/ path)
+echo "Creating environment-specific config files (terraform_config.tf, .tfvars)..."
+touch env/dev/terraform_config.tf env/prod/terraform_config.tf
+touch env/dev/dev.tfvars env/prod/prod.tfvars
 
+# 5. Create Symbolic Links (Symlinks use relative paths for robustness)
+
+# --- Environment Symlinks (env/dev/ and env/prod/) ---
+echo "Creating symbolic links for env/dev/ and env/prod/..."
+# Shared root files
+ln -s ../../main.tf env/dev/main.tf
+ln -s ../../main.tf env/prod/main.tf
+
+ln -s ../../variables.tf env/dev/variables.tf
+ln -s ../../variables.tf env/prod/variables.tf
+
+ln -s ../../outputs.tf env/dev/outputs.tf
+ln -s ../../outputs.tf env/prod/outputs.tf
+
+# Shared modules
+ln -s ../../modules env/dev/modules
+ln -s ../../modules env/prod/modules
+
+echo "Directory structure and symbolic links created successfully with corrected paths."
 ```
-infra/
-├── modules/
-│   ├── dynamodb/
-│   │   └── main.tf
-        ── variables.tf
-│   ├── secretsmanager/
-│   │   └── main.tf
-        ── variables.tf
-│   └── elasticsearch/
-│       └── main.tf
-        ── variables.tf
-│
-├── shared/
-│   ├── main.tf            # shared root module
-│   ├── variables.tf       # shared variables definition
-│   └── outputs.tf         # shared outputs
-│
-├── dev/
-│   ├── terraform_config.tf
-│   ├── dev.tfvars
-│   ├── main.tf        -> ../shared/main.tf (symlink)
-│   ├── variables.tf   -> ../shared/variables.tf (symlink)
-│   └── outputs.tf     -> ../shared/outputs.tf (symlink)
-│
-└── prod/
-    ├── terraform_config.tf
-    ├── prod.tfvars
-    ├── main.tf        -> ../shared/main.tf (symlink)
-    ├── variables.tf   -> ../shared/variables.tf (symlink)
-    └── outputs.tf     -> ../shared/outputs.tf (symlink)
+
+-----
+
+### 🧱 Terraform Configuration Files Content
+
+#### 1\. Root-Level Shared Files (`$BASE_DIR/`)
+
+These files define the structure and variables shared across all environments.
+
+**`$BASE_DIR/variables.tf`** (Shared root variables)
+
+```terraform
+variable "KKE_ENV" {
+  description = "Name of the Environment used (dev or prod)."
+  type        = string
+}
+
+variable "KKE_DYNAMODB_TABLE_NAME" {
+  description = "Name of the DynamoDB table."
+  type        = string
+}
+
+variable "KKE_SECRET_NAME" {
+  description = "Name of the Secrets Manager secret."
+  type        = string
+}
+
+variable "KKE_SECRET_VALUE" {
+  description = "Secret value."
+  type        = string
+  sensitive   = true
+}
+
+variable "KKE_ELASTICSEARCH_DOMAIN" {
+  description = "Domain of the Elasticsearch cluster."
+  type        = string
+}
 ```
 
----
+**`$BASE_DIR/outputs.tf`** (Shared root outputs)
 
-# 🧱 **MODULES**
+```terraform
+output "kke_dynamodb_table_name" {
+  description = "Exposes the name of the created DynamoDB table."
+  value       = module.dynamodb.kke_dynamodb_table_name
+}
 
----
+output "kke_secret_arn" {
+  description = "Provides the ARN of the Secrets Manager secret."
+  value       = module.secretsmanager.kke_secret_arn
+}
 
-## **1. modules/dynamodb/main.tf**
+output "kke_elasticsearch_domain_endpoint" {
+  description = "Returns the endpoint of the Elasticsearch domain."
+  value       = module.elasticsearch.kke_elasticsearch_domain_endpoint
+}
+```
 
-```hcl
-resource "aws_dynamodb_table" "this" {
-  name         = var.table_name
-  hash_key     = "id"
-  billing_mode = "PAY_PER_REQUEST"
+**`$BASE_DIR/main.tf`** (Shared root configuration and module calls)
+
+```terraform
+# AWS Provider is defined in terraform_config.tf in each environment.
+
+# --- Module Calls ---
+
+module "dynamodb" {
+  source = "./modules/dynamodb"
+
+  kke_env         = var.KKE_ENV
+  table_name      = var.KKE_DYNAMODB_TABLE_NAME
+}
+
+module "secretsmanager" {
+  source = "./modules/secretsmanager"
+
+  kke_env      = var.KKE_ENV
+  secret_name  = var.KKE_SECRET_NAME
+  secret_value = var.KKE_SECRET_VALUE
+}
+
+module "elasticsearch" {
+  source = "./modules/elasticsearch"
+
+  kke_env        = var.KKE_ENV
+  domain_name    = var.KKE_ELASTICSEARCH_DOMAIN
+}
+```
+
+-----
+
+#### 2\. Module Files (`$BASE_DIR/modules/`)
+
+**`$BASE_DIR/modules/dynamodb/main.tf`**
+
+```terraform
+resource "aws_dynamodb_table" "main" {
+  name           = var.table_name
+  billing_mode   = "PAY_PER_REQUEST" # Serverless/scalable option
+  hash_key       = "id"
 
   attribute {
     name = "id"
     type = "S"
   }
-}
 
-output "table_name" {
-  value = aws_dynamodb_table.this.name
+  tags = {
+    Environment = var.kke_env
+  }
 }
 ```
-# variables.tf
+
+**`$BASE_DIR/modules/dynamodb/variables.tf`**
+
+```terraform
+variable "kke_env" {
+  description = "The environment name (dev/prod)."
+  type        = string
+}
+
 variable "table_name" {
-  type = string
+  description = "The DynamoDB table name."
+  type        = string
 }
----
+```
 
-## **modules/secretsmanager/main.tf**
+**`$BASE_DIR/modules/dynamodb/outputs.tf`**
 
-```hcl
-resource "aws_secretsmanager_secret" "this" {
-  name = var.secret_name
+```terraform
+output "kke_dynamodb_table_name" {
+  description = "The name of the created DynamoDB table."
+  value       = aws_dynamodb_table.main.name
+}
+```
+
+-----
+
+**`$BASE_DIR/modules/secretsmanager/main.tf`**
+
+```terraform
+resource "aws_secretsmanager_secret" "main" {
+  name        = var.secret_name
+  description = "Secret for ${var.kke_env} environment."
+  tags = {
+    Environment = var.kke_env
+  }
 }
 
-resource "aws_secretsmanager_secret_version" "value" {
-  secret_id     = aws_secretsmanager_secret.this.id
+resource "aws_secretsmanager_secret_version" "main" {
+  secret_id     = aws_secretsmanager_secret.main.id
   secret_string = var.secret_value
 }
-
-output "secret_arn" {
-  value = aws_secretsmanager_secret.this.arn
-}
 ```
-# variable.tf 
+
+**`$BASE_DIR/modules/secretsmanager/variables.tf`**
+
+```terraform
+variable "kke_env" {
+  description = "The environment name (dev/prod)."
+  type        = string
+}
+
 variable "secret_name" {
-  type = string
+  description = "The Secrets Manager secret name."
+  type        = string
 }
 
 variable "secret_value" {
-  type = string
-  sensitive = true
+  description = "The actual secret content."
+  type        = string
+  sensitive   = true
 }
----
+```
 
-## **modules/elasticsearch/main.tf**
+**`$BASE_DIR/modules/secretsmanager/outputs.tf`**
 
-```hcl
-resource "aws_elasticsearch_domain" "this" {
-  domain_name = var.domain_name
+```terraform
+output "kke_secret_arn" {
+  description = "The ARN of the Secrets Manager secret."
+  value       = aws_secretsmanager_secret.main.arn
+}
+```
 
+-----
+
+**`$BASE_DIR/modules/elasticsearch/main.tf`**
+
+```terraform
+# NOTE: AWS OpenSearch Service is the current name for Elasticsearch Service.
+# This resource requires a VPC, security groups, and complex permissions setup
+# for a production-grade deployment. For simulation, we use a basic configuration.
+
+resource "aws_opensearch_domain" "main" {
+  domain_name           = var.domain_name
+  engine_version        = "OpenSearch_1.3"
   cluster_config {
-    instance_type = "t3.small.elasticsearch"
+    instance_type = "t3.small.search"
+    instance_count = 1
   }
-
   ebs_options {
     ebs_enabled = true
     volume_size = 10
   }
+  tags = {
+    Environment = var.kke_env
+  }
+  # A placeholder for access policy to allow Terraform plan to succeed.
+  access_policies = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        Effect    = "Allow",
+        Principal = {
+          AWS = "*"
+        },
+        Action = "es:*",
+        Resource = "arn:aws:es:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:domain/${var.domain_name}/*"
+      }
+    ]
+  })
 }
 
-output "endpoint" {
-  value = aws_elasticsearch_domain.this.endpoint
+# Required data sources for the access policy
+data "aws_region" "current" {}
+data "aws_caller_identity" "current" {}
+```
+
+**`$BASE_DIR/modules/elasticsearch/variables.tf`**
+
+```terraform
+variable "kke_env" {
+  description = "The environment name (dev/prod)."
+  type        = string
+}
+
+variable "domain_name" {
+  description = "The Elasticsearch/OpenSearch domain name."
+  type        = string
 }
 ```
-# variables.tf
-variable "domain_name" {
+
+**`$BASE_DIR/modules/elasticsearch/outputs.tf`**
+
+```terraform
+output "kke_elasticsearch_domain_endpoint" {
+  description = "The endpoint of the Elasticsearch/OpenSearch domain."
+  value       = aws_opensearch_domain.main.endpoint
+}
+```
+
+-----
+
+#### 3\. Environment-Specific Configuration
+
+**`$BASE_DIR/env/dev/dev.tfvars`**
+
+```terraform
+KKE_ENV                      = "dev"
+KKE_DYNAMODB_TABLE_NAME      = "xfusion-dev-table"
+KKE_SECRET_NAME              = "xfusion-dev-secret"
+KKE_SECRET_VALUE             = "xfusion-dev-value"
+KKE_ELASTICSEARCH_DOMAIN     = "xfusion-dev-es"
+```
+
+**`$BASE_DIR/env/prod/prod.tfvars`**
+
+```terraform
+KKE_ENV                      = "prod"
+KKE_DYNAMODB_TABLE_NAME      = "xfusion-prod-table"
+KKE_SECRET_NAME              = "xfusion-prod-secret"
+KKE_SECRET_VALUE             = "xfusion-prod-value"
+KKE_ELASTICSEARCH_DOMAIN     = "xfusion-prod-es"
+```
+
+**`$BASE_DIR/dev/terraform_config.tf`** (Provider, backend, etc.)
+
+```terraform
+terraform {
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 5.0"
+    }
+  }
+
+  # Example of environment-specific backend configuration
+  backend "s3" {
+    bucket = "xfusion-dev-tf-state-bucket"
+    key    = "dev/terraform.tfstate"
+    region = "us-east-1"
+  }
+}
+
+provider "aws" {
+  region = "us-east-1"
+}
+```
+
+**`$BASE_DIR/prod/terraform_config.tf`** (Provider, backend, etc.)
+
+```terraform
+terraform {
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 5.0"
+    }
+  }
+
+  # Example of environment-specific backend configuration
+  backend "s3" {
+    bucket = "xfusion-prod-tf-state-bucket"
+    key    = "prod/terraform.tfstate"
+    region = "us-west-2" # Different region for prod
+  }
+}
+
+provider "aws" {
+  region = "us-west-2"
+}
+```
+
+### 🚀 Execution Steps
+
+To run this configuration for the **dev** environment, you would navigate to the environment directory and execute the standard Terraform workflow:
+
+1.  **Initialize:**
+    ```bash
+    cd /home/bob/terraform/env/dev
+    terraform init
+    ```
+2.  **Plan:**
+    ```bash
+    terraform plan -var-file="dev.tfvars"
+    ```
+3.  **Apply:**
+    ```bash
+    terraform apply -var-file="dev.tfvars"
+    ```
+
+Q5:
+The DevOps team is building a Terraform-based AWS pipeline using strict modular design, symbolic links for configuration reuse, and a sequential resource flow
+
+1 Create modules under modules/ named:
+
+SNS Module Create an SNS topic named nautilus-sns-topic.
+
+SSM Module Create an SSM Parameter named nautilus-param storing the SNS topic ARN.
+
+Step Functions Module Create a Step Functions state machine named nautilus-stepfunction that retrieves the SNS topic ARN from the SSM Parameter.
+
+Use symbolic links to reuse the root variables.tf file across all modules (no duplicated variable declarations inside module main.tf files).
+
+Create a single main.tf in the root to orchestrate the module calls in sequence SNS → SSM → Step Functions.
+
+Use the depends_on feature so that SSM depends on SNS and StepFunctions depend on SSM.
+
+Use variables.tf file with the following variable names:
+
+KKE_SNS_TOPIC_NAME:name of the sns topic.
+KKE_SSM_PARAM_NAME:ssm parameter name.
+KKE_STEP_FUNCTION_NAME:Step Function name.
+Use terraform.tfvarsfile to input the values of the variables.
+
+Use outputs.tffile with the following variables:
+
+kke_sns_topic:name of the sns topic created.
+kke_sns_parameter_name:name of the sns parameter created.
+kke_step_function_name:name of the step function created.
+
+Notes:
+
+The Terraform working directory is /home/bob/terraform.
+Right-click under the EXPLORER section in VS Code and select Open in Integrated Terminal to launch the terminal.
+3.Ensure all modules use symlinks and avoid duplication.
+Ensure that the variables.tf file in each module uses an absolute path for the symlink.
+Before submitting the task, ensure that terraform plan returns No changes. Your infrastructure matches the configuration. You may need to run terraform apply multiple times.
+
+Ans:
+
+Perfect — let’s lay out the full Terraform structure step by step so your DevOps team can implement this pipeline cleanly. I’ll show you the **directory layout**, **module code**, **root orchestration**, and **symlink setup** so everything is modular, reusable, and sequential.
+
+---
+
+## 📂 Directory Structure
+
+```
+/home/bob/terraform/
+├── main.tf
+├── variables.tf
+├── terraform.tfvars
+├── outputs.tf
+└── modules/
+    ├── sns/
+    │   ├── main.tf
+    │   └── variables.tf -> /home/bob/terraform/variables.tf
+    ├── ssm/
+    │   ├── main.tf
+    │   └── variables.tf -> /home/bob/terraform/variables.tf
+    └── stepfunctions/
+        ├── main.tf
+        └── variables.tf -> /home/bob/terraform/variables.tf
+```
+
+👉 Notice that each module’s `variables.tf` is a **symbolic link** pointing to the root `variables.tf` (absolute path).
+
+---
+
+## 📝 Root Files
+
+### `variables.tf`
+```hcl
+variable "KKE_SNS_TOPIC_NAME" {
   type = string
 }
----
 
-# 📌 **Shared Configuration (linked via symlink)**
+variable "KKE_SSM_PARAM_NAME" {
+  type = string
+}
 
----
+variable "KKE_STEP_FUNCTION_NAME" {
+  type = string
+}
+```
 
-## **shared/main.tf**
+### `terraform.tfvars`
+```hcl
+KKE_SNS_TOPIC_NAME   = "nautilus-sns-topic"
+KKE_SSM_PARAM_NAME   = "nautilus-param"
+KKE_STEP_FUNCTION_NAME = "nautilus-stepfunction"
+```
 
+### `outputs.tf`
+```hcl
+output "kke_sns_topic" {
+  value = module.sns.sns_topic_name
+}
+
+output "kke_sns_parameter_name" {
+  value = module.ssm.ssm_param_name
+}
+
+output "kke_step_function_name" {
+  value = module.stepfunctions.step_function_name
+}
+```
+
+### `main.tf`
 ```hcl
 terraform {
-  required_version = ">= 1.4"
   required_providers {
     aws = {
       source  = "hashicorp/aws"
@@ -5171,194 +5537,112 @@ provider "aws" {
   region = "us-east-1"
 }
 
-module "dynamodb" {
-  source     = "../modules/dynamodb"
-  table_name = var.KKE_DYNAMODB_TABLE_NAME
+module "sns" {
+  source = "./modules/sns"
 }
 
-module "secrets" {
-  source       = "../modules/secretsmanager"
-  secret_name  = var.KKE_SECRET_NAME
-  secret_value = var.KKE_SECRET_VALUE
+module "ssm" {
+  source     = "./modules/ssm"
+  depends_on = [module.sns]
+  sns_topic_arn = module.sns.sns_topic_arn
 }
 
-module "elasticsearch" {
-  source      = "../modules/elasticsearch"
-  domain_name = var.KKE_ELASTICSEARCH_DOMAIN
-}
-```
-
----
-
-## **shared/variables.tf**
-
-```hcl
-variable "KKE_ENV" {
-  description = "Environment (dev or prod)"
-  type        = string
-}
-
-variable "KKE_DYNAMODB_TABLE_NAME" {
-  description = "DynamoDB table name"
-  type        = string
-}
-
-variable "KKE_SECRET_NAME" {
-  description = "Secrets Manager name"
-  type        = string
-}
-
-variable "KKE_SECRET_VALUE" {
-  description = "Secret value to store"
-  type        = string
-  sensitive   = true
-}
-
-variable "KKE_ELASTICSEARCH_DOMAIN" {
-  description = "Elasticsearch domain name"
-  type        = string
+module "stepfunctions" {
+  source     = "./modules/stepfunctions"
+  depends_on = [module.ssm]
+  ssm_param_name = module.ssm.ssm_param_name
 }
 ```
 
 ---
 
-## **shared/outputs.tf**
+## 🧩 Module Files
 
+### `modules/sns/main.tf`
 ```hcl
-output "kke_dynamodb_table_name" {
-  value = module.dynamodb.table_name
+resource "aws_sns_topic" "this" {
+  name = var.KKE_SNS_TOPIC_NAME
 }
 
-output "kke_secret_arn" {
-  value = module.secrets.secret_arn
+output "sns_topic_name" {
+  value = aws_sns_topic.this.name
 }
 
-output "kke_elasticsearch_domain_endpoint" {
-  value = module.elasticsearch.endpoint
+output "sns_topic_arn" {
+  value = aws_sns_topic.this.arn
 }
 ```
 
 ---
 
-# 🌍 **Environment-Specific Config (dev & prod)**
+### `modules/ssm/main.tf`
+```hcl
+resource "aws_ssm_parameter" "this" {
+  name  = var.KKE_SSM_PARAM_NAME
+  type  = "String"
+  value = var.sns_topic_arn
+}
 
-Each environment has a small wrapper file referencing shared modules.
+output "ssm_param_name" {
+  value = aws_ssm_parameter.this.name
+}
+```
 
 ---
 
-## **dev/terraform_config.tf**
-
+### `modules/stepfunctions/main.tf`
 ```hcl
-terraform {
-  backend "s3" {
-    bucket = "my-tf-states-dev"
-    key    = "infra/terraform.tfstate"
-    region = "us-east-1"
+data "aws_ssm_parameter" "sns_param" {
+  name = var.ssm_param_name
+}
+
+resource "aws_sfn_state_machine" "this" {
+  name     = var.KKE_STEP_FUNCTION_NAME
+  role_arn = "arn:aws:iam::123456789012:role/DummyStepFunctionRole" # Replace with actual IAM role
+  definition = <<EOF
+{
+  "Comment": "State machine using SNS ARN",
+  "StartAt": "GetSNSArn",
+  "States": {
+    "GetSNSArn": {
+      "Type": "Pass",
+      "Result": "${data.aws_ssm_parameter.sns_param.value}",
+      "End": true
+    }
   }
 }
-```
+EOF
+}
 
----
-
-## **dev/dev.tfvars**
-
-```hcl
-KKE_ENV = "dev"
-
-KKE_DYNAMODB_TABLE_NAME = "datacenter-dev-table"
-
-KKE_SECRET_NAME  = "datacenter-dev-secret"
-KKE_SECRET_VALUE = "datacenter-dev-value"
-
-KKE_ELASTICSEARCH_DOMAIN = "datacenter-dev-es"
-```
-
----
-
-## **prod/terraform_config.tf**
-
-```hcl
-terraform {
-  backend "s3" {
-    bucket = "my-tf-states-prod"
-    key    = "infra/terraform.tfstate"
-    region = "us-east-1"
-  }
+output "step_function_name" {
+  value = aws_sfn_state_machine.this.name
 }
 ```
 
 ---
 
-## **prod/prod.tfvars**
+## ⚙️ Symlink Setup
 
-```hcl
-KKE_ENV = "prod"
-
-KKE_DYNAMODB_TABLE_NAME = "datacenter-prod-table"
-
-KKE_SECRET_NAME  = "datacenter-prod-secret"
-KKE_SECRET_VALUE = "datacenter-prod-value"
-
-KKE_ELASTICSEARCH_DOMAIN = "datacenter-prod-es"
+From `/home/bob/terraform/modules/sns`:
+```bash
+ln -s /home/bob/terraform/variables.tf variables.tf
 ```
+
+Repeat for `ssm` and `stepfunctions`.
 
 ---
 
-# 🔗 **Symbolic Links (Linux/macOS)**
+## ✅ Final Steps
 
-Inside **dev/**:
+1. Open VS Code → Right-click → **Open in Integrated Terminal**.
+2. Run:
+   ```bash
+   terraform init
+   terraform plan
+   terraform apply
+   ```
+3. Confirm `terraform plan` shows **No changes** after apply.
 
-```sh
-ln -s ../shared/main.tf main.tf
-ln -s ../shared/variables.tf variables.tf
-ln -s ../shared/outputs.tf outputs.tf
-```
-
-Inside **prod/**:
-
-```sh
-ln -s ../shared/main.tf main.tf
-ln -s ../shared/variables.tf variables.tf
-ln -s ../shared/outputs.tf outputs.tf
-```
-
----
-
-# 🚀 **Running Terraform**
-
-### Dev:
-
-```sh
-cd dev
-terraform init
-terraform apply -var-file="dev.tfvars"
-```
-
-### Prod:
-
-```sh
-cd prod
-terraform init
-terraform apply -var-file="prod.tfvars"
-```
-
----
-
-# ✅ **Resulting Outputs**
-
-Each environment outputs:
-
-* **kke_dynamodb_table_name**
-* **kke_secret_arn**
-* **kke_elasticsearch_domain_endpoint**
-
----
-
-If you'd like, I can also generate:
-✅ A full README
-✅ A Makefile for automation
-✅ A CI/CD pipeline (GitHub Actions / GitLab / Jenkins)
-Just let me know!
 
 
 

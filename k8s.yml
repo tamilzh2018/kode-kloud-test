@@ -9,6 +9,7 @@ spec:
   selector:
     matchLabels:
       app: lamp-wp
+      tier: frontend
   template:
     metadata:
       labels:

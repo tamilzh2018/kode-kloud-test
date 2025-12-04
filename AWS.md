@@ -77,6 +77,8 @@ There is an EC2 instance named xfusion-ec2 under us-east-1 region, enable the st
 
 > *You want to protect an EC2 instance from accidental deletion during a clean-up script. Enable termination protection and explain the implications.*
 
+An instance named nautilus-ec2 already exists in us-east-1 region. Enable termination protection for the same.
+
 **Q10: Attach Elastic IP to EC2 Instance**
 
 > *You have an Elastic IP allocated. Assign it to an EC2 instance that hosts your website, ensuring the IP remains static across reboots.*

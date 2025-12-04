@@ -204,9 +204,78 @@ Attach the disk devops-disk to the VM devops-vm as a data disk.
 Ensure the disk is attached to the VM devops-vm.
 Make sure that the virtual machine initialization has been completed before submitting this task.
 
+Ans: 
+
+Go to the Azure portal to find the VM. Search for and select Virtual machines.
+
+Select the VM you'd like to attach the disk to from the list.
+
+In the Virtual machines page, under Settings, select Disks.
+
+Attach a new disk
+Follow these steps:
+
+On the Disks pane, under Data disks, select Create and attach a new disk.
+
+Enter a name for your managed disk. Review the default settings, and update the Storage type, Size (GiB), Encryption and Host caching as necessary.
+
+Screenshot of review disk settings.
+
+When you're done, select Save at the top of the page to create the managed disk and update the VM configuration.
+
+Attach an existing disk
+Follow these steps:
+
+On the Disks pane, under Data disks, select Attach existing disks.
+
+Select the drop-down menu for Disk name and select a disk from the list of available managed disks.
+
+Select Save to attach the existing managed disk and update the VM configuration:
+
+
+
 ### **Q14: Attach Network Interface Card (NIC) to Azure Virtual Machine**
 
 > *To improve network throughput, add a second NIC to your VM. What are the prerequisites, and how does this impact VM size and OS-level configuration?*
+
+
+An existing VM named xfusion-vm and a network interface named xfusion-nic already exist in the West US region.
+
+Attach the network interface xfusion-nic to the VM xfusion-vm.
+Ensure the NIC's status is attached before submitting the task.
+Make sure that the virtual machine initialization has been completed before submitting this task.
+
+Ans: 
+
+
+## 💻 Azure Portal Steps: Attach NIC to VM
+
+### Step 1: Navigate to the Virtual Machine
+1.  In the Azure portal search bar, type **"Virtual machines"** and select the service.
+2.  Locate and select the virtual machine named **$\mathbf{xfusion-vm}$** in the **West US** region.
+    * *Note: Ensure the VM's initialization is complete, as stated in the requirement.*
+
+---
+
+### Step 2: Access Networking Settings
+1.  In the left-hand menu blade for the $\mathbf{xfusion-vm}$, under **Settings**, select **Networking**.
+
+---
+
+### Step 3: Attach the Network Interface
+1.  On the Networking page, you will see a list of attached network interfaces (if any).
+2.  At the top of the Networking page, click the **Attach network interface** button.
+    * 
+3.  A pane will open where you can select the network interface.
+4.  From the dropdown menu, select the existing network interface named **$\mathbf{xfusion-nic}$**.
+5.  Click **OK** or **Attach** (button text may vary) to confirm the attachment.
+
+---
+
+### Step 4: Verify the NIC Status
+1.  After the attachment operation is complete, the $\mathbf{xfusion-vm}$ Networking page will refresh.
+2.  Verify that the **$\mathbf{xfusion-nic}$** now appears in the list of network interfaces for the VM.
+3.  The status of the NIC should show as **Attached** (or similar wording indicating it is successfully connected to the VM).
 
 ### **Q15: Attach Public IP to Azure Virtual Machine**
 
