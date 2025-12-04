@@ -95,4 +95,4 @@ docker push xfusionacr3932.azurecr.io/pyapp:latest
 4. Click on **pyapp**
 5. Verify the **latest** tag is present
 
-![verify repo](assets/day29_03.png)
+![verify repo](assets/day29_04.png)
