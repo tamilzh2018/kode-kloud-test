@@ -12,34 +12,32 @@ The Nautilus DevOps team is expanding their Azure infrastructure and requires th
 
 ## Solution
 
-### Part 1: Create Private Virtual Network
-
-#### **Step 1: Log in to Azure Portal**
+### **Step 1: Log in to Azure Portal**
 Go to the Azure Portal:  
 https://portal.azure.com  
 Sign in with the credentials provided.
 
-#### **Step 2: Search for Virtual Networks**
+### **Step 2: Search for Virtual Networks**
 - In the top search bar, type **Virtual networks**.  
 - Select **Virtual networks** from the list.  
 
-#### **Step 3: Create a New Virtual Network**
+### **Step 3: Create a New Virtual Network**
 - Click **+ Create**
 
-#### **Step 4: Configure Basic Settings**
+### **Step 4: Configure Basic Settings**
 **Basics Tab:**
 
 - **Resource Group:** Select existing resource group  
 - **Virtual network name:** `xfusion-priv-vnet`  
 - **Region:** `(US) East US`   
 
-#### **Step 5: Configure IP Address Space**
+### **Step 5: Configure IP Address Space**
 **IP Addresses Tab:**
 
 - **IPv4 address space:** Use a private IP range (e.g., `10.0.0.0/16` or `172.16.0.0/16`)
   - We'll use `10.0.0.0/16` for this example
 
-#### **Step 6: Add Private Subnet**
+### **Step 6: Add Private Subnet**
 - Click **+ Add subnet**
 - Configure the subnet:
 
@@ -48,7 +46,7 @@ Sign in with the credentials provided.
 - **Subnet address range:** `10.0.1.0/24` (within the VNet address space)
 - **Network security group:** None (we'll create and associate a custom NSG later)
 
-#### **Step 7: Review and Create VNet**
+### **Step 7: Review and Create VNet**
 - Click **Review + create**
 - Verify all settings:
   - VNet name: `xfusion-priv-vnet`
@@ -58,7 +56,7 @@ Sign in with the credentials provided.
   - Subnet range: `10.0.1.0/24`
 - Click **Create**
 
-#### **Step 8: Verify VNet Creation**
+### **Step 8: Verify VNet Creation**
 - Click **Go to resource** or navigate to **Virtual networks**
 - Select **xfusion-priv-vnet**
 - Verify the VNet details in the Overview page
@@ -66,14 +64,14 @@ Sign in with the credentials provided.
 
 ![verify vnet](assets/day27_01.png)
 
-#### **Step 9: Search for Network Security Groups**
+### **Step 9: Search for Network Security Groups**
 - In the top search bar, type **Network security groups**
 - Select **Network security groups** from the list
 
-#### **Step 10: Create New NSG**
+### **Step 10: Create New NSG**
 - Click **+ Create**
 
-#### **Step 11: Configure NSG Basic Settings**
+### **Step 11: Configure NSG Basic Settings**
 **Basics Tab:**
 
 - **Resource Group:** Same resource group as the VNet
@@ -84,12 +82,12 @@ Sign in with the credentials provided.
 
 Click **Review + create** → **Create**
 
-#### **Step 12: Configure NSG Inbound Rules**
+### **Step 12: Configure NSG Inbound Rules**
 Once the NSG is created:
 - Click **Go to resource** or navigate to the NSG
 - In the left menu, click on **Inbound security rules**
 
-#### **Step 13: Add SSH Rule for VNet Only**
+### **Step 13: Add SSH Rule for VNet Only**
 **IMPORTANT:** We need to allow SSH only from within the VNet's CIDR block (10.0.0.0/16).  
 Click **+ Add** to create a new inbound rule
 
@@ -109,17 +107,17 @@ Click **+ Add** to create a new inbound rule
 
 Click **Add** to create the rule.
 
-#### **Step 14: Associate NSG with subnet**
+### **Step 14: Associate NSG with subnet**
 After adding the inbound rule, associate the nsg with the subnet that we've created earlier.
 - On the NSG page, go to **Settings** → **Subnets**
 - Click **+ Associate** and select **xfusion-priv-subnet**
 
-#### **Step 15: Navigate to Virtual Machines**
+### **Step 15: Navigate to Virtual Machines**
 - In the top search bar, type **Virtual Machines**
 - Select **Virtual Machines** from the list
 - Click **+ Create** → **Azure virtual machine**
 
-#### **Step 16: Configure VM Basic Settings**
+### **Step 16: Configure VM Basic Settings**
 **Basics Tab:**
 
 - **Resource Group:** Same resource group as VNet and NSG
@@ -134,14 +132,14 @@ After adding the inbound rule, associate the nsg with the subnet that we've crea
 - **Public inbound ports:** `None` 
   - We'll control access through the NSG we created
 
-#### **Step 17: Configure Disks**
+### **Step 17: Configure Disks**
 **Disks Tab:**
 
 - **OS disk size:** Default
 - **OS disk type:** `Standard HDD`
 - **Delete with VM:** Checked
 
-#### **Step 18: Configure Networking (CRITICAL STEP)**
+### **Step 18: Configure Networking (CRITICAL STEP)**
 **Networking Tab:**
 
 This is where we connect the VM to our private VNet and attach the custom NSG.
@@ -152,7 +150,7 @@ This is where we connect the VM to our private VNet and attach the custom NSG.
 - **NIC network security group:** `Advanced`
 - **Configure network security group:** Select **xfusion-priv-nsg** 
 
-#### **Step 19: Review and Create VM**
+### **Step 19: Review and Create VM**
 - Review all configuration settings:
   - VM name: **xfusion-priv-vm**
   - Region: **East US**
@@ -164,5 +162,5 @@ This is where we connect the VM to our private VNet and attach the custom NSG.
 - Wait for validation
 - Click **Create**
 
-#### **Step 20: Wait for VM Deployment**
+### **Step 20: Wait for VM Deployment**
 The VM creation will take 3-5 minutes. Wait for deployment to complete.  
