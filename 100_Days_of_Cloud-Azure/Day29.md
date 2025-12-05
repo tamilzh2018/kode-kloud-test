@@ -4,7 +4,7 @@ The Nautilus DevOps team has been tasked with setting up a containerized applica
 1. Create an ACR repository named `xfusionacr3932` under `East US`.
 2. Pricing plan must be `Basic`.
 3. Dockerfile already exists under `/root/pyapp` directory on `azure-client` host.
-4. Build a Docker image using this Dockerfile and push the same to the newly created ACR repo. The image tag must be `latest` i.e `xfusionacr3932.azurecr.io/pyapp:latest`.
+4. Build a Docker image using this Dockerfile and push the same to the newly created ACR repo. The image tag must be `latest` i.e `xfusionacr3932:latest`.
 
 ---
 
@@ -73,7 +73,7 @@ ls -la
 Build the Docker image with the ACR repository URL and tag:
 ```bash
 # Build the Docker image
-docker build -t xfusionacr3932.azurecr.io/pyapp:latest .
+docker build -t xfusionacr3932.azurecr.io/xfusionacr3932:latest .
 ```
 
 ### **Step 10: Verify Image Built Successfully**
@@ -85,14 +85,14 @@ docker images | grep xfusionacr3932
 ### **Step 11: Push Image to ACR**
 ```bash
 # Push the image to ACR
-docker push xfusionacr3932.azurecr.io/pyapp:latest
+docker push xfusionacr3932.azurecr.io/xfusionacr3932:latest
 ```
 
 ### **Step 12: Check ACR Repositories**
-1. Go to **Container registries** → **xfusionacr3932**
-2. In the left menu, click **Services** → **Repositories**
-3. You should see **pyapp** listed
-4. Click on **pyapp**
-5. Verify the **latest** tag is present
+- Go to **Container registries** → **xfusionacr3932**
+- In the left menu, click **Services** → **Repositories**
+- You should see **pyapp** listed
+- Click on **pyapp**
+- Verify the **latest** tag is present
 
 ![verify repo](assets/day29_04.png)
