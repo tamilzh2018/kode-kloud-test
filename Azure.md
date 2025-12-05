@@ -280,6 +280,11 @@ Ans:
 ### **Q15: Attach Public IP to Azure Virtual Machine**
 
 > *You created a VM without a public IP. Now you need to access it remotely. Create and associate a static public IP to the VM using both portal and CLI. What is the impact of Basic vs. Standard IP SKUs?*
+An existing VM named nautilus-vm-pip and a public IP address named nautilus-pip already exist.
+
+Attach the public IP nautilus-pip to the network interface of the VM nautilus-vm-pip.
+Make sure the VM is properly assigned the public IP.
+
 
 ### **Q16: Change Azure Virtual Machine Size Using Console**
 

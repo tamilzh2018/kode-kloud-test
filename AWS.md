@@ -83,6 +83,8 @@ An instance named nautilus-ec2 already exists in us-east-1 region. Enable termin
 
 > *You have an Elastic IP allocated. Assign it to an EC2 instance that hosts your website, ensuring the IP remains static across reboots.*
 
+There is an instance named datacenter-ec2 and an elastic-ip named datacenter-ec2-eip in us-east-1 region. Attach the datacenter-ec2-eip elastic-ip to the datacenter-ec2 instance.
+
 **Q11: Attach Elastic Network Interface to EC2 Instance**
 
 > *Your application requires multiple network interfaces. Attach a second ENI to an EC2 instance in a different subnet and describe the use case.*

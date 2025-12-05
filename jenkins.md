@@ -169,7 +169,9 @@ Ans:
     - **Name:** `PACKAGE`
     - **Default Value:** *(leave blank or specify a common package like `vim`)*
     - **Description:** `Name of the package to install on the storage server`
-
+#### Generate SSH key on Jenkins
+ssh-keygen -t ed25519
+ssh-copy-id natasha@ststor0
 #### 4. **Configure the Build Step**
 - Scroll to **Build** section.
 - Click **Add build step** → choose **Execute shell**.
