@@ -32,8 +32,8 @@ With the `nautilus-ec2-eip` Elastic IP selected:
 ### **Step 5: Configure Association Settings**
 The **Associate Elastic IP address** dialog will appear with configuration options:
 - Click on the **Instance** dropdown
-- Search for or select `nautilus-ec2` from the list 
-- Click **Associate** 
+- Search for or select `nautilus-ec2` from the list  
+- Click **Associate**  
 ![Select Instance](assets/day10_03.png)
 
 **IMPORTANT:** The instance should be in the **running** state for successful association. If stopped, start it first.  
