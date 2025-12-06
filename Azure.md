@@ -170,6 +170,50 @@ Assignment: Static or Dynamic
 Region: Choose your region
 
 Click Review + Create → Create
+### **Q: Delete Azure Virtual Machine Using Console**
+The Nautilus DevOps team is migrating a portion of their infrastructure to Azure. During the migration, they have created several virtual machines (VMs) in different regions. The team has identified one VM that is underutilized and has decided to change its size to optimize resource usage.
+
+1) Change the VM size from Standard_B1s to Standard_B2s for the virtual machine named datacenter-vm.
+
+2) Ensure the VM is in the running state after the size change is complete.
+
+Ans:
+
+
+## 🔧 Steps to Change VM Size in Azure Portal
+
+1. **Sign in to Azure Portal**
+   - Go to [portal.azure.com](https://portal.azure.com) and log in with your Azure credentials.
+
+2. **Locate the Virtual Machine**
+   - In the left-hand menu, select **Virtual Machines**.
+   - Find and click on the VM named **datacenter-vm**.
+
+3. **Stop the VM (if required)**
+   - Some VM size changes require the VM to be stopped.
+   - On the VM overview page, click **Stop** and wait until the status shows **Stopped (deallocated)**.
+
+4. **Change the VM Size**
+   - In the VM’s menu, under **Settings**, select **Size**.
+   - Browse or search for **Standard_B2s**.
+   - Click on **Standard_B2s** and then select **Resize**.
+
+5. **Restart the VM**
+   - Once resizing is complete, go back to the **Overview** page.
+   - If the VM is not already running, click **Start**.
+   - Confirm that the **Status** shows **Running**.
+
+---
+
+## ✅ Verification
+
+- Check the **Overview** blade of **datacenter-vm**:
+  - **Size** should now display **Standard_B2s**.
+  - **Status** should display **Running**.
+
+---
+
+Would you like me to also outline the equivalent **Azure CLI commands** for automation, so the DevOps team can script this change instead of doing it manually in the portal?
 ### **Q8: Delete Azure Virtual Machine Using Console**
 
 > *A developer VM is no longer in use. Delete the VM and optionally remove associated resources (NIC, disk, IP) from the Azure portal. What precautions should you take to avoid orphaned or shared resources being deleted?*

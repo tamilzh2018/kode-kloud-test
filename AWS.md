@@ -89,6 +89,13 @@ There is an instance named datacenter-ec2 and an elastic-ip named datacenter-ec2
 
 > *Your application requires multiple network interfaces. Attach a second ENI to an EC2 instance in a different subnet and describe the use case.*
 
+An instance named devops-ec2 and an elastic network interface named devops-eni already exists in us-east-1 region.
+
+Attach the devops-eni network interface to the devops-ec2 instance.
+Make sure status is attached before submitting the task.
+Please make sure instance initialisation has been completed before submitting this task.
+
+
 **Q12: Attach Volume to EC2 Instance**
 
 > *Your database has outgrown its current volume. Attach a new 100 GiB GP3 volume to your existing EC2 instance and mount it properly.*
