@@ -44,7 +44,7 @@ Params_constructor_obj= Params_constructor("name","age")
 #Params_constructor_obj= Params_constructor("age=40","name=raj") #What used in constructor meathod Same Keyword when object creation """
 
 # Area of traingle using constructor
-""" class Area_of_Triangle():
+""" class Area_of_Triangle:
     def __init__(self,b,h):
         self.base=b  #self keyword using to pass this value another function incase if you are not going to pass this values another function you use without self. ex:variable_name
         self.height=h 
@@ -65,7 +65,7 @@ default_construct_obj=Destructor_test()
 del default_construct_obj #delete the object  """
 
 # constructor with return type: always keep return None
-""" class construct_return():
+""" class construct_return:
     def __init__(self,a,b):
         c = a+b
         return c #__init__() should return None, not 'int' 'str' 'bool' if you give other than None throws error
