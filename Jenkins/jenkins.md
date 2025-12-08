@@ -557,7 +557,7 @@ ssh-copy-id peter@stdb01
 - Click **“Add build step” → “Execute shell”**
 - Paste the following shell script:
 
-#!/bin/
+#!/bin/bash
 set -e
 
 # Variables

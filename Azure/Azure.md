@@ -232,9 +232,114 @@ Would you like me to also outline the equivalent **Azure CLI commands** for auto
 
 > *Your finance team needs to track costs by environment. Add `Environment=Production` and `Owner=DevOps` tags to existing VMs using both portal and CLI. How do tags impact billing and governance?*
 
+Add the tag Environment=dev to the virtual machine named datacenter-vm.
+
 ### **Q12: SSH into an Azure Virtual Machine**
 
 > *You deployed a Linux VM but can't SSH into it. Verify your key pair, NSG rules, and public IP configuration. How do you troubleshoot and securely access the VM?*
+Task Details:
+1) VM Details:
+
+The VM is named xfusion-vm and is running in the West US region. The default SSH user is azureuser — use this user to connect to the VM.
+You need to add the root user's SSH public key from the Azure client host to the authorized_keys file of the VM's root user.
+The SSH public key of the root user on the Azure client host is located at /root/.ssh/id_rsa.pub.
+2) Public Key Addition:
+
+Copy the public key located at /root/.ssh/id_rsa.pub on the Azure client host to the authorized_keys file of the root user on xfusion-vm.
+Ensure that the proper permissions for the .ssh folder and authorized_keys file are set on the VM.
+3) Verification:
+
+After adding the public key, make sure that you are able to SSH into the xfusion-vm VM as the root user from the Azure client host without needing a password.
+Important Notes:
+Ensure that the VM is up and running before attempting to SSH.
+You may need to adjust the firewall or security group rules for the VM to allow SSH access.
+
+Ans:
+Here’s a clean, reliable walkthrough to get this done. I’ll give you the exact steps you’d run on both the Azure client host and the VM, plus the permission rules you must follow so SSH key‑based login works smoothly.
+
+---
+
+# ✅ Overview  
+You want to:
+
+- Connect to **xfusion-vm** as *azureuser*  
+- Add the **root user’s public key** from the Azure client host  
+- Place it into **/root/.ssh/authorized_keys** on the VM  
+- Fix permissions  
+- Verify passwordless SSH as **root**
+
+Let’s go step by step.
+
+---
+
+# ✅ 1. Connect to the VM as *azureuser*
+
+From the Azure client host:
+
+```bash
+ssh azureuser@<public-ip-of-xfusion-vm>
+```
+
+Make sure the VM is running and SSH (port 22) is allowed in its NSG/firewall.
+
+---
+
+# ✅ 2. Prepare the root account on the VM
+
+Once logged in as *azureuser*:
+
+ sudo mkdir -p /root/.ssh
+ sudo chmod 700 /root/.ssh
+ sudo vi /root/.ssh/authorized_keys
+ paste key and remove anything existing # key available clint machine cat /root/.ssh/id_rsa.pub
+ sudo chmod 600 /root/.ssh/authorized_keys
+
+
+# ✅ 4. Ensure SSH allows root login with keys
+
+On xfusion-vm, check:
+
+```bash
+sudo nano /etc/ssh/sshd_config
+```
+
+Ensure these lines exist:
+
+```
+PermitRootLogin yes
+PubkeyAuthentication yes
+```
+
+Then restart SSH:
+
+```bash
+sudo systemctl restart sshd
+```
+
+---
+
+# ✅ 5. Verification
+
+From the Azure client host:
+
+```bash
+ssh root@<public-ip-of-xfusion-vm>
+```
+
+If everything is correct, you should log in **without a password**.
+
+---
+
+# ✅ 6. Security Group / Firewall Check
+
+If SSH fails, verify:
+
+- **[NSG allows inbound port 22](guide://action?prefill=Tell%20me%20more%20about%3A%20NSG%20allows%20inbound%20port%2022)**
+- **[No deny rules override SSH](guide://action?prefill=Tell%20me%20more%20about%3A%20No%20deny%20rules%20override%20SSH)**
+- **[VM firewall (ufw/firewalld) allows SSH](guide://action?prefill=Tell%20me%20more%20about%3A%20VM%20firewall%20(ufw%2Ffirewalld)%20allows%20SSH)**
+
+
+
 
 ## 💾 **Disk and Network Configuration**
 

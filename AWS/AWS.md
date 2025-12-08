@@ -99,10 +99,15 @@ Please make sure instance initialisation has been completed before submitting th
 **Q12: Attach Volume to EC2 Instance**
 
 > *Your database has outgrown its current volume. Attach a new 100 GiB GP3 volume to your existing EC2 instance and mount it properly.*
+An instance named datacenter-ec2 and a volume named datacenter-volume already exists in us-east-1 region. Attach the datacenter-volume volume to the datacenter-ec2 instance, make sure to set the device name to /dev/sdb while attaching the volume.
 
 **Q13: Create AMI from EC2 Instance**
 
 > *Before applying risky updates to your EC2 instance, create a backup. How would you create an AMI to preserve the instance state?*
+
+For this task, create an AMI from an existing EC2 instance named xfusion-ec2 with the following requirement:
+
+Name of the AMI should be xfusion-ec2-ami, make sure AMI is in available state.
 
 **Q14: Terminate EC2 Instance**
 
