@@ -442,6 +442,20 @@ Make sure the VM is properly assigned the public IP.
 ### **Q17: Create and Attach Managed Disks in Azure**
 
 > *A VM requires two new data disks: one for logs, one for app data. Create two disks, attach them, and configure Linux to use LVM for redundancy. What are the IOPS limitations for the selected disk types?*
+Create a managed disk with the following requirements:
+
+Name of the disk should be nautilus-disk.
+
+Disk type must be Standard_LRS.
+
+Disk size must be 2 GiB.
+Ans:
+az disk create \
+  --resource-group <your-resource-group> \
+  --name nautilus-disk \
+  --size-gb 2 \
+  --sku Standard_LRS
+
 
 ## 🔐 **Security & Access Control**
 

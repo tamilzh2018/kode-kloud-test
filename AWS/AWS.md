@@ -113,7 +113,9 @@ Name of the AMI should be xfusion-ec2-ami, make sure AMI is in available state.
 
 > *You no longer need a development instance. What steps must you take to terminate it safely, ensuring data is not lost unintentionally?*
 
+1) Delete the ec2 instance named xfusion-ec2 present in us-east-1 region.
 
+2) Before submitting your task, make sure instance is in terminated state.
 
 ### 💾 **EBS & Snapshots**
 
