@@ -1,0 +1,1 @@
+#Encapsulation:- Wrapping of data and method ex:capsule. used to protect and hide
