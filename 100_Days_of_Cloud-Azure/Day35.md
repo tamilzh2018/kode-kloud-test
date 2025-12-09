@@ -63,7 +63,7 @@ Go back to the Public VNet to create the peering:
 ### **Step 7: Create VNet Peering from Public to Private**
 - In the left menu under **Settings**, click **Peerings**
 - Click **+ Add**  
-![add peering](assets/day35_06.png)
+![add peering](assets/day35_02.png)
 
 ### **Step 8: Configure Peering Settings**
 **Local virtual network summary:**
