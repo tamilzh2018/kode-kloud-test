@@ -34,7 +34,6 @@ RESOURCE_GROUP=$(az group list --query "[0].name" -o tsv)
 USER_NAME=$(az account show --query user.name -o tsv)
 KEY_VAULT="datacenter-22709"
 KEY_NAME="datacenter-key"
-FILE_NAME="SensitiveData.txt"
 ```
 
 ### **Step 3: Create the Key Vault**

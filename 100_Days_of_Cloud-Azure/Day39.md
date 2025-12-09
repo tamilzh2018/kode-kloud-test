@@ -19,7 +19,7 @@ https://portal.azure.com
 Sign in with the credentials provided.
 
 ### **Step 2: Create New Storage Account**
-Refer to [Day17](Day17) to check how to create a public Azure blob storage container.
+Refer to [Day17](Day17.md) to check how to create a public Azure blob storage container.
 
 ### **Step 3: Enable Static Website Hosting**
 On the storage account page:
@@ -32,7 +32,7 @@ On the storage account page:
 Click **Save**
 
 ### **Step 4: Note the Static Website Endpoints**
-After saving, you'll see important URL:
+After saving, you'll see an important URL:
 - **Primary endpoint:** `https://xfusionwebst31237.z13.web.core.windows.net/`  
 ![static website endpoints](assets/day39_02.png)
 

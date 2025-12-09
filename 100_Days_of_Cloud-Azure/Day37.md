@@ -164,7 +164,7 @@ Make sure to edit the following details in the `/var/www/html/db_test.php` file:
   - **password** = "password123";
   - **database** = "datacenter_db";
 
-### **Step 15: Validation
+### **Step 15: Validation**
 Test the connection between the PHP application and the MySQL database.  
 From **PHP VM** host:
 ```bash
