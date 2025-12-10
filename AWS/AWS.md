@@ -123,7 +123,13 @@ Name of the AMI should be xfusion-ec2-ami, make sure AMI is in available state.
 
 > *You’re about to run a script that might corrupt data. Create a snapshot of your volume so you can restore if needed. How would you do it?*
 
+Create a snapshot of an existing volume named xfusion-vol in us-east-1 region.
 
+1) The name of the snapshot must be xfusion-vol-ss.
+
+2) The description must be xfusion Snapshot.
+
+3) Make sure the snapshot status is completed before submitting the task.
 
 ### 🔐 **IAM**
 

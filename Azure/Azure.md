@@ -462,6 +462,70 @@ az disk create \
 ### **Q18: Create and Configure Network Security Group (NSG) in Azure**
 
 > *Create an NSG to allow inbound SSH and HTTP traffic but deny all other inbound access. Associate it with a subnet. How do you test and verify the NSG is working correctly?*
+For this task, create a network security group (NSG) with the following requirements:
+
+Name of the NSG should be xfusion-nsg.
+
+Add an inbound security rule named Allow-HTTP for HTTP service on port 80, with the source CIDR range of 0.0.0.0/0.
+
+Add another inbound security rule named Allow-SSH for SSH service on port 22, with the source CIDR range of 0.0.0.0/0.
+
+Ans:
+## 🌐 Steps in Azure Portal
+
+### 1. Create the NSG
+- Sign in to the [Azure Portal](https://portal.azure.com).
+- In the left menu, select **All services** → search for **Network security groups**.
+- Click **+ Create**.
+- Fill in the details:
+  - **Subscription**: choose your subscription.
+  - **Resource group**: select an existing one or create a new one.
+  - **Name**: `xfusion-nsg`.
+  - **Region**: choose the same region as your resources (VMs, subnets).
+- Click **Review + Create** → then **Create**.
+
+---
+
+### 2. Add Inbound Rule for HTTP
+- Open the newly created NSG (`xfusion-nsg`).
+- In the **Settings** section, select **Inbound security rules**.
+- Click **+ Add**.
+- Configure:
+  - **Source**: IP Addresses.
+  - **Source IP addresses/CIDR ranges**: `0.0.0.0/0`.
+  - **Source port ranges**: `*`.
+  - **Destination**: Any.
+  - **Destination port ranges**: `80`.
+  - **Protocol**: TCP.
+  - **Action**: Allow.
+  - **Priority**: e.g., `100` (lower numbers = higher priority).
+  - **Name**: `Allow-HTTP`.
+- Click **Add**.
+
+---
+
+### 3. Add Inbound Rule for SSH
+- Still under **Inbound security rules**, click **+ Add** again.
+- Configure:
+  - **Source**: IP Addresses.
+  - **Source IP addresses/CIDR ranges**: `0.0.0.0/0`.
+  - **Source port ranges**: `*`.
+  - **Destination**: Any.
+  - **Destination port ranges**: `22`.
+  - **Protocol**: TCP.
+  - **Action**: Allow.
+  - **Priority**: e.g., `110` (must be unique and higher than HTTP rule).
+  - **Name**: `Allow-SSH`.
+- Click **Add**.
+
+---
+
+### ✅ Verification
+- You should now see two inbound rules under `xfusion-nsg`:
+  - `Allow-HTTP` → TCP, Port 80, Source `0.0.0.0/0`.
+  - `Allow-SSH` → TCP, Port 22, Source `0.0.0.0/0`.
+
+
 
 ## ☁️ **Azure Storage - Blob Containers**
 
