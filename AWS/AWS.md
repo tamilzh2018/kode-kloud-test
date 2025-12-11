@@ -136,7 +136,7 @@ Create a snapshot of an existing volume named xfusion-vol in us-east-1 region.
 **Q16: Create IAM User**
 
 > *A new developer joins your team and needs access to AWS. Create an IAM user with console access and explain secure password handling.*
-
+For this task, create an IAM user named iamuser_javed.
 **Q17: Create IAM Group**
 
 > *You want to manage permissions for a team of DevOps engineers. Create an IAM group and attach relevant policies.*

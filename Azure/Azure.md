@@ -532,6 +532,31 @@ Ans:
 ### **Q19: Create a Private Azure Blob Storage Container**
 
 > *Create a blob container in a storage account with private access. Upload a sample file and verify that it cannot be accessed without credentials. How would you grant time-limited access via a Shared Access Signature (SAS)?*
+Create a new storage account named nautilusst31292 and a private Blob container named nautilus-blob-24518 within the storage account.
+
+
+### Step 1: Create the Storage Account
+1. Sign in to the [Azure Portal](https://portal.azure.com).
+2. In the left-hand menu, click **Storage accounts**.
+3. Select **+ Create**.
+4. Fill in the details:
+   - **Subscription**: Choose your subscription.
+   - **Resource group**: Select an existing one or create a new one.
+   - **Storage account name**: Enter `nautilusst31292` (must be globally unique, all lowercase).
+   - **Region**: Pick the region closest to you.
+   - **Performance**: Standard is fine unless you need Premium.
+   - **Redundancy**: Choose your replication option (e.g., LRS, GRS).
+5. Click **Review + Create**, then **Create**.
+
+### Step 2: Create the Blob Container
+1. Once the storage account is deployed, go to **Storage accounts** and select `nautilusst31292`.
+2. In the left menu, under **Data storage**, click **Containers**.
+3. Select **+ Container**.
+4. Enter the name: `nautilus-blob-24518`.
+5. Set **Public access level** to **Private (no anonymous access)**.
+6. Click **Create**.
+
+That’s it — you’ll now have a storage account named `nautilusst31292` and a private blob container named `nautilus-blob-24518`.  
 
 ### **Q20: Create a Public Azure Blob Storage Container**
 
