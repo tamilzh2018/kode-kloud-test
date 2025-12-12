@@ -21,7 +21,7 @@ REGION="us-east-1"
 Get AMI ID of `Ubuntu 22.04` image in `us-east-1` region
 ```bash
 AMI_ID=$(aws ec2 describe-images \
-  --region us-east-1 \
+  --region $REGION \
   --owners 099720109477 \
   --filters "Name=name,Values=ubuntu/images/hvm-ssd/ubuntu-jammy-22.04-amd64-server-*" "Name=state,Values=available" \
   --query "sort_by(Images, &CreationDate)[-1].ImageId" \
