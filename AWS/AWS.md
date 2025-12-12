@@ -140,6 +140,7 @@ For this task, create an IAM user named iamuser_javed.
 **Q17: Create IAM Group**
 
 > *You want to manage permissions for a team of DevOps engineers. Create an IAM group and attach relevant policies.*
+Create an IAM group named iamgroup_kirsty
 
 **Q18: Create Read-Only IAM Policy for EC2 Console Access**
 

@@ -1418,7 +1418,6 @@ git status
 
 Paste the following into the **Pipeline Script** section:
 
-
 pipeline {
     agent { label 'ststor01' }
 
@@ -1430,15 +1429,24 @@ pipeline {
         stage('Deploy') {
             steps {
                 script {
-                    if (params.BRANCH == 'master' || params.BRANCH == 'feature') {
-                        sh """
+                    if (params.BRANCH == 'master') {
+                        echo "Deploying master branch..."
+                        sh '''
                             cd /var/www/html/
                             git fetch origin
-                            git checkout ${params.BRANCH}
-                            git pull origin ${params.BRANCH}
-                        """
+                            git checkout master
+                            git pull origin master
+                        '''
+                    } else if (params.BRANCH == 'feature') {
+                        echo "Deploying feature branch..."
+                        sh '''
+                            cd /var/www/html/
+                            git fetch origin
+                            git checkout feature
+                            git pull origin feature
+                        '''
                     } else {
-                        error "Invalid branch name: ${params.BRANCH}. Use 'master' or 'feature'."
+                        error "Invalid branch specified: ${params.BRANCH}. Use master or feature."
                     }
                 }
             }

@@ -561,6 +561,62 @@ That’s it — you’ll now have a storage account named `nautilusst31292` and 
 ### **Q20: Create a Public Azure Blob Storage Container**
 
 > *You’re hosting public documents like product manuals. Create a container with anonymous read access. What are the security and compliance implications of this approach?*
+Create a new storage account named xfusionst3123 and a public Blob container named xfusion-blob-4255 within the storage account. Make sure anonymous read access for containers and blobs is enabled.
+Ans:
+
+
+* **Storage Account:** `xfusionst3123`
+* **Blob Container:** `xfusion-blob-4255`
+* **With anonymous read access enabled**
+
+---
+
+# ⭐ **Azure Portal (GUI) Instructions**
+
+## **Step 1 — Create the Storage Account**
+
+1. Go to the Azure Portal:
+   **[https://portal.azure.com](https://portal.azure.com)**
+
+2. In the left menu, click **Storage accounts**.
+
+3. Click **+ Create**.
+
+4. **Basics tab:**
+
+   * **Subscription:** Select your subscription
+   * **Resource group:** Select or create one
+   * **Storage account name:** `xfusionst3123`
+   * **Region:** Choose your region
+   * **Performance:** Standard
+   * **Redundancy:** LRS (or your choice)
+
+5. Click the **Advanced** tab.
+
+6. Under **Security**, ensure:
+   ✔ **Allow blob anonymous access** → **Enabled**
+
+7. Click **Review + Create**, then **Create**.
+
+---
+
+## **Step 2 — Create the Blob Container**
+
+1. After deployment completes, click **Go to resource**.
+
+2. In the left sidebar, choose **Containers** under **Data storage**.
+
+3. Click **+ Container**.
+
+4. Enter:
+
+   * **Name:** `xfusion-blob-4255`
+   * **Public access level:**
+     Select **Container (anonymous read access for containers and blobs)**
+
+5. Click **Create**.
+
+
 
 ### **Q21: Backup and Delete Azure Storage Blob Container**
 
