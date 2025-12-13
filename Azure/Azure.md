@@ -625,6 +625,44 @@ Ans:
 ### **Q22: Copy Data to an Azure Blob Storage Container**
 
 > *You need to upload 10 GB of data from your on-premises machine to Azure Blob Storage. Use `azcopy` to perform the operation efficiently. How do you monitor progress and resume failed transfers?*
+A Blob container named nautilus-blob-8616 already exists in the East US region under the storage account nautilusst5454. Copy the file /tmp/nautilus.txt to the Blob container nautilus-blob-8616.
+
+### Steps in Azure Portal
+
+1. **Open Azure Portal**
+
+   * Go to: [https://portal.azure.com](https://portal.azure.com)
+   * Sign in with your Azure account.
+
+2. **Navigate to the Storage Account**
+
+   * Search for **Storage accounts**.
+   * Click on **nautilusst5454**.
+
+3. **Open the Blob Container**
+
+   * In the left menu, click **Containers** (under *Data storage*).
+   * Select **nautilus-blob-8616**.
+
+4. **Upload the File**
+
+   * Click the **Upload** button at the top.
+   * In the upload panel:
+
+     * Click **Browse for files**
+     * Select `/tmp/nautilus.txt` from your system
+       *(download it locally first if it’s on a remote server)*.
+   * Leave other settings as default.
+   * Click **Upload**.
+
+5. **Verify**
+
+   * Ensure **nautilus.txt** appears in the container list.
+
+### Important Note
+
+If `/tmp/nautilus.txt` is on a **Linux VM or server**, you must first download it to your local machine before uploading via the portal GUI.
+
 
 ### **Q23: Convert Public Azure Blob Container to Private**
 

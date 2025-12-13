@@ -1,0 +1,2 @@
+#Abstraction in Python is about exposing what an object can do while hiding how it does it.Python supports abstraction mainly through Abstract Base Classes (ABCs) and interfaces-by-convention.
+#from abc import ABC, abstractmethod

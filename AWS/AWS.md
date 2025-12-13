@@ -145,6 +145,8 @@ Create an IAM group named iamgroup_kirsty
 **Q18: Create Read-Only IAM Policy for EC2 Console Access**
 
 > *You want auditors to only view EC2 resources, not modify them. Create a custom IAM policy with EC2 read-only permissions.*
+Create an IAM policy named iampolicy_james in us-east-1 region, it must allow read-only access to the EC2 console, i.e this policy must allow users to view all instances, AMIs, and snapshots in the Amazon EC2 console.
+
 
 **Q19: Attach IAM Policy to IAM User**
 

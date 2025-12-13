@@ -1,0 +1,1 @@
+#A Python decorator is a function that wraps another function to extend or modify its behavior without changing the original function’s code.

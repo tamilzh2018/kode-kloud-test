@@ -1511,7 +1511,8 @@ You can do this manually or via Jenkins. Here's how to do it manually:
    sudo sed -i 's/Listen 80/Listen 8080/' /etc/httpd/conf/httpd.conf
    sudo systemctl enable httpd
    sudo systemctl start httpd
-   
+   ss -tulnp | grep 8080
+
 
 ---
 
@@ -1601,7 +1602,32 @@ Jenkins needs to be able to connect to the **Storage Server** as user `sarah` to
 
 #### B. Build Triggers (WebHook)
 Enable “Trigger builds remotely (e.g., from scripts)”:
-http://<JENKINS_IP_or_URL>/generic-webhook-trigger/invoke?token=nautilus_secret_token
+http://172.16.238.19:8080/job/nautilus-app-deployment/build
+
+
+## Configure Generic Webhook Trigger
+
+In Build Triggers, check:
+
+✔ Generic Webhook Trigger
+
+🔹 Token
+
+Set a token (example):
+
+nautilus-webhook
+
+🔹 Post content parameters
+
+Leave empty (not required for this lab).
+
+🔹 Headers
+
+Leave empty.
+
+🔹 Optional filter
+
+Leave unchecked.
 
 #### C. Build Steps (Deployment)
 
@@ -1626,6 +1652,9 @@ Now, you need to tell Gitea to notify Jenkins when a push happens.
       * **Target URL:** The Jenkins URL with the webhook trigger. It should look like this:
         
         http://<JENKINS_IP_or_URL>/generic-webhook-trigger/invoke?token=nautilus_secret_token
+
+        http://172.16.238.19:8080/generic-webhook-trigger/invoke?token=nautilus-webhook
+        
         
         Replace `<JENKINS_IP_or_URL>` and use the token you set in the job (`nautilus_secret_token`).
       * **HTTP Method:** **POST**
