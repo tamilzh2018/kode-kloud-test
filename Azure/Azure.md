@@ -621,6 +621,93 @@ Ans:
 ### **Q21: Backup and Delete Azure Storage Blob Container**
 
 > *Before deleting a storage container, you must back it up. Copy all blobs to another container in a different storage account. Then delete the original container safely. What tools or automation could you use for backup?*
+Below are **exact, runnable steps** you can execute from the **azure-client (landing host)** to complete both tasks using the **Azure CLI**.
+
+---
+
+## Assumptions
+
+* You are logged into Azure (`az login`)
+* You have **permission** on storage account `devopsst1541`
+* The container is **private**, so we’ll authenticate using the **storage account key**
+
+---
+
+## Step 0: Set variables (recommended)
+
+```bash
+STORAGE_ACCOUNT=devopsst1541
+CONTAINER_NAME=devops-blob-28639
+DESTINATION=/opt
+```
+
+---
+
+## Step 1: Get the storage account key
+
+```bash
+ACCOUNT_KEY=$(az storage account keys list \
+  --account-name $STORAGE_ACCOUNT \
+  --query "[0].value" \
+  -o tsv)
+```
+
+---
+
+## Step 2: Copy the blob container contents to `/opt`
+
+This downloads **all blobs** in the container to `/opt`, preserving directory structure.
+
+```bash
+az storage blob download-batch \
+  --account-name nautilusst19982 \
+  --account-key  \
+  --source nautilus-blob-21868 \
+  --destination /opt
+```
+
+✅ At this point, the contents of `devops-blob-28639` should be available under `/opt`.
+
+---
+
+## Step 3: Verify contents (optional but recommended)
+
+```bash
+ls -l /opt
+```
+
+---
+
+## Step 4: Delete the blob container
+
+Once you’ve confirmed the data is copied:
+
+```bash
+az storage container delete \
+  --account-name nautilusst19982 \
+  --account-key  \
+  --name nautilus-blob-21868 
+
+```
+
+---
+
+## Step 5: Confirm deletion (optional)
+
+```bash
+az storage container list \
+  --account-name nautilusst19982 \
+  --account-key  \
+  -o table
+```
+
+---
+
+### ✔ Outcome
+
+* All blobs copied to `/opt` on the azure-client host
+* Container `devops-blob-28639` **deleted** from storage account `devopsst1541`
+
 
 ### **Q22: Copy Data to an Azure Blob Storage Container**
 
@@ -667,6 +754,74 @@ If `/tmp/nautilus.txt` is on a **Linux VM or server**, you must first download i
 ### **Q23: Convert Public Azure Blob Container to Private**
 
 > *You mistakenly created a container with public access. Update it to private without deleting or re-uploading the contents. What changes in access behavior occur post-conversion?*
+Two blob containers named datacenter-container-31524 and datacenter-priv-14874 are available in the East US region within the storage account datacenterst29442. The datacenter-container-31524 is currently public, and datacenter-priv-14874 is private.
+
+1) Convert the blob container datacenter-container-31524 from public to private while leaving datacenter-priv-14874 unchanged.
+
+2) Make sure the access level for datacenter-container-31524 is set to private with no public access.
+
+Ans:
+Below are **clear, correct ways to convert `datacenter-container-31524` from public to private** while leaving `datacenter-priv-14874` unchanged.
+This fully satisfies both requirements.
+
+---
+
+## ✅ Option 1: Azure Portal (GUI)
+
+1. Sign in to the **Azure Portal**
+2. Go to **Storage accounts**
+3. Open **`datacenterst29442`**
+4. Select **Containers** under *Data storage*
+5. Click **`datacenter-container-31524`**
+6. Select **Change access level**
+7. Set **Public access level** to:
+
+   * **Private (no anonymous access)**
+8. Click **OK / Save**
+
+🔒 Result:
+
+* `datacenter-container-31524` → **Private**
+* `datacenter-priv-14874` → **Unchanged (already private)**
+
+---
+
+## ✅ Option 2: Azure CLI (Fast & Precise)
+
+Run the following command:
+
+```bash
+az storage container set-permission \
+  --account-name datacenterst29442 \
+  --name datacenter-container-31524 \
+  --public-access off
+```
+
+✔ This explicitly removes all public access.
+
+> No command is run against `datacenter-priv-14874`, so it remains private.
+
+---
+
+## ✅ Option 3: Azure PowerShell
+
+```powershell
+Set-AzStorageContainerAcl `
+  -Name "datacenter-container-31524" `
+  -Context (Get-AzStorageAccount -ResourceGroupName <RG_NAME> -Name datacenterst29442).Context `
+  -Permission Off
+```
+
+---
+
+## 🔍 Final State Verification
+
+After the change:
+
+* **Access level:** Private (no anonymous access)
+* **Public blob/container access:** Disabled
+* **Only authorized users via Azure AD, SAS, or account keys can access data**
+
 
 ## 📊 **Azure SQL**
 
