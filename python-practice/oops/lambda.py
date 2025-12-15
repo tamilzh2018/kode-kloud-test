@@ -77,3 +77,26 @@ result=reduce(reduce_fuc,iter_values)
 result_lamda=reduce(lambda a,b:a*b,iter_values)
 print(result)
 print(result_lamda) """
+
+#operate() and accumulate()
+#instead of lambda we can use operaotor() with reduce()for aruthmetic operation
+from functools import reduce
+import operator
+list1=[2,3,8,9,12] 
+list2=["Hai", " How are you "]
+add_result=reduce(operator.add,list1)
+mul_result=reduce(operator.mul,list1)
+str_concat=reduce(operator.concat,list2)
+print(add_result)
+print(mul_result)
+print(str_concat)
+
+#instead of reduce(),we can use accumulate(), also we can get middle value not only aggregate value
+#syntax: accumulate(iterables,function_name)
+from itertools import accumulate
+from functools import reduce
+list3=[2,3,8,9,12]
+result=accumulate(list3, lambda x,y:x+y)
+result_reduce=reduce(lambda x,y:x+y, list3)
+print("Accumulate Method: ",list(result))
+print("Reduce Method: ",result_reduce)
