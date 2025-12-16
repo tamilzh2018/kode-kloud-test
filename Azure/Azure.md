@@ -864,6 +864,38 @@ After the change:
 
 > *You deployed multiple VMs in a load-balanced setup but only one VM has a public IP. Update the configuration so each VM can be reached individually for admin purposes without disrupting the application traffic. Should you use dynamic or static public IPs? What are the security implications?*
 
+The Nautilus DevOps Team has received a new request from the Development Team to set up a new Azure Virtual Machine (VM). This VM will be used to host a new application that requires a stable public IP address. To ensure that the VM has a consistent public IP, a Static Public IP address needs to be associated with it. The VM will be named xfusion-vm, and the Static Public IP will be named xfusion-pip. This setup will help the Development Team to have a reliable and consistent access point for their application.
+
+Create an Azure VM named xfusion-vm using any available Ubuntu image, with the VM size Standard_B1s.
+Generate an SSH public key on the azure-client host and associate it with the VM for SSH access.
+Associate a Static Public IP address named xfusion-pip with this VM.
+Ensure the VM is accessible via SSH using the generated public key.
+
+Ans:
+az vm create \
+  --resource-group kml_rg_main-ce872a4588ce405e \
+  --name devops-vm \
+  --image Ubuntu2204 \
+  --size Standard_B1s \
+  --admin-username azureuser \
+  --ssh-key-values ~/.ssh/devops_vm_key.pub \
+  --storage-sku Standard_LRS \
+  --os-disk-size-gb 30 \
+  --public-ip-address devops-pip
+
+az network public-ip create \
+  --resource-group kml_rg_main-ce872a4588ce405e \
+  --name devops-pip \
+  --sku standard\
+  --allocation-method Static
+
+az vm show \
+  --resource-group kml_rg_main-ce872a4588ce405e \
+  --name devops-vm \
+  --show-details \
+  --query "powerState"
+
+
 ### 📝 **Q2: Configuring Instances with User Data**
 
 > *You want every Linux VM created in your environment to automatically install Docker and start an Nginx container on boot. Use cloud-init/user data to achieve this. What format should the script be in, and how would you debug it if it fails?*
