@@ -264,6 +264,8 @@ Create an IAM policy named iampolicy_james in us-east-1 region, it must allow re
 > *You are tasked with hosting a small web application on an EC2 instance. To ensure consistent access, you need to assign a static IP. How do you launch an EC2 instance and associate an Elastic IP to it?*
  or 
  Your application backend needs to be accessed by a partner system that requires a fixed IP. Launch an EC2 instance with a security group allowing HTTP and SSH, associate an Elastic IP, and verify connectivity. What steps do you take and how do you test it?
+
+ 
 **Q2: Expanding EC2 Instance Storage for Development Needs**
 
 > *Your development EC2 instance is running out of disk space. Expand the existing root volume from 8 GiB to 30 GiB without data loss. Describe the steps involved.*
@@ -285,6 +287,134 @@ You’ve configured a baseline EC2 instance with Docker and monitoring tools. Cr
 > *You want to securely access your EC2 instance using SSH. Describe the steps to generate a key pair, configure security groups, and connect to the instance.*
 or 
 Deploy Nginx on an EC2 instance, serve a static webpage, and configure it to start automatically on reboot. How do you test it and ensure the firewall rules allow access?
+
+The Nautilus DevOps team needs to set up a new EC2 instance that can be accessed securely from their landing host (aws-client). The instance should be of type t2.micro and named datacenter-ec2. A new SSH key should be created on the aws-client host under the/root/.ssh/ folder, if it doesn't already exist. This key should then be added to the root user's authorised keys on the EC2 instance, allowing passwordless SSH access from the aws-client host.
+
+Ans:
+Got it — you want the **AWS Management Console (GUI) steps** instead of CLI.
+
+Below is the **GUI-based approach**, while still meeting the requirement that the **SSH key originates on the `aws-client` host**.
+
+---
+
+## PART 1: Create SSH key on `aws-client` (one-time)
+
+On **aws-client**, as root:
+
+```bash
+mkdir -p /root/.ssh
+chmod 700 /root/.ssh
+
+ssh-keygen -t rsa -b 4096 -f /root/.ssh/datacenter-ec2 -N ""
+```
+
+Copy the public key:
+
+```bash
+cat /root/.ssh/datacenter-ec2.pub
+```
+
+👉 **Keep this output copied** (you’ll paste it in the GUI later).
+
+---
+
+## PART 2: Launch EC2 instance using AWS Console (GUI)
+
+### 1. Open EC2 Dashboard
+
+* Log in to **AWS Console**
+* Go to **EC2 → Instances**
+* Click **Launch Instance**
+
+---
+
+### 2. Configure Instance
+
+#### **Name**
+
+* `datacenter-ec2`
+
+#### **AMI**
+
+* Amazon Linux 2 (default)
+
+#### **Instance type**
+
+* `t2.micro`
+
+---
+
+### 3. Key Pair (IMPORTANT)
+
+* Select **Proceed without a key pair**
+
+  > This is correct because we are injecting our own SSH key.
+
+---
+
+### 4. Network Settings
+
+* Choose the correct **VPC**
+* Ensure **Security Group** allows:
+
+  * SSH (TCP 22)
+  * Source: **aws-client private IP** or subnet
+
+---
+
+### 5. Advanced Details → User Data
+
+Scroll to **Advanced details**
+Paste the following (replace with your copied public key):
+
+```bash
+#!/bin/bash
+mkdir -p /root/.ssh
+chmod 700 /root/.ssh
+echo "PASTE_PUBLIC_KEY_HERE" >> /root/.ssh/authorized_keys
+chmod 600 /root/.ssh/authorized_keys
+```
+
+📌 Example:
+
+```bash
+echo "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQ..." >> /root/.ssh/authorized_keys
+```
+
+---
+
+### 6. Launch Instance
+
+Click **Launch Instance**
+
+✅ EC2 instance `datacenter-ec2` is now running.
+
+---
+
+## PART 3: Verify Passwordless SSH from aws-client
+
+1. In AWS Console:
+
+   * Go to **EC2 → Instances**
+   * Copy the **Private IP** of `datacenter-ec2`
+
+2. From `aws-client`:
+
+```bash
+ssh -i /root/.ssh/datacenter-ec2 root@<PRIVATE_IP>
+```
+
+---
+
+## ✅ Final Outcome
+
+✔ EC2 instance named **datacenter-ec2**
+✔ Instance type **t2.micro**
+✔ SSH key created on **aws-client**
+✔ Key added to **root authorized_keys** via GUI
+✔ **Passwordless SSH access** from `aws-client`
+
+
 **Q5: Setting Up an Application Load Balancer for an EC2 Instance**
 
 > *You are hosting a web application on two EC2 instances in different subnets. Create an Application Load Balancer to distribute HTTP traffic across both instances.*

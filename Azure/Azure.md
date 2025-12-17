@@ -872,26 +872,32 @@ Associate a Static Public IP address named xfusion-pip with this VM.
 Ensure the VM is accessible via SSH using the generated public key.
 
 Ans:
+ssh-keygen -t rsa -b 4096 -f /root/.ssh/devops_vm_key -N ""
+
 az vm create \
-  --resource-group kml_rg_main-ce872a4588ce405e \
-  --name devops-vm \
+  --resource-group kml_rg_main-9f671e38543643f2 \
+  --name xfusion-vm \
   --image Ubuntu2204 \
   --size Standard_B1s \
   --admin-username azureuser \
   --ssh-key-values ~/.ssh/devops_vm_key.pub \
   --storage-sku Standard_LRS \
   --os-disk-size-gb 30 \
-  --public-ip-address devops-pip
+  --public-ip-address xfusion-pip \
+  --location eastus
+
 
 az network public-ip create \
-  --resource-group kml_rg_main-ce872a4588ce405e \
-  --name devops-pip \
-  --sku standard\
-  --allocation-method Static
+  --resource-group kml_rg_main-9f671e38543643f2 \
+  --name xfusion-pip \
+  --sku Standard \
+  --allocation-method Static \
+  --location eastus
+
 
 az vm show \
-  --resource-group kml_rg_main-ce872a4588ce405e \
-  --name devops-vm \
+  --resource-group  kml_rg_main-9f671e38543643f2 \
+  --name xfusion-vm \
   --show-details \
   --query "powerState"
 
