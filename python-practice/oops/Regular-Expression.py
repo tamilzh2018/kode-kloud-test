@@ -50,3 +50,29 @@ print("Dispaly other than words:", re.findall("\W",string1)) """
 print("Two digit range:", re.findall("[0-9][0-9]",string1))
 print("Three digit range:", re.findall("[0-9][0-9][0-9]",string1))
 print("albhabets range:", re.findall("[a-c]",string1)) """
+#india phone number validation pattern="^[789]\d{9}$"
+#Email Validation pattern=r"[a-zA-Z0-9._]+@[a-z]{8}\.[a-z]{2,4}$"
+""" import re
+
+# Phone number validation
+def phone_validation(number):
+    pattern = r"^[789]\d{9}$"
+    if re.match(pattern, number):
+        return "Valid Indian Mobile Number"
+    else:
+        return "Invalid Indian Mobile Number"
+
+number = input("Enter Your Mobile Number: ")
+print(phone_validation(number))
+
+
+# Email validation
+def email_validation(mail):
+    pattern = r"^[a-zA-Z0-9._]+@[a-zA-Z]+\.[a-z]{2,4}$"
+    return bool(re.match(pattern, mail))
+
+mail = input("Enter Email Address: ")
+if email_validation(mail):
+    print("Email Address valid")
+else:
+    print("Invalid address") """
