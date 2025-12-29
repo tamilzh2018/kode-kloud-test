@@ -265,7 +265,8 @@ Create an IAM policy named iampolicy_james in us-east-1 region, it must allow re
  or 
  Your application backend needs to be accessed by a partner system that requires a fixed IP. Launch an EC2 instance with a security group allowing HTTP and SSH, associate an Elastic IP, and verify connectivity. What steps do you take and how do you test it?
 
- 
+ Create an EC2 instance named datacenter-ec2 using any linux AMI like ubuntu, the Instance type must be t2.micro and associate an Elastic IP address with this instance, name it as datacenter-eip.
+
 **Q2: Expanding EC2 Instance Storage for Development Needs**
 
 > *Your development EC2 instance is running out of disk space. Expand the existing root volume from 8 GiB to 30 GiB without data loss. Describe the steps involved.*
@@ -291,12 +292,6 @@ Deploy Nginx on an EC2 instance, serve a static webpage, and configure it to sta
 The Nautilus DevOps team needs to set up a new EC2 instance that can be accessed securely from their landing host (aws-client). The instance should be of type t2.micro and named datacenter-ec2. A new SSH key should be created on the aws-client host under the/root/.ssh/ folder, if it doesn't already exist. This key should then be added to the root user's authorised keys on the EC2 instance, allowing passwordless SSH access from the aws-client host.
 
 Ans:
-Got it — you want the **AWS Management Console (GUI) steps** instead of CLI.
-
-Below is the **GUI-based approach**, while still meeting the requirement that the **SSH key originates on the `aws-client` host**.
-
----
-
 ## PART 1: Create SSH key on `aws-client` (one-time)
 
 On **aws-client**, as root:

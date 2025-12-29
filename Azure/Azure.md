@@ -872,47 +872,407 @@ Associate a Static Public IP address named xfusion-pip with this VM.
 Ensure the VM is accessible via SSH using the generated public key.
 
 Ans:
-ssh-keygen -t rsa -b 4096 -f /root/.ssh/devops_vm_key -N ""
+# If you don’t know the resource group name:List all resource groups with their regions
+az group list --query "[].{name:name, location:location}" -o table
+
+ssh-keygen -t rsa -C azureuser 
+
+az network public-ip create \
+  --resource-group kml_rg_main-845dfc36a0e341e4 \
+  --name datacenter-pip \
+  --sku Standard \
+  --allocation-method Static \
+  --location westus
 
 az vm create \
-  --resource-group kml_rg_main-9f671e38543643f2 \
-  --name xfusion-vm \
+  --resource-group kml_rg_main-845dfc36a0e341e4 \
+  --name datacenter-vm \
   --image Ubuntu2204 \
   --size Standard_B1s \
   --admin-username azureuser \
-  --ssh-key-values ~/.ssh/devops_vm_key.pub \
+  --ssh-key-values /root/.ssh/id_rsa.pub \
   --storage-sku Standard_LRS \
   --os-disk-size-gb 30 \
-  --public-ip-address xfusion-pip \
-  --location eastus
-
-
-az network public-ip create \
-  --resource-group kml_rg_main-9f671e38543643f2 \
-  --name xfusion-pip \
-  --sku Standard \
-  --allocation-method Static \
-  --location eastus
-
+  --public-ip-address datacenter-pip \
+  --location westus
 
 az vm show \
-  --resource-group  kml_rg_main-9f671e38543643f2 \
-  --name xfusion-vm \
+  --resource-group  kml_rg_main-845dfc36a0e341e4 \
+  --name datacenter-vm \
   --show-details \
   --query "powerState"
 
+ssh -i <private-key-file-path> azureuser@IP
 
 ### 📝 **Q2: Configuring Instances with User Data**
 
 > *You want every Linux VM created in your environment to automatically install Docker and start an Nginx container on boot. Use cloud-init/user data to achieve this. What format should the script be in, and how would you debug it if it fails?*
+The Nautilus DevOps Team is working on setting up a new virtual machine (VM) to host a web server for a critical application. The team lead has requested you to create an Azure VM that will serve as a web server using Nginx. This VM will be part of the initial infrastructure setup for the Nautilus project. Ensuring that the server is correctly configured and accessible from the internet is crucial for the upcoming deployment phase.
+
+As a member of the Nautilus DevOps Team, your task is to create a VM with the following specifications:
+
+Instance Name: The VM must be named nautilus-vm.
+
+Image: Use any available Ubuntu image to create this VM.
+
+Custom Script Extension/User Data: Configure the VM to run a custom script during its launch. This script should:
+
+Install the Nginx package.
+Start the Nginx service.
+Network Security Group (NSG): Ensure that the VM allows HTTP traffic on port 80 from the internet.
+Ans:
+To create the VM and set it up using **Azure Portal (GUI)**, here's a step-by-step guide on how to achieve the same result with a graphical interface.
+
+---
+
+### **Step 1: Create the Virtual Machine**
+
+1. **Log in to Azure Portal:**
+
+   * Go to the [Azure Portal](https://portal.azure.com/).
+   * Log in with your Azure account credentials.
+
+2. **Create a Resource Group:**
+
+   * In the left sidebar, click on **Resource Groups**.
+   * Click on **+ Create** to create a new resource group.
+   * Provide a **Name** (e.g., `nautilus-rg`) and choose a **Region** (e.g., East US).
+   * Click **Review + Create** and then click **Create**.
+
+3. **Create a Virtual Machine:**
+
+   * In the left sidebar, click on **Create a resource**.
+   * In the search box, type **Virtual Machine**, and select **Virtual Machine**.
+   * Click on **Create** to begin the VM creation process.
+
+#### **Fill out the VM Creation Form:**
+
+* **Subscription**: Choose the subscription you want to use.
+* **Resource Group**: Choose the `nautilus-rg` resource group you created.
+* **Virtual Machine Name**: Enter `nautilus-vm`.
+* **Region**: Select the region (e.g., **East US**).
+* **Image**: Choose **Ubuntu 20.04 LTS** (or another Ubuntu version available).
+* **Size**: Select an appropriate VM size, such as **Standard_B1s**.
+* **Authentication Type**: Choose **SSH public key** or **Password**.
+
+  * If SSH is selected, make sure you have your SSH keys ready.
+  * If using Password, set a strong admin password.
+
+Click **Next** through the tabs for **Disks**, **Networking**, and **Management**.
+
+4. **Networking Settings:**
+
+   * Under the **Networking** tab, ensure that your **Network Security Group (NSG)** allows **HTTP traffic (port 80)**.
+   * You should see a pre-configured Network Security Group associated with the VM.
+   * If it doesn't already allow port 80, you can edit it to ensure HTTP traffic is allowed.
+
+   **To configure HTTP (port 80)**:
+
+   * Click on **Manage inbound ports**.
+   * Select **Allow selected ports** and make sure **HTTP (port 80)** is checked.
+
+#### **Review and Create the VM:**
+
+* Click on **Review + Create** to validate your settings.
+* If everything looks good, click **Create** to deploy your VM.
+
+---
+
+### **Step 2: Configure the VM with Nginx**
+
+Once the VM is created, you need to configure it to install and start Nginx.
+
+#### **1. SSH into the VM:**
+
+* Once the VM is deployed, go to the **Overview** tab of your VM.
+* Copy the **Public IP Address** of your VM.
+* Use an SSH client (e.g., **Putty** or the **terminal** on macOS/Linux) to connect to the VM using the SSH public key or password you provided earlier.
+
+Example command:
+
+```bash
+ssh azureuser@<public-ip-address>
+```
+
+#### **2. Create the Custom Script (Optional)**
+
+You can either manually configure the VM after SSH access or use a custom script to automate the process.
+
+1. **Create a Script to Install Nginx:**
+   Create a file called `nginx-setup.sh` on your local machine with the following content:
+
+```bash
+#!/bin/bash
+# Update and Install Nginx
+sudo apt-get update -y
+sudo apt-get install -y nginx
+
+# Start Nginx service
+sudo systemctl start nginx
+sudo systemctl enable nginx
+```
+
+2. **Upload the Script to Azure (Optional):**
+
+   * You can upload the script using an Azure Storage account and use it as a custom script extension for your VM. Alternatively, you can copy-paste the script directly once you SSH into the VM.
+
+#### **3. Using the Custom Script Extension (via Azure Portal):**
+
+To automate this with Azure’s **Custom Script Extension**, follow these steps:
+
+1. **Go to your Virtual Machine:**
+
+   * In the **Azure Portal**, search for and select the **Virtual Machines** section.
+   * Choose the `nautilus-vm` that you just created.
+
+2. **Add a Custom Script Extension:**
+
+   * In the left sidebar under the VM’s settings, click on **Extensions + applications**.
+   * Click on **+ Add**.
+   * Select **Custom Script for Linux**.
+   * Click **Next**.
+
+3. **Upload the Script:**
+
+   * In the **Script file** section, upload your `nginx-setup.sh` file.
+   * If you don’t have the file uploaded already, you’ll need to use **Azure Storage** or **GitHub** to host the script file.
+   * After uploading, click **Review + Create**.
+
+4. **Run the Script:**
+
+   * Click **Create** to add the extension and run the script on the VM.
+   * Once the script runs successfully, Nginx should be installed and running.
+
+---
+
+### **Step 3: Verify the Nginx Installation**
+
+1. **Check Nginx Status:**
+
+   * SSH into the VM again if needed.
+   * Check the status of Nginx:
+
+   ```bash
+   sudo systemctl status nginx
+   ```
+
+2. **Test in a Browser:**
+
+   * Open your web browser.
+   * Enter the **Public IP address** of the VM (which you copied earlier).
+   * You should see the **Nginx default welcome page**.
+
+---
+
+### **Step 4: Finalize and Ensure HTTP Access**
+
+1. **Test HTTP Access:**
+
+   * Verify that your VM is accessible over HTTP (port 80) by visiting the public IP address in any web browser.
+   * You should see the default Nginx page.
+
+
+
 
 ### 🔄 **Q3: Automating User Data Configuration Using the CLI**
 
 > *You’re automating VM provisioning via Azure CLI. Include a custom user data script that installs software on boot. How do you encode the script properly, pass it in the `az vm create` command, and verify it was executed successfully?*
+The Nautilus DevOps Team is working on setting up a new virtual machine (VM) to host a web server for a critical application. The team lead has requested you to create an Azure VM that will serve as a web server using Nginx. This VM will be part of the initial infrastructure setup for the Nautilus project. Ensuring that the server is correctly configured and accessible from the internet is crucial for the upcoming deployment phase.
+
+As a member of the Nautilus DevOps Team, your task is to create a VM using Azure CLI with the following specifications:
+
+Instance Name: The VM must be named xfusion-vm.
+
+Image: Use any available Ubuntu image to create this VM.
+
+Custom Script Extension/User Data: Configure the VM to run a custom script during its launch. This script should:
+
+Install the Nginx package.
+Start the Nginx service.
+Network Security Group (NSG): Ensure that the VM allows HTTP traffic on port 80 from the internet.
+
+Instructions:
+
+Use Azure CLI commands to set up the VM in the specified configuration.
+Ensure the VM is accessible from the internet on port 80.
+The Nginx service should be running after setup.
+
+
+Use the Azure CLI commands to complete the task.
+
+
+Notes:
+
+Create the resources only in the East US region.
+You may use the default resource group or create a new one if needed.
+
+Ans:
+# If you don’t know the resource group name:List all resource groups with their regions
+az group list --query "[].{name:name, location:location}" -o table
+- **OS Disk size:** 30 GB  
+- **Storage SKU:** Standard_LRS (standard storage)  
+- **VM size:** `B1s`  
+
+Here’s the updated **Azure CLI** command set with those specifications included:
+
+---
+
+## 🖥️ Create the VM with Disk, Storage, and Size
+```bash
+az vm create \
+  --resource-group kml_rg_main-c91e637771de403f \
+  --name xfusion-vm \
+  --image Ubuntu2204 \
+  --size Standard_B1s \
+  --storage-sku Standard_LRS \
+  --os-disk-size-gb 30 \
+  --admin-username azureuser \
+  --generate-ssh-keys \
+  --location westus
+```
+
+---
+
+## 🌐 Open Port 80 for HTTP
+```bash
+az vm open-port \
+  --resource-group kml_rg_main-c91e637771de403f \
+  --name xfusion-vm \
+  --port 80
+```
+
+---
+
+## 📜 Custom Script Extension to Install Nginx
+```bash
+az vm extension set \
+  --resource-group kml_rg_main-c91e637771de403f \
+  --vm-name xfusion-vm \
+  --publisher Microsoft.Azure.Extensions \
+  --name CustomScript \
+  --settings '{"commandToExecute":"sudo apt-get update && sudo apt-get install -y nginx && sudo systemctl start nginx && sudo systemctl enable nginx"}'
+```
+
+---
+
+## ✅ Verify
+1. Get the public IP:
+
+az vm show \
+  --resource-group kml_rg_main-c91e637771de403f \
+  --name xfusion-vm \
+  --show-details \
+  --query publicIps \
+  --output tsv
+
+2. Visit `http://<PUBLIC_IP>` — you should see the **Nginx welcome page**.
+
 
 ### 🔐 **Q4: Securing Virtual Machine SSH Access**
 
 > *You need to restrict SSH access to your VMs to only a specific IP range and disable password-based authentication. Implement this using NSGs and VM OS-level changes. What extra steps are needed if using Azure Bastion instead of public IPs?*
+
+
+
+## 🔑 Step 1: Create or Check SSH Key on `azure-client`
+
+On the landing host (`azure-client`):
+
+```bash
+# Check if an SSH key already exists
+ls -al ~/.ssh/id_rsa.pub
+
+# If not found, generate a new SSH key
+ssh-keygen -t rsa -b 4096 -C "azureuser@xfusion-vm"
+```
+
+- Press **Enter** to accept the default file location (`~/.ssh/id_rsa`).
+- Leave the passphrase empty for password-less access.
+- The public key will be saved at `~/.ssh/id_rsa.pub`.
+
+---
+
+## 💻 Step 2: Create the Virtual Machine
+
+### Using **Azure CLI**:
+
+```bash
+
+# If you don’t know the resource group name:List all resource groups with their regions
+az group list --query "[].{name:name, location:location}" -o table
+
+# Create a resource group (if not already created)
+az group create --name xfusion-rg --location westus
+
+# Create the VM
+az vm create \
+  --resource-group kml_rg_main-1272349d7c1340b8 \
+  --name xfusion-vm \
+  --image Ubuntu2204 \
+  --size Standard_B1s \
+  --admin-username azureuser \
+  --ssh-key-values ~/.ssh/id_rsa.pub \
+  --storage-sku Standard_LRS \
+  --os-disk-size-gb 30 \
+  --location westus
+```
+
+This command:
+- Creates VM `xfusion-vm` in `westus`.
+- Uses size `Standard_B1s`.
+- Configures SSH access for `azureuser` with the public key.
+
+### Using **Azure Portal**:
+1. Go to **Azure Portal → Virtual Machines → Create VM**.
+2. Select **Region: westus**.
+3. Choose **Size: Standard_B1s**.
+4. Under **Administrator account**, select **SSH public key**.
+5. Paste the contents of `~/.ssh/id_rsa.pub`.
+6. Set **Username: azureuser**.
+7. Finish and create the VM.
+
+---
+
+## 🔐 Step 3: Configure SSH Access
+
+The CLI/Portal setup already injects the public key into the VM’s `~/.ssh/authorized_keys` for `azureuser`.  
+If needed, you can manually verify:
+
+```bash
+# On the VM (via Azure Portal serial console or temporary password login)
+cat ~/.ssh/authorized_keys
+```
+
+Ensure the public key from `azure-client` is present.
+
+---
+
+## ✅ Step 4: Verify Connectivity
+
+From `azure-client`:
+
+```bash
+ssh azureuser@<PUBLIC_IP_OF_VM>
+```
+
+- Replace `<PUBLIC_IP_OF_VM>` with the IP shown in the Azure Portal or from CLI:
+
+```bash
+az vm show -d -g xfusion-rg -n xfusion-vm --query publicIps -o tsv
+```
+
+If everything is correct, you’ll connect without being prompted for a password.
+
+---
+
+## 🎯 Summary
+
+- **SSH key** created on `azure-client`.
+- **VM `xfusion-vm`** created in `westus` with size `Standard_B1s`.
+- **SSH access** configured for `azureuser` using the public key.
+- **Connectivity verified** with password-less SSH.
+
+
 
 ### 💽 **Q5: Expanding and Managing Disk Storage**
 
