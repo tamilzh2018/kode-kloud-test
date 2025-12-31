@@ -828,6 +828,107 @@ After the change:
 ### **Q24: Create Azure SQL Database**
 
 > *Deploy an Azure SQL Database in the `Basic` tier within a new SQL Server. Configure a firewall rule to allow access from your current IP only. How do you connect from Azure Data Studio or SQL Server Management Studio?*
+The Nautilus DevOps team is strategizing the migration of a portion of their infrastructure to Azure. Recognizing the scale of this undertaking, they have opted to approach the migration in incremental steps rather than as a single massive transition. Recently, they started working on creating and configuring some database instances on Azure.
+
+For this task, create one publicly accessible Azure SQL Database instance along with the following details:
+
+1) The name of the Azure SQL Database must be datacenter-sqldb.
+
+2) The server name must be datacenter-server-31660.
+
+3) The compute + storage configuration should be Basic (For less demanding workloads).
+
+4) The backup storage redundancy should be Locally-redundant backup storage.
+
+5) Set the login admin username to datacenter-admin and set an appropriate password.
+
+6) Set the database size to 2 GiB.
+
+7) Keep the rest of the configurations as default. Finally, make sure the database is in the Ready state before submitting this task.
+Ans:
+I can guide you step by step on how to create this Azure SQL Database using the **Azure portal**, following all your specified requirements. Here’s how you can do it:
+
+---
+
+### **Step 1: Sign in to Azure Portal**
+
+1. Go to [https://portal.azure.com](https://portal.azure.com) and sign in with your Azure credentials.
+
+---
+
+### **Step 2: Create a SQL Database**
+
+1. In the left-hand menu, select **Create a resource** → **Databases** → **SQL Database**.
+2. In the **Basics** tab:
+
+   * **Subscription**: Choose your subscription.
+   * **Resource group**: Select an existing one or create a new one (e.g., `datacenter-rg`).
+   * **Database name**: `datacenter-sqldb`
+   * **Server**: Click **Create new**.
+
+     * **Server name**: `datacenter-server-31660`
+     * **Server admin login**: `datacenter-admin`
+     * **Password**: Set a strong password (e.g., `Datacenter@1234` – ensure it meets Azure password rules)
+     * **Location**: Pick the region closest to your users.
+     * Click **OK**.
+   * **Want to use SQL elastic pool?**: No.
+   * **Compute + storage**: Click **Configure database**.
+
+     * **Service tier**: Basic
+     * **Max size**: 2 GiB
+     * Click **Apply**.
+
+---
+
+### **Step 3: Backup Storage Redundancy**
+
+1. Still in the **Basics** tab, find **Backup storage redundancy**:
+
+   * Choose **Locally-redundant backup storage (LRS)**
+
+---
+
+### **Step 4: Networking**
+
+1. Under **Networking**, make the database **publicly accessible**:
+
+   * Select **Public endpoint**.
+   * Add your IP to the **Firewall rules** so you can connect to the database from your network.
+
+---
+
+### **Step 5: Additional Settings**
+
+1. Leave **Additional settings** as default (no need to restore from backup or use sample data unless you want).
+
+---
+
+### **Step 6: Review + Create**
+
+1. Click **Review + create**.
+2. Verify the summary matches your requirements.
+3. Click **Create**.
+
+---
+
+### **Step 7: Wait for Deployment**
+
+1. Azure will deploy the database.
+2. Go to **All resources** → select your database.
+3. Make sure the database **status shows “Ready”** before using it.
+
+---
+
+✅ **Checklist after creation**:
+
+* Database name: `datacenter-sqldb` ✅
+* Server name: `datacenter-server-31660` ✅
+* Compute + storage: Basic, 2 GiB ✅
+* Backup redundancy: Locally-redundant ✅
+* Admin username: `datacenter-admin` ✅
+* Publicly accessible: Yes ✅
+* Status: Ready ✅
+
 
 ### **Q25: Backup an Azure SQL Database**
 
@@ -1172,127 +1273,584 @@ az vm show \
 
 > *You need to restrict SSH access to your VMs to only a specific IP range and disable password-based authentication. Implement this using NSGs and VM OS-level changes. What extra steps are needed if using Azure Bastion instead of public IPs?*
 
+The Nautilus DevOps team needs to set up a new Virtual Machine (VM) on the Azure cloud that can be accessed securely from their landing host (azure-client). Follow the steps below to complete this task:
 
+Create an SSH Key: On the azure-client host, check if an SSH key already exists. If it doesn’t exist, create a new SSH key on the azure-client host that will be used for password-less SSH access.
 
-## 🔑 Step 1: Create or Check SSH Key on `azure-client`
+Create a Virtual Machine: Use the Azure Portal or Azure CLI to create a new Virtual Machine named datacenter-vm in the westus region. Set the VM size to Standard_B1s and configure the VM with SSH access for the azureuser account using the newly created SSH key.
 
-On the landing host (`azure-client`):
+Configure SSH Access: Ensure that the SSH key from the azure-client host is added to the azureuser account on datacenter-vm, enabling secure, password-less SSH access from the azure-client host.
 
-```bash
-# Check if an SSH key already exists
-ls -al ~/.ssh/id_rsa.pub
+Verify Connectivity: Test the connection from azure-client to datacenter-vm using SSH to confirm that password-less access has been set up correctly.
 
-# If not found, generate a new SSH key
-ssh-keygen -t rsa -b 4096 -C "azureuser@xfusion-vm"
-```
-
-- Press **Enter** to accept the default file location (`~/.ssh/id_rsa`).
-- Leave the passphrase empty for password-less access.
-- The public key will be saved at `~/.ssh/id_rsa.pub`.
+Complete these tasks entirely within the Azure Portal or Azure CLI.
+Ans:
+Got it — let’s walk through how the Nautilus DevOps team can complete this **entirely within the Azure Portal**. I’ll break it down step by step so you can follow along clearly:
 
 ---
 
-## 💻 Step 2: Create the Virtual Machine
+## 🔑 Step 1: Create an SSH Key on `azure-client`
+Since you’re working from the **azure-client landing host**, you’ll need an SSH key pair.
 
-### Using **Azure CLI**:
+- Open a terminal on `azure-client`.
+- Check if an SSH key already exists:
+  ```bash
+  ls ~/.ssh/id_rsa.pub
+  ```
+- If it doesn’t exist, generate a new one:
+  ```bash
+  ssh-keygen -t rsa -b 4096 -C "azureuser@azure-client"
+  ```
+- The public key will be saved at `~/.ssh/id_rsa.pub`.
 
-```bash
+👉 You’ll need this public key when creating the VM in the Azure Portal.
 
-# If you don’t know the resource group name:List all resource groups with their regions
-az group list --query "[].{name:name, location:location}" -o table
+---
 
-# Create a resource group (if not already created)
-az group create --name xfusion-rg --location westus
-
-# Create the VM
-az vm create \
-  --resource-group kml_rg_main-1272349d7c1340b8 \
-  --name xfusion-vm \
-  --image Ubuntu2204 \
-  --size Standard_B1s \
-  --admin-username azureuser \
-  --ssh-key-values ~/.ssh/id_rsa.pub \
-  --storage-sku Standard_LRS \
-  --os-disk-size-gb 30 \
-  --location westus
-```
-
-This command:
-- Creates VM `xfusion-vm` in `westus`.
-- Uses size `Standard_B1s`.
-- Configures SSH access for `azureuser` with the public key.
-
-### Using **Azure Portal**:
-1. Go to **Azure Portal → Virtual Machines → Create VM**.
-2. Select **Region: westus**.
-3. Choose **Size: Standard_B1s**.
-4. Under **Administrator account**, select **SSH public key**.
-5. Paste the contents of `~/.ssh/id_rsa.pub`.
-6. Set **Username: azureuser**.
-7. Finish and create the VM.
+## 🖥️ Step 2: Create the Virtual Machine in Azure Portal
+1. Sign in to the [Azure Portal](https://portal.azure.com).
+2. Navigate to **Virtual Machines** → **Create** → **Azure Virtual Machine**.
+3. Fill in the details:
+   - **Subscription**: Select your subscription.
+   - **Resource Group**: Choose an existing one or create new.
+   - **VM Name**: `datacenter-vm`
+   - **Region**: `West US`
+   - **Size**: `Standard_B1s`
+   - **Authentication type**: SSH public key
+   - **Username**: `azureuser`
+   - **SSH public key source**: Paste the contents of `~/.ssh/id_rsa.pub` from `azure-client`.
+4. Networking:
+   - Ensure **Inbound port rules** allow SSH (port 22).
+   - Leave defaults for other settings unless your org requires changes.
+5. Review + Create → Click **Create**.
 
 ---
 
 ## 🔐 Step 3: Configure SSH Access
-
-The CLI/Portal setup already injects the public key into the VM’s `~/.ssh/authorized_keys` for `azureuser`.  
-If needed, you can manually verify:
-
-```bash
-# On the VM (via Azure Portal serial console or temporary password login)
-cat ~/.ssh/authorized_keys
-```
-
-Ensure the public key from `azure-client` is present.
+Azure automatically provisions the VM with the SSH key you pasted. That means the `azureuser` account on `datacenter-vm` is already configured for password-less SSH.
 
 ---
 
 ## ✅ Step 4: Verify Connectivity
-
-From `azure-client`:
-
-```bash
-ssh azureuser@<PUBLIC_IP_OF_VM>
-```
-
-- Replace `<PUBLIC_IP_OF_VM>` with the IP shown in the Azure Portal or from CLI:
+From the `azure-client` host, test the connection:
 
 ```bash
-az vm show -d -g xfusion-rg -n xfusion-vm --query publicIps -o tsv
+ssh azureuser@datacenter-vm-public-ip
 ```
 
-If everything is correct, you’ll connect without being prompted for a password.
+- Replace `datacenter-vm-public-ip` with the VM’s public IP address (visible in the Azure Portal under the VM’s **Overview**).
+- If everything is set up correctly, you’ll connect without being prompted for a password.
 
 ---
 
 ## 🎯 Summary
-
 - **SSH key** created on `azure-client`.
-- **VM `xfusion-vm`** created in `westus` with size `Standard_B1s`.
+- **VM** `datacenter-vm` deployed in **West US** with size `Standard_B1s`.
 - **SSH access** configured for `azureuser` using the public key.
 - **Connectivity verified** with password-less SSH.
-
 
 
 ### 💽 **Q5: Expanding and Managing Disk Storage**
 
 > *Your VM is running out of space. Attach a new data disk and expand the root volume by 50 GB without downtime. How do you perform this safely and validate the operation inside the VM (Linux or Windows)?*
+The Nautilus DevOps team needs to expand the storage capacity of an existing virtual machine and add an additional data disk to support increased workloads. This task requires resizing the existing VM disk and mounting a new data disk to the VM.
+
+As a member of the team, perform the following steps:
+
+1) Expand the existing VM xfusion-vm disk from 32Gi to 64Gi.
+
+2) Also create a new standard HDD data disk named xfusion-disk of 64Gi and mount the disk to VM xfusion-vm at location /mnt/xfusion-disk.
+
+Ans:
+Got it — you’d like to see how this task is done through the **cloud provider’s GUI (portal)** instead of CLI. Let’s walk through the steps visually-oriented, assuming you’re using **Azure Portal** (the process is very similar in AWS or GCP):
+
+---
+
+## 🔹 Step 1: Expand the existing VM disk (xfusion-vm)
+1. Log in to the **Azure Portal**.
+2. Navigate to **Virtual Machines** → select **xfusion-vm**.
+3. In the left menu, go to **Disks**.
+4. Click on the **OS Disk** (currently 32Gi).
+5. Select **Size + performance**.
+6. Change the size from **32Gi → 64Gi**.
+7. Click **Save**.
+8. Restart the VM if prompted.
+9. Inside the VM (via SSH or RDP), expand the filesystem:
+   - Linux: `lsblk`, then `sudo growpart /dev/sda 1` and `sudo resize2fs /dev/sda1`.
+   - Windows: use **Disk Management** → right-click → **Extend Volume**.
+
+---
+
+## 🔹 Step 2: Create and attach a new data disk
+1. In the same **Disks** section of **xfusion-vm**, click **+ Add data disk**.
+2. Choose **Create disk**.
+3. Name it **xfusion-disk**.
+4. Select **Standard HDD** as the storage type.
+5. Set size to **64Gi**.
+6. Click **Save** → the disk will be attached to the VM.
+
+---
+
+## 🔹 Step 3: Format and mount the new disk
+### Linux VM:
+1. SSH into the VM.
+2. Run `lsblk` to identify the new disk (likely `/dev/sdc`).
+3. Partition and format:
+   ```bash
+   sudo fdisk /dev/sdc
+   sudo mkfs.ext4 /dev/sdc1
+   ```
+4. Create mount point:
+   ```bash
+   sudo mkdir -p /mnt/xfusion-disk
+   sudo mount /dev/sdc1 /mnt/xfusion-disk
+   ```
+5. Persist across reboots:
+   ```bash
+   echo "/dev/sdc1 /mnt/xfusion-disk ext4 defaults,nofail 0 2" | sudo tee -a /etc/fstab
+   ```
+
+### Windows VM:
+1. Open **Disk Management**.
+2. Initialize the new disk.
+3. Create a new volume, format as NTFS.
+4. Assign a drive letter (e.g., `D:`).
+5. Use it as your data disk.
+
+---
+
+✅ **End Result:**
+- The OS disk of **xfusion-vm** is expanded to **64Gi**.  
+- A new **64Gi Standard HDD disk** named **xfusion-disk** is attached and mounted at **`/mnt/xfusion-disk`** (Linux) or as a new drive (Windows).  
+
 
 ### 🌐 **Q6: Deploying Virtual Machines in a Public Virtual Network**
 
 > *You’re deploying a VM that hosts a public-facing web application. Configure a public subnet with internet access, NSG rules, and a VM with a static IP. What routing and security changes are required to make the application accessible securely?*
+The Nautilus DevOps Team has received a request from the Networking Team to set up a new public VNet to support a set of public-facing services. This VNet will host various resources that need to be accessible over the internet. As part of this setup, you need to ensure the VNet has public subnets with automatic public IP assignment for resources. Additionally, a new VM will be launched within this VNet to host public applications that require SSH access. This setup will enable the Networking Team to deploy and manage public-facing applications.
+
+Create a public VNet named xfusion-pub-vnet, and a subnet named xfusion-pub-subnet under the same, make sure public IP is being auto-assigned to resources under this subnet. Further, create a VM named xfusion-pub-vm under this VNet. Make sure SSH port 22 is open for this instance and accessible over the internet. Use the Azure portal to complete the task and ensure that SSH access is configured correctly.
+Ans:
+Here’s how you can complete this setup step‑by‑step in the **Azure Portal GUI**:
+
+---
+
+## 🔹 Step 1: Create the Public VNet
+1. Sign in to the **Azure Portal**.
+2. In the left menu, select **Virtual networks** → **+ Create**.
+3. Fill in:
+   - **Name**: `xfusion-pub-vnet`
+   - **Region**: same region where you’ll deploy the VM
+   - **Resource Group**: choose or create one (e.g., `NautilusRG`)
+4. Click **Next: IP Addresses**.
+5. Define the **Address space** (e.g., `10.0.0.0/16`).
+6. Add a **Subnet**:
+   - **Subnet name**: `xfusion-pub-subnet`
+   - **Subnet address range**: e.g., `10.0.1.0/24`
+   - Ensure **Public IP assignment** is enabled (this is controlled later when attaching NICs, but subnet must allow it).
+7. Click **Review + Create** → **Create**.
+
+---
+
+## 🔹 Step 2: Create the VM in the Public VNet
+1. Go to **Virtual machines** → **+ Create** → **Azure virtual machine**.
+2. Fill in:
+   - **Name**: `xfusion-pub-vm`
+   - **Region**: same as VNet
+   - **Image**: Ubuntu Server (or your preferred OS)
+   - **Size**: choose based on workload
+   - **Authentication type**: SSH public key (recommended) or password
+3. Under **Networking**:
+   - Select **Virtual network**: `xfusion-pub-vnet`
+   - Select **Subnet**: `xfusion-pub-subnet`
+   - **Public IP**: set to **Create new** (this ensures auto‑assignment of a public IP)
+   - **NIC network security group**: choose **Basic** and allow **SSH (22)** inbound
+4. Click **Review + Create** → **Create**.
+
+---
+
+## 🔹 Step 3: Configure SSH Access
+1. Once the VM is deployed, go to **xfusion-pub-vm → Networking**.
+2. Confirm inbound port rules:
+   - **Port**: 22
+   - **Protocol**: TCP
+   - **Source**: Any (or restrict to your IP for security)
+   - **Action**: Allow
+3. Copy the **Public IP address** from the VM overview.
+4. Test SSH access:
+   ```bash
+   ssh azureuser@<public-ip>
+   ```
+
+---
+
+## ✅ Final Setup
+- **VNet**: `xfusion-pub-vnet`
+- **Subnet**: `xfusion-pub-subnet` (public IP auto‑assigned)
+- **VM**: `xfusion-pub-vm` with a public IP
+- **SSH port 22** open and accessible over the internet
 
 ### 🔒 **Q7: Deploying Virtual Machines in a Private Virtual Network**
 
 > *For compliance, you need to deploy a VM in a private subnet with no internet exposure. Use NAT Gateway or Azure Bastion for outbound access or management. How do you configure routing and DNS resolution in such an environment?*
+The Nautilus DevOps team is expanding their Azure infrastructure and requires the setup of a private Virtual Network (VNet) along with a subnet. This VNet and subnet configuration will ensure that resources deployed within them remain isolated from external networks and can only communicate within the VNet. Additionally, the team needs to provision a Virtual Machine (VM) under the newly created private VNet. This VM should be accessible over SSH from within the VNet only, allowing for secure communication and resource management within the Azure environment.
+
+The name of the VNet must be datacenter-priv-vnet, create a subnet named datacenter-priv-subnet under the same. Further, create a Virtual Machine named datacenter-priv-vm under this VNet. Additionally, create a Network Security Group (NSG) named datacenter-priv-nsg, and ensure that the NSG rules for the VM allow access only from within the VNet's CIDR block. Ensure all resources are created in the East US region.
+Ans:
+## 🌐 Step 1: Create the Virtual Network (VNet)
+1. Sign in to the [Azure Portal](https://portal.azure.com).
+2. In the left menu, select **Create a resource** → **Networking** → **Virtual Network**.
+3. Fill in:
+   - **Name:** `datacenter-priv-vnet`
+   - **Region:** East US
+   - **Resource Group:** (create or select one, e.g., `NautilusRG`)
+   - **Address space:** `10.0.0.0/16`
+4. Under **Subnets**, click **Add subnet**:
+   - **Subnet name:** `datacenter-priv-subnet`
+   - **Subnet address range:** `10.0.1.0/24`
+   - **Private Subnet**: Enabled
+5. Click **Review + Create** → **Create**.
+
+---
+
+## 🔒 Step 2: Create the Network Security Group (NSG)
+1. Go to **Create a resource** → **Networking** → **Network Security Group**.
+2. Fill in:
+   - **Name:** `datacenter-priv-nsg`
+   - **Region:** East US
+   - **Resource Group:** `NautilusRG`
+3. After creation, open the NSG and go to **Inbound security rules**.
+4. Add a rule:
+   - **Name:** `Allow-SSH-From-VNet`
+   - **Priority:** 100
+   - **Source:** IP addresses
+   - **Source IP range:** `10.0.0.0/16`
+   - **Destination:** Any
+   - **Port:** 22
+   - **Protocol:** TCP
+   - **Action:** Allow
+
+---
+## 💻 Step 3: Create the Virtual Machine
+1. In the Azure Portal, go to **Create a resource** → **Virtual Machine**.
+2. Fill in:
+   - **Name:** `datacenter-priv-vm`  
+   - **Region:** West US (same as VNet)  
+   - **Resource Group:** `kml_rg_main-cdb8d615621b42b6`  
+   - **Image:** Ubuntu LTS (or preferred OS)  
+   - **Authentication:** SSH public key  
+   - **Username:** e.g., `azureuser`  
+   - Upload or generate SSH key.  
+3. Under **Networking**:
+   - **Virtual Network:** `datacenter-priv-vnet`  
+   - **Subnet:** `datacenter-priv-subnet`  
+   - **Public IP:** None (to keep it private)  
+   - **NIC NSG:** Select `datacenter-priv-nsg`  
+4. Click **Review + Create** → **Create**.
+
+---
+
+## 🏗 Final Architecture
+- **VNet:** `datacenter-priv-vnet`  
+- **Subnet:** `datacenter-priv-subnet`  
+- **NSG:** `datacenter-priv-nsg` (SSH restricted to VNet CIDR)  
+- **VM:** `datacenter-priv-vm` (private, only accessible via SSH inside VNet)  
 
 ### 🧰 **Q8: Troubleshooting Public Virtual Network Configurations**
 
 > *Your VM in a public subnet is not accessible via its public IP. List and explain all the configuration points (e.g., NSGs, NIC, public IP association, route tables) you would inspect to identify and fix the issue.*
+The Nautilus DevOps Team deployed an Nginx server on an Azure VM in a public VNet named devops-vnet. However, the server is still inaccessible from the internet.
+
+As a DevOps team member, complete the following tasks:
+
+Verify VNet Configuration: Ensure devops-vnet allows internet access.
+Attach Public IP: A public IP named devops-pip already exists. Attach this public IP to the VM devops-vm to make it accessible from the internet.
+Ensure Accessibility: Confirm the VM devops-vm is accessible on port 80.
+Use the provided Azure credentials to troubleshoot and resolve the issue.
+
+Ans:
+
+## 1. Verify VNet Configuration (Azure Portal)
+
+1. Sign in to **Azure Portal**
+2. Go to **Virtual networks**
+3. Select **nautilus-vnet**
+4. Click **Subnets**
+5. Select the subnet used by **nautilus-vm**
+
+✔️ Verify:
+
+* No **User Defined Route** forcing `0.0.0.0/0` to a firewall or virtual appliance
+* No restrictive **Network Security Group** blocking inbound traffic
+
+If a route table is attached and blocks internet, remove and add new.
+
+## How to Add This via Azure Portal (GUI)
+
+Go to Route tables
+
+Select nautilus-rtb
+
+Click + Add route
+
+Fill in:
+
+Route name: InternetRoute (or any name)
+
+Address prefix: 0.0.0.0/0
+
+Next hop type: Internet
+
+Save the route
+---
+
+## 2. Attach Public IP (nautilus-pip) to VM
+
+> Public IPs are attached to the **Network Interface**, not directly to the VM.
+
+1. Go to **Virtual machines**
+2. Open **nautilus-vm**
+3. Select **Networking** from the left menu
+4. Click the **Network interface** (e.g., `nautilus-vm-nic`)
+5. Click **IP configurations**
+6. Select **ipconfig1**
+7. Under **Public IP address**, select **nautilus-pip**
+8. Click **Save**
+
+✔️ VM now has a public IP.
+
+---
+
+## 3. Ensure Port 80 Is Allowed (NSG)
+
+### 3.1 Check NSG Rules
+
+1. In **nautilus-vm → Networking**
+2. Under **Inbound port rules**, verify **HTTP (80)** is allowed
+
+If not present:
+
+### 3.2 Add Inbound Rule
+
+1. Click **Add inbound port rule**
+2. Configure:
+
+   * **Source**: Any
+   * **Source port ranges**: *
+   * **Destination**: Any
+   * **Destination port ranges**: `80`
+   * **Protocol**: TCP
+   * **Action**: Allow
+   * **Priority**: `100`
+   * **Name**: `Allow-HTTP`
+3. Click **Add**
+
+✔️ Port 80 is now open.
+
+---
+
+## 4. Verify Nginx Is Running
+
+1. Go to **nautilus-vm**
+2. Click **Connect → SSH**
+3. Use **Azure Bastion** or native SSH
+
+Run:
+
+```bash
+sudo systemctl status nginx
+```
+
+If not running:
+
+```bash
+sudo systemctl start nginx
+sudo systemctl enable nginx
+```
+
+Test locally:
+
+```bash
+curl http://localhost
+```
+
+---
+
+## 5. Confirm Internet Access
+
+1. Copy the **Public IP address** from the VM Overview page
+2. Open a browser:
+
+```
+http://<PUBLIC-IP>
+```
+
+✔️ You should see the **Nginx Welcome Page**
 
 ### 📦 **Q9: Working with Azure Container Registry (ACR)**
 
 > *Push a custom Docker image to ACR and deploy it on an Azure VM. Authenticate securely, set up `docker login`, and configure the VM to pull and run the image on boot. How would you automate this as part of a CI/CD pipeline?*
+
+The Nautilus DevOps team has been tasked with setting up a containerized application. They need to create a Azure Container Registry (ACR) to store their Docker images. Once the repository is created, they will build a Docker image from a Dockerfile located on the azure-client host and push this image to the ACR repository. This process is essential for maintaining and deploying containerized applications in a streamlined manner.
+
+1) Create a ACR repository named datacenteracr15866 under East US.
+
+2) Pricing plan must be Basic.
+
+3) Dockerfile already exists under /root/pyapp directory on azure-client host.
+
+4) Build a Docker image using this Dockerfile and push the same to the newly created ACR repo. The image tag must be latest i.e datacenteracr15866:latest.
+
+Ans:
+
+## **Step 1: Create a Resource Group (if you don’t have one)**
+
+1. Log in to the [Azure Portal](https://portal.azure.com).
+2. Search for **Resource groups** in the top search bar.
+3. Click **+ Create**.
+4. Fill in:
+
+   * **Resource group name:** `datacenter-rg` (or any name you prefer)
+   * **Region:** `East US`
+5. Click **Review + Create**, then **Create**.
+
+---
+
+## **Step 2: Create an Azure Container Registry (ACR)**
+
+1. In the portal search bar, type **Container registries** and select it.
+2. Click **+ Create**.
+3. Fill in the form:
+
+   * **Subscription:** Your subscription
+   * **Resource group:** `datacenter-rg`
+   * **Registry name:** `datacenteracr15866`
+   * **Location:** `East US`
+   * **SKU:** `Basic`
+4. Click **Review + Create**, then **Create**.
+
+---
+
+## **Step 3: Get the Login Server**
+
+1. Open your newly created registry `datacenteracr15866`.
+2. On the **Overview** page, note the **Login server** (it will look like `datacenteracr15866.azurecr.io`).
+
+   > You will need this for Docker tagging.
+
+---
+
+## **Step 4: Build and Push Docker Image**
+
+Unfortunately, Azure Portal doesn’t let you directly build Docker images from a local host. You have **two GUI options**:
+
+### **Option A: Use Azure Cloud Shell (GUI-integrated terminal)**
+
+1. Open **Azure Cloud Shell** (top-right corner of the portal).
+2. Upload your `/root/pyapp` directory files to the Cloud Shell.
+3. Run the commands:
+
+```bash
+# Log in to ACR
+az acr login --name datacenteracr15866
+
+# Build Docker image
+docker build -t datacenteracr15866.azurecr.io/datacenteracr15866:latest /path/to/pyapp
+
+# Push image
+docker push datacenteracr15866.azurecr.io/datacenteracr15866:latest
+```
+# Incase Error Occured to pull:
+**Docker Hub’s rate limit for unauthenticated pulls**. You **cannot pull any more images without logging in**.
+
+Here’s how to fix it:
+
+---
+
+### **Step 1: Log in to Docker Hub**
+
+```bash
+docker login
+```
+
+* Username: your Docker Hub username
+* Password: your Docker Hub password (or personal access token if 2FA is enabled)
+
+> After successful login, Docker knows who you are and increases your pull limit.
+
+---
+
+### **Step 2: Pull the base image again**
+
+```bash
+docker pull python:3.8-slim
+```
+
+It should now succeed.
+
+---
+
+### **Step 3: Build your application image**
+
+```bash
+docker build -t datacenteracr15866.azurecr.io/datacenteracr15866:latest /root/pyapp
+```
+
+---
+
+### **Step 4: Push the image to your ACR**
+
+```bash
+docker push datacenteracr15866.azurecr.io/datacenteracr15866:latest
+```
+
+---
+
+💡 **Alternative workaround if you want to avoid Docker Hub limits permanently:**
+
+1. Pull the base image **once** on a machine with Docker Hub login.
+2. Tag it and push it to your **ACR**:
+
+```bash
+docker tag python:3.8-slim datacenteracr15866.azurecr.io/python:3.8-slim
+docker push datacenteracr15866.azurecr.io/python:3.8-slim
+```
+
+3. Then update your Dockerfile to use your ACR-hosted base image:
+
+```dockerfile
+FROM datacenteracr15866.azurecr.io/python:3.8-slim
+```
+
+Now all builds will come from your ACR instead of Docker Hub, bypassing rate limits.
+
+---
+
+If you want, I can write a **ready-to-run sequence of commands** that logs in to Docker Hub, builds your image, tags it, and pushes it to ACR in one shot. It’s fully automated.
+
+Do you want me to do that?
+
+> Replace `/path/to/pyapp` with the Cloud Shell path.
+
+### **Option B: Use Azure Container Registry Tasks (Full GUI)**
+
+1. Go to your **ACR** in the portal.
+2. Select **Tasks** → **+ Quick Task**.
+3. Configure:
+
+   * **Source Type:** `Local Git` (if your Dockerfile is in a Git repo) or `GitHub`
+   * **Image Name and Tag:** `datacenteracr15866:latest`
+   * **Dockerfile Path:** `/Dockerfile` or relative path
+4. Click **Run Task**.
+5. ACR will build the Docker image and push it automatically.
+
+---
+
+## **Step 5: Verify Image in GUI**
+
+1. Go to your **ACR** → **Repositories**.
+2. You should see `datacenteracr15866` with tag `latest`.
+
 
 ### 🔧 **Q10: Set Up and Manage a Secure Azure DevOps Repository**
 
@@ -1301,6 +1859,106 @@ If everything is correct, you’ll connect without being prompted for a password
 ### 🌍 **Q11: Deploying and Managing a Web Application**
 
 > *Deploy a multi-tier web application consisting of frontend and backend components. Use VMs or containers, secure communication with HTTPS, and manage scaling based on load. How would you monitor performance and perform zero-downtime updates?*
+The Nautilus DevOps team is tasked with deploying a Python-based web application on Azure. You need to create a web app using the following specifications:
+
+1) The Web App name should be xfusion-webapp.
+2) It should be created in the West US region under the default resource group.
+3) The publish option should be set to Code.
+4) The Runtime Stack should be Python with Linux as the operating system.
+5) Create a new App Service Plan named xfusion-learn-python with the SKU Basic B1.
+6) Application Insights should be disabled.
+7) Add tags:
+
+Name: WebAppLearning
+Environment: Dev
+Make sure the web app is in Running state after creation.
+Ans:
+Here’s a clear, step-by-step guide to create the **Python-based web app** in **Azure Portal** based on your specifications. I’ll make it precise so you can follow easily:
+
+---
+
+### **Step 1: Sign in to Azure Portal**
+
+1. Go to [https://portal.azure.com](https://portal.azure.com).
+2. Sign in with your Azure account.
+
+---
+
+### **Step 2: Create the Web App**
+
+1. In the left-hand menu, click **Create a resource** → **Compute** → **Web App**.
+2. Fill in the **Basics** tab:
+
+   | Field            | Value                                         |
+   | ---------------- | --------------------------------------------- |
+   | Subscription     | Select your subscription                      |
+   | Resource Group   | Use the default resource group                |
+   | Name             | `xfusion-webapp`                              |
+   | Publish          | `Code`                                        |
+   | Runtime stack    | `Python <latest version>` (e.g., Python 3.11) |
+   | Operating System | `Linux`                                       |
+   | Region           | `West US`                                     |
+
+---
+
+### **Step 3: Configure the App Service Plan**
+
+1. Under **App Service Plan**, choose **Create new**.
+2. Enter the following:
+
+   | Field        | Value                                       |
+   | ------------ | ------------------------------------------- |
+   | Name         | `xfusion-learn-python`                      |
+   | Pricing tier | Click **Change size** → Select **Basic B1** |
+
+---
+
+### **Step 4: Configure Monitoring**
+
+1. In the **Monitoring** tab:
+
+   * **Application Insights** → Set to **Off**.
+
+---
+
+### **Step 5: Add Tags**
+
+1. Go to the **Tags** tab.
+2. Add the following key-value pairs:
+
+   | Name        | Value          |
+   | ----------- | -------------- |
+   | Name        | WebAppLearning |
+   | Environment | Dev            |
+
+---
+
+### **Step 6: Review + Create**
+
+1. Click **Review + create**.
+2. Validate the configuration.
+3. Click **Create**.
+4. Wait for deployment to complete.
+
+---
+
+### **Step 7: Verify the Web App**
+
+1. After deployment, go to the **Web App resource**.
+2. Ensure the **Status** shows **Running**.
+3. You can browse the web app by clicking **Browse** at the top.
+
+---
+
+✅ Following these steps will ensure:
+
+* Web App name: `xfusion-webapp`
+* Location: West US
+* Runtime: Python on Linux
+* App Service Plan: `xfusion-learn-python`, Basic B1
+* Application Insights: Disabled
+* Tags applied
+* Web app is running
 
 ### 🔄 **Q12: Synchronizing Containers Using the CLI**
 

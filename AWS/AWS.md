@@ -300,13 +300,13 @@ On **aws-client**, as root:
 mkdir -p /root/.ssh
 chmod 700 /root/.ssh
 
-ssh-keygen -t rsa -b 4096 -f /root/.ssh/datacenter-ec2 -N ""
+ssh-keygen 
 ```
 
 Copy the public key:
 
 ```bash
-cat /root/.ssh/datacenter-ec2.pub
+cat .ssh/id_rsa.pub
 ```
 
 👉 **Keep this output copied** (you’ll paste it in the GUI later).
@@ -366,8 +366,13 @@ Paste the following (replace with your copied public key):
 #!/bin/bash
 mkdir -p /root/.ssh
 chmod 700 /root/.ssh
-echo "PASTE_PUBLIC_KEY_HERE" >> /root/.ssh/authorized_keys
+echo "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQ... root@aws-client" > /root/.ssh/authorized_keys
 chmod 600 /root/.ssh/authorized_keys
+
+# Enable root login
+sed -i 's/^#PermitRootLogin.*/PermitRootLogin yes/' /etc/ssh/sshd_config
+systemctl restart sshd
+
 ```
 
 📌 Example:
@@ -415,6 +420,224 @@ ssh -i /root/.ssh/datacenter-ec2 root@<PRIVATE_IP>
 > *You are hosting a web application on two EC2 instances in different subnets. Create an Application Load Balancer to distribute HTTP traffic across both instances.*
 or 
 Deploy two EC2 instances running identical apps and place them behind an Application Load Balancer. Set up a health check that uses a custom path (/health) and verify that the load balancer only routes traffic to healthy instances.
+The Nautilus DevOps team is currently working on setting up a simple application on the AWS cloud. They aim to establish an Application Load Balancer (ALB) in front of an EC2 instance where an Nginx server is currently running. While the Nginx server currently serves a sample page, the team plans to deploy the actual application later.
+
+Set up an Application Load Balancer named xfusion-alb.
+Create a target group named xfusion-tg.
+Create a security group named xfusion-sg to open port 80 for the public.
+Attach this security group to the ALB.
+The ALB should route traffic on port 80 to port 80 of the xfusion-ec2 instance.
+Make appropriate changes in the default security group attached to the EC2 instance if necessary.
+Ans:
+
+Below is a **clean, practical guide** to set up the Application Load Balancer in front of your existing **xfusion-ec2** instance running Nginx.
+
+I’ve included **AWS Console steps** (most commonly expected) and **AWS CLI commands** (optional, for automation).
+
+---
+
+## Architecture Overview
+
+```
+Internet
+   |
+[ xfusion-alb (ALB) ]
+   |
+[ xfusion-tg (Target Group) ]
+   |
+[ xfusion-ec2 (Nginx on port 80) ]
+```
+
+---
+
+# Option 1: AWS Console (Recommended)
+
+## 1. Create Security Group for ALB (xfusion-sg)
+
+1. Go to **EC2 → Security Groups**
+2. Click **Create security group**
+3. Name: **xfusion-sg**
+4. Description: Allow HTTP access to ALB
+5. VPC: Same VPC as EC2
+
+### Inbound Rules
+
+| Type | Protocol | Port | Source    |
+| ---- | -------- | ---- | --------- |
+| HTTP | TCP      | 80   | 0.0.0.0/0 |
+
+### Outbound Rules
+
+* Allow all traffic (default)
+
+Click **Create security group**
+
+---
+
+## 2. Create Target Group (xfusion-tg)
+
+1. Go to **EC2 → Target Groups**
+2. Click **Create target group**
+3. Target type: **Instances**
+4. Name: **xfusion-tg**
+5. Protocol: **HTTP**
+6. Port: **80**
+7. VPC: Same VPC as EC2
+8. Health check:
+
+   * Protocol: HTTP
+   * Path: `/`
+
+Click **Next**
+
+### Register Targets
+
+* Select **xfusion-ec2**
+* Port: **80**
+* Click **Include as pending**
+* Click **Create target group**
+
+---
+
+## 3. Create Application Load Balancer (xfusion-alb)
+
+1. Go to **EC2 → Load Balancers**
+2. Click **Create Load Balancer**
+3. Choose **Application Load Balancer**
+
+### Basic Configuration
+
+* Name: **xfusion-alb**
+* Scheme: **Internet-facing**
+* IP address type: IPv4
+
+### Network Mapping
+
+* VPC: Same as EC2
+* Select **at least two public subnets**
+
+### Security Groups
+
+* Remove default SG
+* Attach **xfusion-sg**
+
+### Listeners and Routing
+
+* Listener: HTTP : 80
+* Default action: Forward to **xfusion-tg**
+
+Click **Create load balancer**
+
+---
+
+## 4. Update EC2 Security Group (IMPORTANT)
+
+The EC2 instance must allow traffic **from the ALB**, not the internet.
+
+1. Go to **EC2 → Instances**
+2. Select **xfusion-ec2**
+3. Click **Security → Security Groups**
+4. Edit **Inbound Rules**
+
+### Add Rule
+
+| Type | Protocol | Port | Source     |
+| ---- | -------- | ---- | ---------- |
+| HTTP | TCP      | 80   | xfusion-sg |
+
+✔ This ensures only ALB can reach the EC2 instance.
+
+---
+
+## 5. Validate Setup
+
+1. Copy **ALB DNS Name**
+   (EC2 → Load Balancers → xfusion-alb)
+2. Open in browser:
+
+```
+http://<alb-dns-name>
+```
+
+✅ You should see the Nginx sample page.
+
+---
+
+# Option 2: AWS CLI (Optional)
+
+> Assumes AWS CLI is configured and instance already exists.
+
+### Create Security Group
+
+```bash
+aws ec2 create-security-group \
+  --group-name xfusion-sg \
+  --description "Allow HTTP access to ALB" \
+  --vpc-id <vpc-id>
+
+aws ec2 authorize-security-group-ingress \
+  --group-name xfusion-sg \
+  --protocol tcp \
+  --port 80 \
+  --cidr 0.0.0.0/0
+```
+
+### Create Target Group
+
+```bash
+aws elbv2 create-target-group \
+  --name xfusion-tg \
+  --protocol HTTP \
+  --port 80 \
+  --vpc-id <vpc-id> \
+  --target-type instance
+```
+
+### Register EC2 Instance
+
+```bash
+aws elbv2 register-targets \
+  --target-group-arn <tg-arn> \
+  --targets Id=<instance-id>,Port=80
+```
+
+### Create Load Balancer
+
+```bash
+aws elbv2 create-load-balancer \
+  --name xfusion-alb \
+  --subnets <subnet-1> <subnet-2> \
+  --security-groups <xfusion-sg-id> \
+  --scheme internet-facing \
+  --type application
+```
+
+### Create Listener
+
+```bash
+aws elbv2 create-listener \
+  --load-balancer-arn <alb-arn> \
+  --protocol HTTP \
+  --port 80 \
+  --default-actions Type=forward,TargetGroupArn=<tg-arn>
+```
+
+---
+
+## Final Checklist ✅
+
+* ✔ ALB name: **xfusion-alb**
+* ✔ Target group: **xfusion-tg**
+* ✔ Security group: **xfusion-sg**
+* ✔ Port 80 open publicly on ALB
+* ✔ EC2 allows traffic from ALB SG
+* ✔ Traffic routes: ALB → EC2 (port 80)
+
+If you want, I can also:
+
+* Add HTTPS (ACM + SSL)
+* Convert this to Terraform
+* Validate health check failures
 
 **Q6: Setting Up an EC2 Instance and CloudWatch Alarm**
 
@@ -423,9 +646,266 @@ Deploy two EC2 instances running identical apps and place them behind an Applica
 or 
 Your EC2-based service occasionally hits high CPU usage during batch jobs. Configure a CloudWatch alarm to trigger an SNS notification if CPU exceeds 80% for more than 3 minutes. What CloudWatch metric and threshold do you use, and how do you test the alarm?
 
+The Nautilus DevOps team has been tasked with setting up an EC2 instance for their application. To ensure the application performs optimally, they also need to create a CloudWatch alarm to monitor the instance's CPU utilization. The alarm should trigger if the CPU utilization exceeds 90% for one consecutive 5-minute period. To send notifications, use the SNS topic named devops-sns-topic which is already created.
+
+Launch EC2 Instance: Create an EC2 instance named devops-ec2 using any appropriate Ubuntu AMI.
+
+Create CloudWatch Alarm: Create a CloudWatch alarm named devops-alarm with the following specifications:
+
+Statistic: Average
+Metric: CPU Utilization
+Threshold: >= 90% for 1 consecutive 5-minute period.
+Alarm Actions: Send a notification to devops-sns-topic.
+Ans:
+## Part 1: Launch EC2 Instance (GUI)
+### Step 1: Open EC2 Dashboard
+
+1. Log in to **AWS Management Console**
+2. Go to **Services → EC2**
+3. Click **Launch instance**
+
+---
+
+### Step 2: Configure EC2 Instance
+
+1. **Name**:
+
+   ```
+   devops-ec2
+   ```
+
+2. **Application and OS Image (AMI)**
+
+   * Select **Ubuntu Server** (20.04 or 22.04 LTS – any is fine)
+
+3. **Instance Type**
+
+   * Choose **t2.micro** (or any suitable type)
+
+4. **Key Pair**
+
+   * Select an existing key pair or create a new one
+
+5. **Network Settings**
+
+   * Use default VPC
+   * Allow SSH (port 22) if needed
+
+6. **Storage**
+
+   * Keep default settings
+
+7. Click **Launch instance**
+
+✅ EC2 instance **devops-ec2** is now running
+
+---
+
+## Part 2: Create CloudWatch Alarm (GUI)
+
+### Step 1: Open CloudWatch
+
+1. Go to **Services → CloudWatch**
+2. Click **Alarms** (left menu)
+3. Click **Create alarm**
+
+---
+
+### Step 2: Select Metric
+
+1. Click **Select metric**
+2. Navigate to:
+
+   ```
+   EC2 → Per-Instance Metrics
+   ```
+3. Select your instance **devops-ec2**
+4. Choose **CPUUtilization**
+5. Click **Select metric**
+
+---
+
+### Step 3: Define Alarm Conditions
+
+1. **Statistic**:
+
+   * Select **Average**
+
+2. **Period**:
+
+   * Set to **5 minutes (300 seconds)**
+
+3. **Threshold Type**:
+
+   * Static
+
+4. **Condition**:
+
+   * **Greater/Equal**
+   * **90**
+
+5. **Evaluation Periods**:
+
+   * **1 out of 1**
+
+---
+
+### Step 4: Configure Notifications
+
+1. **Alarm state trigger**:
+
+   * Select **In alarm**
+
+2. **Send notification to**:
+
+   * Choose **Select an existing SNS topic**
+   * Select **devops-sns-topic**
+
+---
+
+### Step 5: Name & Create Alarm
+
+1. **Alarm name**:
+
+   ```
+   devops-alarm
+   ```
+2. (Optional) Description:
+
+   ```
+   Alarm when CPU utilization exceeds 90% for 5 minutes
+   ```
+3. Click **Create alarm**
+
+---
+
+## ✅ Final Result
+
+* **EC2 Instance**: `devops-ec2` (Ubuntu)
+* **CloudWatch Alarm**: `devops-alarm`
+* **Trigger Condition**: CPU ≥ 90% for 5 minutes
+* **Notification**: SNS topic `devops-sns-topic`
+
+
 **Q7: Configuring an EC2 Instance as a Web Server with Nginx**
 
 > *You need to deploy a static website using Nginx on an EC2 instance. Set up the instance, install Nginx, and ensure it is accessible via a browser.*
+The Nautilus DevOps Team is working on setting up a new web server for a critical application. The team lead has requested you to create an EC2 instance that will serve as a web server using Nginx. This instance will be part of the initial infrastructure setup for the Nautilus project. Ensuring that the server is correctly configured and accessible from the internet is crucial for the upcoming deployment phase.
+
+As a member of the Nautilus DevOps Team, your task is to create an EC2 instance with the following specifications:
+
+Instance Name: The EC2 instance must be named datacenter-ec2.
+
+AMI: Use any available Ubuntu AMI to create this instance.
+
+User Data Script: Configure the instance to run a user data script during its launch. This script should:
+
+Install the Nginx package.
+Start the Nginx service.
+Security Group: Ensure that the instance allows HTTP traffic on port 80 from the internet.
+Ans:
+Got it! I’ll guide you through creating an **EC2 instance on AWS** with your specifications using the **AWS Management Console** (AWS Portal) approach. Here's a detailed step-by-step guide:
+
+---
+
+### **Step 1: Log in to AWS Management Console**
+
+1. Open the AWS Management Console.
+2. Navigate to **EC2** service.
+
+---
+
+### **Step 2: Launch a New EC2 Instance**
+
+1. Click **Launch instances**.
+2. **Name and tags**:
+
+   * Instance Name: `datacenter-ec2`
+3. **Application and OS Images (Amazon Machine Image, AMI)**:
+
+   * Select **Ubuntu Server 22.04 LTS** (or the latest available Ubuntu AMI).
+4. **Instance type**:
+
+   * Choose a type like `t2.micro` (free-tier eligible if needed) or as per your project requirements.
+5. Click **Next: Configure Instance Details**.
+
+---
+
+### **Step 3: Configure Instance**
+
+1. Leave default settings for network/subnet unless specific VPC is required.
+2. Scroll to **Advanced Details**.
+3. **User Data**: Paste the following script to automatically install and start Nginx:
+
+```bash
+#!/bin/bash
+sudo apt-get update -y
+sudo apt-get install nginx -y
+sudo systemctl start nginx
+sudo systemctl enable nginx
+```
+
+> This ensures Nginx is installed, started immediately, and enabled on boot.
+
+---
+
+### **Step 4: Add Storage**
+
+* Keep default storage (e.g., 8 GB) or adjust as needed.
+* Click **Next: Add Tags**.
+
+---
+
+### **Step 5: Add Tags**
+
+* Add a tag for clarity (optional), e.g.,
+
+  * Key: `Project`
+  * Value: `Nautilus`
+
+---
+
+### **Step 6: Configure Security Group**
+
+1. Create a **new security group** (or choose an existing one if it allows HTTP traffic).
+2. Add **Inbound Rule**:
+
+   * Type: `HTTP`
+   * Protocol: `TCP`
+   * Port Range: `80`
+   * Source: `Anywhere (0.0.0.0/0, ::/0)` to allow internet access.
+3. (Optional) Add SSH rule for admin access:
+
+   * Type: `SSH`
+   * Protocol: `TCP`
+   * Port Range: `22`
+   * Source: your IP (for security).
+
+---
+
+### **Step 7: Review and Launch**
+
+1. Review all settings.
+2. Click **Launch**.
+3. Choose an existing key pair or create a new key pair to access the instance via SSH.
+4. Acknowledge you have the private key, then click **Launch Instances**.
+
+---
+
+### **Step 8: Verify**
+
+1. After the instance is running, get its **public IP**.
+2. Open a web browser and navigate to:
+
+   ```
+   http://<public-ip>
+   ```
+3. You should see the default **Nginx welcome page**, confirming the server is running and accessible.
+
+---
+
+✅ **Result:**
+You now have an EC2 instance named `datacenter-ec2`, running Ubuntu with Nginx installed, and accessible via HTTP from the internet.
 
 ### ☁️ **S3, CLI, and Data Management**
 
@@ -435,6 +915,31 @@ Your EC2-based service occasionally hits high CPU usage during batch jobs. Confi
 
 or 
 You're migrating log files from one S3 bucket to another using AWS CLI. Use aws s3 sync to copy only new or changed files and delete old ones from the destination. How would you script this for regular runs, and what flags do you use to prevent data loss?
+
+As part of a data migration project, the team lead has tasked the team with migrating data from an existing S3 bucket to a new S3 bucket. The existing bucket contains a substantial amount of data that must be accurately transferred to the new bucket. The team is responsible for creating the new S3 bucket and ensuring that all data from the existing bucket is copied or synced to the new bucket completely and accurately. It is imperative to perform thorough verification steps to confirm that all data has been successfully transferred to the new bucket without any loss or corruption.
+
+As a member of the Nautilus DevOps Team, your task is to perform the following:
+
+Create a New Private S3 Bucket: Name the bucket datacenter-sync-28616.
+
+Data Migration: Migrate the entire data from the existing datacenter-s3-31971 bucket to the new datacenter-sync-28616 bucket.
+
+Ensure Data Consistency: Ensure that both buckets have the same data.
+
+Use AWS CLI: Use the AWS CLI to perform the creation and data migration tasks.
+Ans:
+**Confirm the Bucket Exists (Authoritative Check)**
+1  aws s3 ls
+2  aws s3api list-buckets
+3  aws s3api head-bucket --bucket xfusion-s3-26443
+**Create the bucket**
+4  aws s3api create-bucket   --bucket xfusion-sync-28537   --region us-east-1
+5  aws s3api head-bucket --bucket xfusion-sync-28537
+**Migrate Data from Source Bucket to Destination Bucket**
+6  aws s3 sync s3://xfusion-s3-26443 s3://xfusion-sync-28537
+**Verify Data Consistency:**
+7  aws s3 ls s3://xfusion-s3-26443 --recursive | wc -l
+8  aws s3 ls s3://xfusion-sync-28537 --recursive | wc -l
 
 
 ### 🛢️ **RDS (Relational Database Service)**
@@ -468,6 +973,106 @@ A developer corrupted the staging database. Use a previously created manual snap
 > *Design a VPC with a public subnet, Internet Gateway, and an EC2 instance that can access the internet. What components and routes are required?*
 or 
 Design a public VPC from scratch: create a VPC, subnet, Internet Gateway, and a route table. Launch an EC2 instance and verify internet access. What mistakes might prevent the instance from accessing the internet?
+
+The Nautilus DevOps Team has received a request from the Networking Team to set up a new public VPC to support a set of public-facing services. This VPC will host various resources that need to be accessible over the internet. As part of this setup, you need to ensure the VPC has public subnets with automatic IP assignment for resources. Additionally, a new EC2 instance will be launched within this VPC to host public applications that require SSH access. This setup will enable the Networking Team to deploy and manage public-facing applications.
+
+Create a public VPC named devops-pub-vpc, and a subnet named devops-pub-subnet under the same, make sure public IP is being auto assigned to resources under this subnet. Further, create an EC2 instance named devops-pub-ec2 under this VPC with instance type t2.micro. Make sure SSH port 22 is open for this instance and accessible over the internet.
+
+Ans:
+
+## **Step 1: Create a VPC**
+
+1. Go to **AWS Management Console → VPC → Your VPCs → Create VPC**.
+2. Select **VPC only**.
+3. **Name tag**: `devops-pub-vpc`
+4. **IPv4 CIDR block**: `10.0.0.0/16`
+5. **Tenancy**: Default
+6. Click **Create VPC**
+
+---
+
+## **Step 2: Create a Public Subnet**
+
+1. Go to **Subnets → Create subnet**
+2. **VPC**: `devops-pub-vpc`
+3. **Subnet name**: `devops-pub-subnet`
+4. **Availability Zone**: pick any (e.g., `us-east-1a`)
+5. **IPv4 CIDR block**: `10.0.1.0/24`
+6. Click **Create subnet**
+
+Enable **Auto-assign public IPv4**:
+
+1. Select the subnet → **Actions → Modify auto-assign IP settings** → check **Enable auto-assign public IPv4** → Save
+
+---
+
+## **Step 3: Create an Internet Gateway (IGW)**
+
+1. Go to **Internet Gateways → Create internet gateway**
+2. **Name tag**: `devops-pub-igw` → Create
+3. Select your IGW → **Actions → Attach to VPC → devops-pub-vpc**
+
+---
+
+## **Step 4: Create a Route Table for Public Access**
+
+1. Go to **Route Tables → Create route table**
+2. **Name tag**: `devops-pub-rt`
+3. **VPC**: `devops-pub-vpc` → Create
+
+Add a route to the internet:
+
+1. Select the route table → **Routes → Edit routes → Add route**
+2. **Destination**: `0.0.0.0/0`
+3. **Target**: select your Internet Gateway `devops-pub-igw` → Save
+
+Associate the route table with the subnet:
+
+1. **Subnet associations → Edit subnet associations → select `devops-pub-subnet` → Save**
+
+---
+
+## **Step 5: Create a Security Group**
+
+1. Go to **Security Groups → Create security group**
+2. **Name**: `devops-pub-sg`
+3. **VPC**: `devops-pub-vpc`
+4. **Inbound rule**:
+
+   * Type: SSH
+   * Protocol: TCP
+   * Port: 22
+   * Source: Anywhere (`0.0.0.0/0`)
+5. **Outbound**: keep default (allow all) → Create
+
+---
+
+## **Step 6: Launch an EC2 Instance**
+
+1. Go to **EC2 → Instances → Launch Instances**
+2. **Name**: `devops-pub-ec2`
+3. **AMI**: Amazon Linux 2 (or your preferred AMI)
+4. **Instance type**: `t2.micro`
+5. **Key pair**: select or create a key pair for SSH
+6. **Network settings**:
+
+   * VPC: `devops-pub-vpc`
+   * Subnet: `devops-pub-subnet`
+   * Auto-assign Public IP: **Enable**
+   * Security group: `devops-pub-sg` (SSH allowed)
+7. Click **Launch instance**
+
+---
+
+✅ **Result**:
+
+* Public VPC: `devops-pub-vpc`
+* Public Subnet: `devops-pub-subnet` (auto-assign IP)
+* Internet Gateway: `devops-pub-igw`
+* Route table: `devops-pub-rt` → routes 0.0.0.0/0 to IGW
+* EC2 instance: `devops-pub-ec2` (SSH accessible over the internet)
+
+
 
 **Q13: Establishing Secure Communication Between Public and Private VPCs via VPC Peering**
 
