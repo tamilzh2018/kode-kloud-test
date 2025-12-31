@@ -1080,6 +1080,189 @@ Associate the route table with the subnet:
 or 
 Your app is split across two VPCs (frontend/backend). Set up VPC peering and route table entries to enable communication between the instances in both VPCs. How do you test the connection and enforce security using security groups?
 
+The Nautilus DevOps team has been tasked with demonstrating the use of VPC Peering to enable communication between two VPCs. One VPC will be a private VPC that contains a private EC2 instance, while the other will be the default public VPC containing a publicly accessible EC2 instance.
+
+1) There is already an existing EC2 instance in the public vpc/subnet:
+
+Name: devops-public-ec2
+2) There is already an existing Private VPC:
+
+Name: devops-private-vpc
+CIDR: 10.1.0.0/16
+3) There is already an existing Subnet in devops-private-vpc:
+
+Name: devops-private-subnet
+CIDR: 10.1.1.0/24
+4) There is already an existing EC2 instance in the private subnet:
+
+Name: devops-private-ec2
+5) Create a Peering Connection between the Default VPC and the Private VPC:
+
+VPC Peering Connection Name: devops-vpc-peering
+6) Configure Route Tables to enable communication between the two VPCs.
+
+Ensure the private EC2 instance is accessible from the public EC2 instance.
+7) Test the Connection:
+
+Add /root/.ssh/id_rsa.pub public key to the public EC2 instance's ec2-user's authorized_keys to make sure we are able to ssh into this instance from AWS client host. You may also need to update the security group of the private EC2 instance to allow ICMP traffic from the public/default VPC CIDR. This will enable you to ping the private instance from the public instance.
+SSH into the public EC2 instance and ensure that you can ping the private EC2 instance.
+Ans:
+Below is a **clear, step-by-step guide** to complete the VPC Peering demo exactly as described. You can do this from the **AWS Console** (recommended for a demo), with optional **CLI equivalents** where useful.
+
+---
+
+## Architecture Goal (Quick Recap)
+
+* **Default VPC (Public)**
+
+  * EC2: `devops-public-ec2`
+* **Private VPC**
+
+  * VPC: `devops-private-vpc` (10.1.0.0/16)
+  * Subnet: `devops-private-subnet` (10.1.1.0/24)
+  * EC2: `devops-private-ec2`
+* **Connectivity**: VPC Peering + route tables + security groups
+* **Test**: SSH → Public EC2 → Ping Private EC2
+
+---
+
+## 1️⃣ Create VPC Peering Connection
+
+### AWS Console
+
+1. Go to **VPC → Peering connections**
+2. Click **Create peering connection**
+3. Configure:
+
+   * **Name**: `devops-vpc-peering`
+   * **VPC (Requester)**: **Default VPC**
+   * **VPC (Accepter)**: `devops-private-vpc`
+4. Click **Create peering connection**
+5. Select the peering connection → **Actions → Accept request**
+
+✅ Status should now be **Active**
+
+---
+
+## 2️⃣ Update Route Tables
+
+### A) Default VPC Route Table
+
+1. Go to **VPC → Route Tables**
+2. Identify the route table associated with the **public subnet** of `devops-public-ec2`
+3. Edit **Routes** → **Add route**
+
+   * **Destination**: `10.1.0.0/16`
+   * **Target**: `devops-vpc-peering`
+4. Save changes
+
+---
+
+### B) Private VPC Route Table
+
+1. Locate the route table associated with:
+
+   * `devops-private-vpc`
+   * Subnet: `devops-private-subnet`
+2. Edit **Routes** → **Add route**
+
+   * **Destination**: **Default VPC CIDR** (usually `172.31.0.0/16`)
+   * **Target**: `devops-vpc-peering`
+3. Save changes
+
+---
+
+## 3️⃣ Update Security Groups
+
+### A) Private EC2 Security Group
+
+1. Go to **EC2 → Security Groups**
+2. Open the security group attached to `devops-private-ec2`
+3. Add **Inbound Rules**:
+
+   * **ICMP – Echo Request**
+
+     * Source: **Default VPC CIDR** (e.g., `172.31.0.0/16`)
+   * **SSH**
+
+     * Source: **Default VPC CIDR**
+
+> This allows ping + SSH traffic from the public EC2
+
+---
+
+### B) Public EC2 Security Group
+
+Ensure it allows:
+
+* **SSH (22)** from your AWS client host IP (or `0.0.0.0/0` for demo)
+
+---
+
+## 4️⃣ Add SSH Key to Public EC2
+
+From your **AWS client host**:
+
+```bash
+ssh ec2-user@<PUBLIC_EC2_PUBLIC_IP>
+```
+
+On the **public EC2**:
+
+```bash
+mkdir -p ~/.ssh
+chmod 700 ~/.ssh
+```
+
+Append your key:
+
+```bash
+echo "<contents-of-/root/.ssh/id_rsa.pub>" >> ~/.ssh/authorized_keys
+chmod 600 ~/.ssh/authorized_keys
+```
+
+---
+
+## 5️⃣ Test Connectivity
+
+### A) SSH into Public EC2
+
+```bash
+ssh ec2-user@<PUBLIC_EC2_PUBLIC_IP>
+```
+
+---
+
+### B) Ping Private EC2
+
+1. Get the **private IP** of `devops-private-ec2` (e.g., `10.1.1.10`)
+2. From **public EC2**:
+
+```bash
+ping 10.1.1.10
+```
+
+✅ **Successful replies confirm VPC Peering works**
+
+---
+
+## 6️⃣ (Optional) SSH from Public EC2 to Private EC2
+
+If SSH keys are shared:
+
+```bash
+ssh ec2-user@10.1.1.10
+```
+
+---
+
+## ✅ Final Validation Checklist
+
+✔ VPC Peering is **Active**
+✔ Routes added on **both sides**
+✔ Security groups allow ICMP + SSH
+✔ Public EC2 can **ping private EC2**
+
 
 **Q14: Setting Up a Private VPC with an Isolated EC2 Instance**
 
@@ -1124,6 +1307,110 @@ An EC2 instance in a private subnet fails to install software updates. Explain h
 
 or
 Create a private ECR repository, build a Docker image locally, and push it to the ECR repo. What authentication steps are required, and how do you allow ECS or EC2 instances to pull this image?
+
+The Nautilus DevOps team has been tasked with setting up a containerized application. They need to create a private Amazon Elastic Container Registry (ECR) repository to store their Docker images. Once the repository is created, they will build a Docker image from a Dockerfile located on the aws-client host and push this image to the ECR repository. This process is essential for maintaining and deploying containerized applications in a streamlined manner.
+
+Create a private ECR repository named xfusion-ecr. There is a Dockerfile under /root/pyapp directory on aws-client host, build a docker image using this Dockerfile and push the same to the newly created ECR repo, the image tag must be latest.
+Ans:
+Below is a **GUI-first walkthrough** with the **exact CLI commands** you’ll run on the `aws-client` host to build and push the image.
+
+---
+
+## Part 1: Create a Private ECR Repository (AWS GUI)
+
+1. **Log in to AWS Management Console**
+2. Go to **Services → Elastic Container Registry (ECR)**
+3. Click **Repositories** (left sidebar)
+4. Click **Create repository**
+
+### Repository settings
+
+* **Visibility settings**: ✅ *Private*
+* **Repository name**:
+
+  ```
+  xfusion-ecr
+  ```
+* Leave other settings as default
+
+5. Click **Create repository**
+
+📌 Once created, note:
+
+* **AWS Region** (top-right of console)
+* **Repository URI**
+  Example format:
+
+  ```
+  <account-id>.dkr.ecr.<region>.amazonaws.com/xfusion-ecr
+  ```
+
+---
+
+## Part 2: Authenticate Docker to ECR (aws-client host)
+
+Log in to the `aws-client` host and run:
+
+```bash
+aws ecr get-login-password --region <region> \
+| docker login --username AWS --password-stdin <account-id>.dkr.ecr.<region>.amazonaws.com
+```
+
+✅ You should see:
+
+```
+Login Succeeded
+```
+
+---
+
+## Part 3: Build Docker Image from Dockerfile
+
+1. Go to the directory containing the Dockerfile:
+
+```bash
+cd /root/pyapp
+```
+
+2. Build the Docker image:
+
+```bash
+docker build -t xfusion-ecr:latest .
+```
+
+---
+
+## Part 4: Tag the Image for ECR
+
+Tag the image using the ECR repository URI:
+
+```bash
+docker tag xfusion-ecr:latest <account-id>.dkr.ecr.<region>.amazonaws.com/xfusion-ecr:latest
+```
+
+---
+
+## Part 5: Push Image to ECR
+
+```bash
+docker push <account-id>.dkr.ecr.<region>.amazonaws.com/xfusion-ecr:latest
+```
+
+Wait until the push completes successfully.
+
+---
+
+## Part 6: Verify in AWS GUI
+
+1. Go back to **ECR → Repositories**
+2. Click **xfusion-ecr**
+3. Open the **Images** tab
+
+✅ You should see:
+
+* **Tag**: `latest`
+* **Image status**: Available
+
 
 ### 🌐 **NAT Gateway**
 
@@ -1178,6 +1465,95 @@ Here is a set of **Advanced-Level Scenario-Based Questions** based on your provi
 ### 🌍 **Q7: Enable Internet Access for Private EC2 using NAT Instance**
 
 > *You’ve deployed EC2 instances in private subnets that need internet access for software updates, but due to budget constraints, you're using a NAT instance instead of a NAT Gateway. Configure the NAT instance, update route tables, harden the instance, and implement high availability using autoscaling or failover strategy. What are the trade-offs of using NAT instance over NAT Gateway?*
+
+The Nautilus DevOps team is tasked with enabling internet access for an EC2 instance running in a private subnet. This instance should be able to upload a test file to a public S3 bucket once it can access the internet. To minimize costs, the team has decided to use a NAT Instance instead of a NAT Gateway.
+
+The following components already exist in the environment:
+1) A VPC named xfusion-priv-vpc and a private subnet named xfusion-priv-subnet have been created.
+2) An EC2 instance named xfusion-priv-ec2 is already running in the private subnet.
+3) The EC2 instance is configured with a cron job that uploads a test file to the S3 bucket xfusion-nat-26631 every minute. Upload will only succeed once internet access is established.
+
+Your task is to:
+
+Create a new public subnet named xfusion-pub-subnet in the existing VPC.
+Launch a NAT Instance in the public subnet using an Amazon Linux 2 AMI and name it xfusion-nat-instance. Configure this instance to act as a NAT instance. Make sure to use a custom security group for this instance.
+After the configuration, verify that the test file xfusion-test.txt appears in the S3 bucket xfusion-nat-26631. This indicates successful internet access from the private EC2 instance via the NAT Instance.
+
+Ans:
+Got it ✅ — this is a classic AWS networking setup exercise. Let’s walk through the **step‑by‑step solution** to enable internet access for your private EC2 instance using a **NAT Instance**.
+
+---
+
+## 🔹 Step 1: Create a Public Subnet
+- Go to **VPC Console** → Subnets → Create Subnet.
+- Select **VPC: datacenter-priv-vpc**.
+- Name: **datacenter-pub-subnet**.
+- Choose an **Availability Zone** (same as private subnet for simplicity).
+- Assign a **CIDR block** (e.g., `10.0.2.0/24`).
+- Ensure the **Route Table** for this subnet has:
+  - A **default route (0.0.0.0/0)** pointing to the **Internet Gateway** attached to the VPC.
+
+---
+
+## 🔹 Step 2: Launch the NAT Instance
+- Go to **EC2 Console** → Launch Instance.
+- Name: **datacenter-nat-instance**.
+- AMI: **Amazon Linux 2**.
+- Instance type: **t3.micro** (cost‑effective).
+- Network: **datacenter-priv-vpc**.
+- Subnet: **datacenter-pub-subnet**.
+- Enable **Auto-assign Public IP**.
+- Security Group (custom):
+  - Inbound: Allow SSH (22) from your IP, allow HTTP/HTTPS if needed.
+  - Outbound: Allow all traffic.
+- Launch the instance.
+
+---
+
+## 🔹 Step 3: Configure NAT Instance
+1. **Disable Source/Destination Check**:
+   - Select the NAT instance → Actions → Networking → Change Source/Dest Check → Disable.
+2. **Enable IP Forwarding**:
+   - Edit `/etc/sysctl.conf` and set:
+     ```
+     net.ipv4.ip_forward = 1
+     ```
+   - Apply changes:
+     ```
+     sudo sysctl -p
+     ```
+3. **Configure iptables for NAT**:
+   ```
+   sudo iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE
+   sudo iptables-save > /etc/sysconfig/iptables
+   ```
+   (This masquerades traffic from private subnet through NAT instance’s public IP.)
+
+---
+
+## 🔹 Step 4: Update Private Subnet Route Table
+- Go to **Route Tables** in VPC Console.
+- Select the route table associated with **datacenter-priv-subnet**.
+- Add a route:
+  - Destination: `0.0.0.0/0`
+  - Target: **datacenter-nat-instance** (instance ID).
+
+---
+
+## 🔹 Step 5: Verification
+- The private EC2 (`datacenter-priv-ec2`) should now reach the internet via NAT.
+- Since it already has a cron job uploading `datacenter-test.txt` to S3:
+  - Wait a minute.
+  - Go to **S3 Console** → Bucket: `datacenter-nat-12243`.
+  - Confirm that `datacenter-test.txt` appears.
+  - If it does, ✅ internet access is working through NAT Instance.
+
+---
+
+## ✅ Outcome
+- **datacenter-pub-subnet** created.
+- **datacenter-nat-instance** launched and configured as NAT.
+- Private EC2 (`datacenter-priv-ec2`) now uploads files to S3 successfully.
 
 
 
