@@ -1527,6 +1527,96 @@ ssh ec2-user@10.1.1.10
 or 
 Create a Lambda function triggered when new files are uploaded to an S3 bucket. The function should log the filename and timestamp. What permissions do you need to configure on the bucket and Lambda role?
 
+The Nautilus DevOps team is embracing serverless architecture by integrating AWS Lambda into their operational tasks. They have decided to deploy a simple Lambda function that will return a custom greeting to demonstrate serverless capabilities effectively. This function is crucial for showcasing rapid deployment and easy scalability features of AWS Lambda to the team.
+
+Create Lambda Function: Create a Lambda function named devops-lambda.
+
+Runtime: Use the Runtime Python.
+
+Deploy: The function should print the body Welcome to KKE AWS Labs!.
+
+Status Code: Ensure the status code is 200.
+
+IAM Role: Create and use the IAM role named lambda_execution_role.
+
+Use the AWS Console to complete this task.
+Ans:
+To deploy the AWS Lambda function as described, follow these steps using the **AWS Management Console**:
+
+### 1. **Create IAM Role for Lambda Execution**
+
+Before creating the Lambda function, you need to create an IAM role that grants the function the necessary permissions.
+
+#### Step 1: Create IAM Role
+
+1. **Log in to the AWS Management Console**.
+2. Navigate to **IAM** by searching for "IAM" in the AWS Management Console.
+3. In the left-hand sidebar, click on **Roles**.
+4. Click the **Create role** button.
+5. Choose **Lambda** as the trusted entity type.
+6. Click **Next: Permissions** (you don’t need to add permissions for this specific function since it’s a basic Lambda function).
+7. Click **Next: Tags** and then **Next: Review**.
+8. Name the role **lambda_execution_role**.
+9. Click **Create role**.
+
+### 2. **Create the Lambda Function**
+
+#### Step 2: Create Lambda Function
+
+1. **Navigate to Lambda** by searching for "Lambda" in the AWS Management Console.
+2. On the Lambda dashboard, click the **Create function** button.
+3. Select **Author from scratch**.
+4. Set the **Function name** to `devops-lambda`.
+5. Choose **Python 3.x** as the runtime (Python 3.8 or later should work).
+6. Under **Permissions**, select **Choose an existing role** and choose the IAM role you created earlier: `lambda_execution_role`.
+7. Click **Create function**.
+
+#### Step 3: Configure the Lambda Function
+
+1. On the Lambda function configuration page, scroll to the **Function code** section.
+2. In the **Code source** editor, add the following Python code:
+
+```python
+import json
+
+def lambda_handler(event, context):
+    # Printing the message to the logs
+    print("Welcome to KKE AWS Labs!")
+    
+    # Returning a response with status code 200
+    return {
+        'statusCode': 200,
+        'body': json.dumps('Welcome to KKE AWS Labs!')
+    }
+```
+
+3. **Save** the Lambda function.
+
+### 3. **Test the Lambda Function**
+
+#### Step 4: Create a Test Event
+
+1. On the Lambda function page, click on the **Test** button.
+2. In the **Configure test event** pop-up, name the test event (e.g., `testEvent`).
+3. For simplicity, you can leave the event data as the default (empty JSON `{}`).
+4. Click **Save changes** and then click **Test**.
+
+#### Step 5: Verify Output
+
+1. After clicking **Test**, AWS Lambda will execute your function.
+2. In the **Execution results** section, verify that the status code is `200` and that the body contains the message `"Welcome to KKE AWS Labs!"`.
+
+---
+
+### Summary of the Lambda Function:
+
+* **Function Name**: `devops-lambda`
+* **Runtime**: Python 3.x
+* **IAM Role**: `lambda_execution_role`
+* **Code**: Prints a greeting and returns a 200 status code with the message in the body.
+
+This Lambda function now showcases how to deploy a serverless function on AWS Lambda, and it can be scaled effortlessly in the future if needed.
+
 
 **Q16: Create a Lambda Function Using CLI**
 
@@ -1534,6 +1624,147 @@ Create a Lambda function triggered when new files are uploaded to an S3 bucket. 
 or 
 
 Package a Python script into a zip file and deploy it to AWS Lambda using CLI. What CLI commands are needed, and how do you test the function after deployment?
+
+The Nautilus DevOps team continues to explore serverless architecture by setting up another Lambda function. This time, the task must be completed using the AWS Console to familiarize the team with the web interface. The function will return a custom greeting and demonstrate the capabilities of AWS Lambda effectively.
+
+Create Python Script: Create a Python script named lambda_function.py with a function that returns the body Welcome to KKE AWS Labs! and status code 200.
+
+Zip the Python Script: Zip the script into a file named function.zip.
+
+Create Lambda Function: Create a Lambda function named devops-lambda-cli using the zipped file and specify Python as the runtime.
+
+IAM Role: Use the IAM role named lambda_execution_role.
+
+Use AWS CLI which is already configured on the aws-client host.
+Ans:
+Below are **clear, step-by-step instructions** to complete this task **using the AWS CLI on the aws-client host**, exactly as requested.
+
+---
+
+## Step 1: Create the Python Script
+
+On the **aws-client host**, create a file named **`lambda_function.py`**.
+
+```bash
+vi lambda_function.py
+```
+
+Add the following content:
+
+```python
+def lambda_handler(event, context):
+    return {
+        "statusCode": 200,
+        "body": "Welcome to KKE AWS Labs!"
+    }
+```
+
+Save and exit the file.
+
+---
+
+## Step 2: Zip the Python Script
+
+Create a deployment package named **`function.zip`**.
+
+```bash
+zip function.zip lambda_function.py
+```
+
+Verify the zip file exists:
+
+```bash
+ls
+```
+
+You should see:
+
+```
+function.zip
+lambda_function.py
+```
+
+---
+
+## Step 3: Create the Lambda Function Using AWS CLI
+
+Run the following command to create the Lambda function:
+
+```bash
+aws lambda create-function \
+  --function-name devops-lambda-cli \
+  --runtime python3.9 \
+  --role arn:aws:iam::<ACCOUNT_ID>(08947-xxxxxxx):role/lambda_execution_role \
+  --handler lambda_function.lambda_handler \
+  --zip-file fileb://function.zip
+```
+
+### 🔴 Important
+
+Replace `<ACCOUNT_ID>` with your actual AWS account ID.
+You can get aacound id using:
+
+```bash
+aws sts get-caller-identity
+Ex:
+{
+    "UserId": "AIDARJVIXVM3M3QRQ37HM",
+    "Account": "08947-xxxxxxx",
+    "Arn": "arn:aws:iam::08947xxxxxxx:user/kk_labs_user_810831"
+}
+```
+
+---
+
+## Step 4: Verify Lambda Function Creation
+
+Check that the function was created successfully:
+
+```bash
+aws lambda get-function --function-name devops-lambda-cli
+```
+
+---
+
+## Step 5: Test the Lambda Function (Optional but Recommended)
+
+Invoke the Lambda function:
+
+```bash
+aws lambda invoke \
+  --function-name devops-lambda-cli \
+  response.json
+```
+
+View the output:
+
+```bash
+cat response.json
+```
+
+Expected output:
+
+```json
+{
+  "statusCode": 200,
+  "body": "Welcome to KKE AWS Labs!"
+}
+```
+
+---
+
+## ✅ Final Summary
+
+| Item                 | Value                    |
+| -------------------- | ------------------------ |
+| Script Name          | `lambda_function.py`     |
+| Zip File             | `function.zip`           |
+| Lambda Function Name | `devops-lambda-cli`      |
+| Runtime              | Python 3.9               |
+| IAM Role             | `lambda_execution_role`  |
+| Status Code          | 200                      |
+| Response Body        | Welcome to KKE AWS Labs! |
+
 
 ### 🛠️ **Troubleshooting & NAT Gateway**
 
@@ -1680,7 +1911,134 @@ Here is a set of **Advanced-Level Scenario-Based Questions** based on your provi
 
 > *You’re leading the migration of a monolithic application to AWS. The app consists of a backend API, frontend UI, and a relational database. How would you design a resilient, scalable architecture using AWS services like EC2, RDS, Auto Scaling, and Route 53? How would you manage secrets and deploy updates with minimal downtime?*
 
+The Nautilus DevOps team needs a new private RDS instance for their application. They need to set up a MySQL database and ensure that their existing EC2 instance can connect to it. This will help in managing their database needs efficiently and securely.
 
+1) Task Details:
+
+Create a private RDS instance named xfusion-rds using a sandbox template.
+The engine type must be MySQL v8.4.5, and it must be a db.t3.micro type instance.
+The master username must be xfusion_admin with an appropriate password.
+The RDS storage type must be gp2, and the storage size must be 5GiB.
+Create a database named xfusion_db.
+Keep the rest of the configurations as default. Ensure the instance is in available state.
+Adjust the security groups so that the xfusion-ec2 instance can connect to the RDS on port 3306 and also open port 80 for the instance.
+2) An EC2 instance named xfusion-ec2 exists. Connect to this instance from the AWS console. Create an SSH key (/root/.ssh/id_rsa) on the aws-client host if it doesn't already exist. Add the public key to the authorized keys of the root user on the EC2 instance for password-less SSH access.
+
+3) There is a file named index.php under the /root directory on the aws-client host. Copy this file to the xfusion-ec2 instance under the /var/www/html/ directory. Make the appropriate changes in the file to connect to the RDS.
+
+4) You should see a Connected successfully message in the browser once you access the instance using the public IP.
+
+Ans:
+To help you set up and configure your AWS RDS and EC2 environment, I've broken down the process into clear, manageable steps.
+
+### Step 1: Create the RDS Instance
+
+1. Log in to the **AWS RDS Console**.
+2. Click **Create database**.
+3. Choose **Standard create**.
+4. **Engine options:** Select **MySQL** and set the version to **8.0.35** (Note: AWS versions update frequently; choose the closest available 8.0/8.4 version if 8.4.5 is not listed).
+5. **Templates:** Select **Free Tier** or **Dev/Test** (since "sandbox" refers to the environment type).
+6. **Settings:**
+* DB instance identifier: `datacenter-rds`
+* Master username: `datacenter_admin`
+* Master password: [Set a secure password]
+
+
+7. **Instance configuration:** Choose **db.t3.micro**.
+8. **Storage:**
+* Storage type: **General Purpose SSD (gp2)**.
+* Allocated storage: **20 GiB** (This is usually the minimum for RDS; if the lab allows 5GiB, use that, but 20GiB is the standard AWS minimum).
+
+
+9. **Connectivity:** Ensure **Public access** is set to **No**.
+10. **Additional configuration:** Under **Initial database name**, enter `datacenter_db`.
+11. Click **Create database** and wait for the status to become **Available**.
+
+### Step 2: Configure Security Groups
+
+1. Go to the **EC2 Console** > **Security Groups**.
+2. **RDS Security Group:** Add an **Inbound Rule**.
+* Type: **MySQL/Aurora (3306)**.
+* Source: Select the Security Group ID of the `datacenter-ec2` instance.
+
+
+3. **EC2 Security Group:** Add an **Inbound Rule**.
+* Type: **HTTP (80)**.
+* Source: **Anywhere (0.0.0.0/0)**.
+
+
+
+### Step 3: Set up SSH Access
+
+On the `aws-client` host:
+
+1. Check for an existing key: `ls /root/.ssh/id_rsa`.
+2. If it doesn't exist, generate one: `ssh-keygen -t rsa -N "" -f /root/.ssh/id_rsa`.
+3. Copy the public key: `cat /root/.ssh/id_rsa.pub`.
+4. SSH into `datacenter-ec2` (using the password/key provided by your lab) and append that string to `/root/.ssh/authorized_keys`.
+# Enable root login
+sed -i 's/^#PermitRootLogin.*/PermitRootLogin yes/' /etc/ssh/sshd_config
+systemctl restart sshd
+### Step 4: Deploy and Configure the PHP Application
+
+1. **Copy the file:** ```bash
+scp /root/index.php root@<EC2_Pulic_IP>:/var/www/html/
+```
+### 1. Install PHP and MySQL Extensions
+
+On Ubuntu, Apache does not automatically process PHP unless the module is installed.
+
+```bash
+sudo apt update
+sudo apt install php libapache2-mod-php php-mysql -y
+
+```
+
+### 2. Prioritize PHP over HTML
+
+By default, Ubuntu's Apache is configured to look for `index.html` before `index.php`. You have two choices:
+
+* **Option A (Recommended):** Delete the default HTML file so Apache has no choice but to use your PHP file.
+```bash
+sudo rm /var/www/html/index.html
+
+```
+
+
+* **Option B:** Edit the configuration to prioritize PHP.
+```bash
+sudo nano /etc/apache2/mods-enabled/dir.conf
+
+```
+
+
+Move `index.php` to the beginning of the list, then save and exit.
+
+### 3. Permissions and Ownership
+
+Since you moved the file as `root` using `scp`, the web server user (`www-data`) needs permission to read it.
+
+```bash
+sudo chown www-data:www-data /var/www/html/index.php
+sudo chmod 644 /var/www/html/index.php
+
+```
+### 4. Restart Apache
+
+Always restart the service after installing modules or changing configurations.
+
+```bash
+sudo systemctl restart apache2
+
+```
+2. **Edit the file:** SSH into the `datacenter-ec2` and edit `/var/www/html/index.php`. Update the following variables:
+* `$servername` = [The Endpoint found in the RDS console]
+* `$username` = `datacenter_admin`
+* `$password` = [Your password]
+* `$dbname` = `datacenter_db`
+
+
+3. **Verify:** Open your browser and navigate to `http://<EC2_Public_IP>/index.php`. You should see the **"Connected successfully"** message.
 
 ### ⚖️ **Q2: Load Balancing EC2 Instances with Application Load Balancer**
 
