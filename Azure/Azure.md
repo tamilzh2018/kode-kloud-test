@@ -1897,7 +1897,7 @@ Here’s a clear, step-by-step guide to create the **Python-based web app** in *
    | Publish          | `Code`                                        |
    | Runtime stack    | `Python <latest version>` (e.g., Python 3.11) |
    | Operating System | `Linux`                                       |
-   | Region           | `West US`                                     |
+   | Region           | `West US` Quota isssue create central us                                    |
 
 ---
 
@@ -1963,10 +1963,123 @@ Here’s a clear, step-by-step guide to create the **Python-based web app** in *
 ### 🔄 **Q12: Synchronizing Containers Using the CLI**
 
 > *You updated a Docker image and need to synchronize your ACR with the latest build. Use Azure CLI to push the image, verify it’s available, and redeploy the container on an Azure App Service or VM. How do you automate this with minimal downtime?*
+To complete this data migration task efficiently using the Azure CLI, you will need to follow a structured process: creating the destination, performing the copy, and verifying the integrity of the data.
+
+As part of a data migration project, the team lead has tasked the team with migrating data from an existing Azure Blob container to a new Blob container. The existing container contains a substantial amount of data that must be accurately transferred to the new container. The team is responsible for creating the new Blob container and ensuring that all data from the existing container is copied or synced to the new container completely and accurately. It is imperative to perform thorough verification steps to confirm that all data has been successfully transferred to the new container without any loss or corruption.
+As a member of the Nautilus DevOps Team, your task is to perform the following:
+Create a New Private Azure Blob Container: Name the container devops-dest-6318 under the storage account devopsst2010.
+Data Migration: Migrate the file devops.txt from the existing devops-source-28162 container to the new devops-dest-6318 container.
+Ensure Data Consistency: Ensure that both containers have the file devops.txt and confirm the file content is identical in both containers.
+Use Azure CLI: Use the Azure CLI to perform the creation and data migration tasks.
+
+---
+
+### Phase 1: Create the New Container
+
+First, create the private destination container as requested.
+
+```bash
+az storage container create \
+    --name devops-dest-6318 \
+    --account-name devopsst2010 \
+    --public-access off \
+    --auth-mode login
+
+
+# Confirm it’s private (access off):  
+az storage container show \
+--name devops-dest-6318 \
+--account-name devopsst2010 \
+--auth-mode login \
+--query "publicAccess"
+```
+### Phase 2: Migrate the Data
+
+To move the specific file `devops.txt` from the source to the destination, use the `az storage blob copy start` command. This performs a server-side copy within Azure.
+
+```bash
+#Start server-side copy (same storage account):  
+az storage blob copy start \
+    --account-name devopsst2010 \
+    --destination-container devops-dest-6318 \
+    --destination-blob devops.txt \
+    --source-container devops-source-28162 \
+    --source-blob devops.txt \
+    --auth-mode login
+
+```
+
+### Phase 3: Verification and Consistency Check
+
+To ensure data consistency and accuracy, you should verify the file's existence and compare the **MD5 hashes (Content-MD5)**. This confirms the data was not corrupted during the transfer.
+
+**1. Check if the file exists in the destination:**
+
+```bash
+# erify both containers contain devops.txt
+# List source container:  
+az storage blob list \
+--account-name devopsst2010 \
+--container-name devops-source-28162 \
+--auth-mode login \
+--query "[?name=='devops.txt'].name"
+
+# List destination container:  
+az storage blob list \
+--account-name devopsst2010 \
+--container-name devops-dest-6318 \
+--auth-mode login \
+--query "[?name=='devops.txt'].name"
+```
+
+**2. Compare Content Hashes:**
+Run the following to retrieve the properties of both blobs and compare their `contentSettings.contentMd5` values.
+
+```bash
+# Get Source MD5
+az storage blob show \
+    --account-name devopsst2010 \
+    --container-name devops-source-28162 \
+    --name devops.txt \
+    --query "properties.contentSettings.contentMd5"
+
+# Get Destination MD5
+az storage blob show \
+    --account-name devopsst2010 \
+    --container-name devops-dest-6318 \
+    --name devops.txt \
+    --query "properties.contentSettings.contentMd5"
+
+```
+
+---
+
+### Summary of Actions
+
+| Action | Command/Tool | Result |
+| --- | --- | --- |
+| **Provisioning** | `az storage container create` | Created `devops-dest-6318` |
+| **Migration** | `az storage blob copy start` | Transferred `devops.txt` |
+| **Integrity Check** | `az storage blob show` | Verified MD5 Hash match |
+
+> [!IMPORTANT]
+> Because `copy start` is asynchronous for large files, you can check the status using `az storage blob show --query "properties.copy.status"`. For a single `.txt` file, this is usually instantaneous.
+
+
 
 ### ⚖️ **Q13: Integrating Virtual Machines with Application Load Balancer**
 
 > *Distribute traffic across multiple VMs hosting a web application using Azure Load Balancer. Implement health probes and ensure VMs automatically register/deregister during scaling. What type of load balancer (Basic vs. Standard) is appropriate, and why?*
+The Nautilus DevOps team is currently working on setting up a simple application on the Azure cloud. They aim to establish an Azure Load Balancer in front of a Virtual Machine (VM) where an Nginx server is currently running. While the Nginx server currently serves a sample page, the team plans to deploy the actual application later.
+
+Set up an Azure Load Balancer named xfusion-lb.
+Configure the Load Balancer’s frontend IP configuration with the name xfusion-lb-ip and assign a public IP address with the same name (xfusion-lb-ip).
+Create a backend pool named xfusion-backend-pool and add the VM running Nginx to this pool.
+Create a health probe named xfusion-health-probe on port 80 to check the VM's health.
+Set up a load balancer rule named xfusion-lb-rule to route traffic on port 80 to the backend pool on port 80.
+Add an inbound rule to the existing NSG of the VM to allow HTTP traffic on port 80.
+Ans:
+
 
 ### 🌐 **Q14: Enabling Internet Connectivity for Virtual Machines**
 

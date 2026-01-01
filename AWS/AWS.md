@@ -950,6 +950,125 @@ Ans:
 or 
 Your application requires an RDS MySQL database accessible only from within the VPC. Deploy the RDS instance in a private subnet, and ensure your EC2 app server can access it. What are the necessary security group, route table, and subnet configurations?
 
+The Nautilus Development Team is working on a new application feature that requires a reliable and scalable database solution. To facilitate development and testing, they need a new private RDS instance. This instance will be used to store critical application data and must be provisioned using the AWS free tier to minimize costs during the initial development phase. The team has chosen MySQL as the database engine due to its compatibility with their existing systems. The DevOps team has been tasked with setting up this RDS instance, ensuring that it is correctly configured and available for use by the development team.
+
+As a member of the Nautilus DevOps Team, your task is to perform the following:
+
+Provision a Private RDS Instance: Create a new private RDS instance named xfusion-rds using a sandbox template, further it must be a db.t3.micro type instance.
+Engine Configuration: Use the MySQL engine with version 8.4.x.
+Enable Storage Autoscaling: Enable storage autoscaling and set the threshold value to 50GB. Keep the rest of the configurations as default.
+Instance Availability: Ensure the instance is in the available state before submitting this task.
+
+Ans:
+Below is a **clear, DevOps-ready procedure** to provision the required **private Amazon RDS MySQL instance** using the **AWS Free Tier**, exactly as requested.
+
+---
+
+## ✅ Objective Summary
+
+* **DB Identifier:** `xfusion-rds`
+* **Engine:** MySQL **8.4.x**
+* **Instance Class:** `db.t3.micro` (Free Tier eligible)
+* **Accessibility:** **Private** (not publicly accessible)
+* **Storage Autoscaling:** Enabled, max **50 GB**
+* **State Required:** `Available`
+
+---
+
+## 🚀 Step-by-Step: Provision Private RDS Instance (AWS Console)
+
+### 1. Open RDS Console
+
+1. Log in to the **AWS Management Console**
+2. Navigate to **Services → RDS**
+3. Click **Create database**
+
+---
+
+### 2. Choose Database Creation Method
+
+* Select **Standard create**
+
+---
+
+### 3. Engine Configuration
+
+* **Engine type:** MySQL
+* **Version:** **MySQL 8.4.x** (choose latest 8.4 available)
+
+---
+
+### 4. Templates
+
+* Select **Sandbox**
+  *(Optimized for development/testing and Free Tier usage)*
+
+---
+
+### 5. Settings
+
+* **DB instance identifier:** `xfusion-rds`
+* **Master username:** (leave default or set as required)
+* **Password:** Auto-generate or set manually (store securely)
+
+---
+
+### 6. Instance Configuration
+
+* **DB instance class:** `db.t3.micro`
+* **Storage type:** General Purpose (gp2 or gp3 – default)
+* **Allocated storage:** Default (typically 20 GB)
+
+---
+
+### 7. Enable Storage Autoscaling
+
+* ✅ Check **Enable storage autoscaling**
+* **Maximum storage threshold:** `50 GB`
+
+---
+
+### 8. Connectivity (Private Configuration)
+
+* **VPC:** Default or project-specific VPC
+* **Public access:** ❌ **No**
+* **Subnet group:** Default (private subnets)
+* **VPC security group:** Default or private SG allowing MySQL (3306) only from app servers
+* **Availability Zone:** No preference
+
+---
+
+### 9. Additional Configuration
+
+* Leave **all other settings as default**, including:
+
+  * Backup
+  * Monitoring
+  * Maintenance window
+  * Encryption (default)
+
+---
+
+### 10. Create Database
+
+* Click **Create database**
+* Wait for status to change from **Creating** → **Available**
+
+⏳ This may take **5–10 minutes**
+
+---
+
+## 🔍 Final Verification Checklist
+
+Before submitting the task, confirm:
+
+* ✅ DB identifier is **xfusion-rds**
+* ✅ Engine is **MySQL 8.4.x**
+* ✅ Instance class is **db.t3.micro**
+* ✅ Public accessibility is **disabled**
+* ✅ Storage autoscaling enabled with **50 GB max**
+* ✅ Instance status is **Available**
+
 
 **Q10: Enabling Public Access to an RDS Instance**
 
@@ -964,6 +1083,137 @@ For temporary testing, your QA team needs public access to an RDS instance. Modi
 
 or 
 A developer corrupted the staging database. Use a previously created manual snapshot to restore the RDS instance. What changes (e.g., DB identifier, endpoint) should be expected post-restoration?
+
+The Nautilus Development Team is preparing for a major update to their database infrastructure. To ensure a smooth transition and to safeguard data, the team has requested the DevOps team to take a snapshot of the current RDS instance and restore it to a new instance. This process is crucial for testing and validation purposes before the update is rolled out to the production environment. The snapshot will serve as a backup, and the new instance will be used to verify that the backup process works correctly and that the application can function seamlessly with the restored data.
+
+As a member of the Nautilus DevOps Team, your task is to perform the following:
+
+Take a Snapshot: Take a snapshot of the datacenter-rds RDS instance and name it datacenter-snapshot (please wait datacenter-rds instance to be in available state).
+
+Restore the Snapshot: Restore the snapshot to a new RDS instance named datacenter-snapshot-restore.
+
+Configure the New RDS Instance: Ensure that the new RDS instance has a class of db.t3.micro.
+
+Verify the New RDS Instance: The new RDS instance must be in the Available state upon completion of the restoration process.
+Ans:
+Below are **clear, practical steps** you can follow to complete the task exactly as requested. I’m including **both AWS Console and AWS CLI methods**—use whichever your environment allows.
+
+---
+
+## ✅ Prerequisites
+
+* You must have permissions for **RDS snapshots and restore**
+* Ensure **`datacenter-rds`** is in **`Available`** state before starting
+
+---
+
+# 🔹 Step 1: Take a Snapshot of the RDS Instance
+
+### **Using AWS Console**
+
+1. Open **AWS Console → RDS**
+2. Click **Databases**
+3. Select **`datacenter-rds`**
+4. Click **Actions → Take snapshot**
+5. Snapshot name:
+
+   ```
+   datacenter-snapshot
+   ```
+6. Click **Take snapshot**
+7. Wait until snapshot status becomes **Available**
+
+---
+
+### **Using AWS CLI**
+
+```bash
+aws rds create-db-snapshot \
+  --db-instance-identifier datacenter-rds \
+  --db-snapshot-identifier datacenter-snapshot
+```
+
+Check status:
+
+```bash
+aws rds describe-db-snapshots \
+  --db-snapshot-identifier datacenter-snapshot
+```
+
+---
+
+# 🔹 Step 2: Restore Snapshot to a New RDS Instance
+
+### **Using AWS Console**
+
+1. Go to **RDS → Snapshots**
+2. Select **`datacenter-snapshot`**
+3. Click **Actions → Restore snapshot**
+4. Configure:
+
+   * **DB Instance Identifier**:
+
+     ```
+     datacenter-snapshot-restore
+     ```
+   * **DB Instance Class**:
+
+     ```
+     db.t3.micro
+     ```
+5. Keep other settings default (unless your lab specifies otherwise)
+6. Click **Restore DB Instance**
+
+---
+
+### **Using AWS CLI**
+
+```bash
+aws rds restore-db-instance-from-db-snapshot \
+  --db-instance-identifier datacenter-snapshot-restore \
+  --db-snapshot-identifier datacenter-snapshot \
+  --db-instance-class db.t3.micro
+```
+
+---
+
+# 🔹 Step 3: Verify the New RDS Instance
+
+### **Console Verification**
+
+1. Go to **RDS → Databases**
+2. Confirm:
+
+   * Instance name: `datacenter-snapshot-restore`
+   * Instance class: `db.t3.micro`
+   * Status: **Available**
+
+---
+
+### **CLI Verification**
+
+```bash
+aws rds describe-db-instances \
+  --db-instance-identifier datacenter-snapshot-restore
+```
+
+Look for:
+
+```json
+"DBInstanceStatus": "available",
+"DBInstanceClass": "db.t3.micro"
+```
+
+---
+
+## ✅ Final Checklist
+
+✔ Snapshot name: **datacenter-snapshot**
+✔ Restored instance name: **datacenter-snapshot-restore**
+✔ Instance class: **db.t3.micro**
+✔ Status: **Available**
+
+---
 
 
 ### 🌐 **Networking: VPCs & Peering**
@@ -1480,10 +1730,8 @@ Launch a NAT Instance in the public subnet using an Amazon Linux 2 AMI and name 
 After the configuration, verify that the test file xfusion-test.txt appears in the S3 bucket xfusion-nat-26631. This indicates successful internet access from the private EC2 instance via the NAT Instance.
 
 Ans:
-Got it ✅ — this is a classic AWS networking setup exercise. Let’s walk through the **step‑by‑step solution** to enable internet access for your private EC2 instance using a **NAT Instance**.
-
----
-
+USe follwoing document
+https://docs.aws.amazon.com/vpc/latest/userguide/work-with-nat-instances.html
 ## 🔹 Step 1: Create a Public Subnet
 - Go to **VPC Console** → Subnets → Create Subnet.
 - Select **VPC: datacenter-priv-vpc**.
@@ -1506,31 +1754,24 @@ Got it ✅ — this is a classic AWS networking setup exercise. Let’s walk thr
 - Security Group (custom):
   - Inbound: Allow SSH (22) from your IP, allow HTTP/HTTPS if needed.
   - Outbound: Allow all traffic.
-- Launch the instance.
+- user data: 
 
----
-
+# Enable IP forwarding # Install SSM Agent (Amazon Linux 2)# Configure iptables for NAT
+#!/bin/bash
+sudo sysctl -w net.ipv4.ip_forward=1
+sudo yum install iptables-services -y
+sudo systemctl enable iptables
+sudo systemctl start iptables
+sudo iptables -t nat -A POSTROUTING -o ens5 -j MASQUERADE
+sudo service iptables save
+sudo yum install -y amazon-ssm-agent
+sudo systemctl enable amazon-ssm-agent
+sudo systemctl start amazon-ssm-agent
+# Disable source/destination check will be done in console manually
+# (cannot be automated via user-data)
 ## 🔹 Step 3: Configure NAT Instance
 1. **Disable Source/Destination Check**:
    - Select the NAT instance → Actions → Networking → Change Source/Dest Check → Disable.
-2. **Enable IP Forwarding**:
-   - Edit `/etc/sysctl.conf` and set:
-     ```
-     net.ipv4.ip_forward = 1
-     ```
-   - Apply changes:
-     ```
-     sudo sysctl -p
-     ```
-3. **Configure iptables for NAT**:
-   ```
-   sudo iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE
-   sudo iptables-save > /etc/sysconfig/iptables
-   ```
-   (This masquerades traffic from private subnet through NAT instance’s public IP.)
-
----
-
 ## 🔹 Step 4: Update Private Subnet Route Table
 - Go to **Route Tables** in VPC Console.
 - Select the route table associated with **datacenter-priv-subnet**.
@@ -1554,7 +1795,8 @@ Got it ✅ — this is a classic AWS networking setup exercise. Let’s walk thr
 - **datacenter-pub-subnet** created.
 - **datacenter-nat-instance** launched and configured as NAT.
 - Private EC2 (`datacenter-priv-ec2`) now uploads files to S3 successfully.
-
+aws s3 ls s3://datacenter-nat-6877/datacenter-test.txt
+aws s3 ls s3://nautilus-nat-23937/nautilus-test.txt
 
 
 ### 🔒 **Q8: Securing Data with AWS KMS**
