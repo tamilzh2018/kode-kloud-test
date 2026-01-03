@@ -2044,18 +2044,440 @@ sudo systemctl restart apache2
 
 > *You’re running multiple EC2 instances across two Availability Zones hosting microservices. Configure an Application Load Balancer that routes traffic based on path (`/api`, `/admin`, etc.). How would you implement sticky sessions, enable HTTPS with SSL certificates, and configure health checks for each target group?*
 
+The Nautilus Development Team needs to set up a new EC2 instance and configure it to run a web server. This EC2 instance should be part of an Application Load Balancer (ALB) setup to ensure high availability and better traffic management. The task involves creating an EC2 instance, setting up an ALB, configuring a target group, and ensuring the web server is accessible via the ALB DNS.
 
+Create a security group: Create a security group named xfusion-sg to open port 80 for the default security group (which will be attached to the ALB). Attach xfusion-sg security group to the EC2 instance.
+
+Create an EC2 instance: Create an EC2 instance named xfusion-ec2. Use any available Ubuntu AMI to create this instance. Configure the instance to run a user data script during its launch.
+
+This script should:
+
+Install the Nginx package.
+Start the Nginx service.
+Set up an Application Load Balancer: Set up an Application Load Balancer named xfusion-alb. Attach default security group to the same.
+
+Create a target group: Create a target group named xfusion-tg.
+
+Route traffic: The ALB should route traffic on port 80 to port 80 of the xfusion-ec2 instance.
+
+Security group adjustments: Make appropriate changes in the default security group attached to the ALB if necessary. Eventually, the Nginx server running under xfusion-ec2 instance must be accessible using the ALB DNS.
+
+Ans:
+
+Here’s a **step-by-step guide** to set up the requested AWS infrastructure for the Nautilus Development Team:
+
+---
+
+## 🔐 Step 1: Create Security Group
+- **Name:** `xfusion-sg`
+- **Inbound Rule:**
+  - Protocol: TCP
+  - Port: 80
+  - Source: Default security group (attached to ALB)
+- **Outbound Rule:** Allow all traffic (default).
+- Attach `xfusion-sg` to the EC2 instance.
+
+---
+
+## 🖥️ Step 2: Launch EC2 Instance
+- **Name:** `xfusion-ec2`
+- **AMI:** Any Ubuntu AMI (e.g., Ubuntu Server 22.04 LTS).
+- **Instance Type:** t2.micro (or any suitable type).
+- **Security Group:** Attach `xfusion-sg`.
+- **User Data Script:**
+
+```bash
+#!/bin/bash
+# Update packages
+apt-get update -y
+
+# Install Nginx
+apt-get install nginx -y
+
+# Start Nginx service
+systemctl start nginx
+systemctl enable nginx
+
+# Simple index page
+echo "<h1>Welcome to xfusion-ec2 via ALB</h1>" > /var/www/html/index.html
+```
+
+This ensures Nginx is installed, started, and serving a test page.
+
+---
+
+## ⚖️ Step 3: Create Application Load Balancer (ALB)
+- **Name:** `xfusion-alb`
+- **Type:** Internet-facing, HTTP (port 80).
+- **Security Group:** Attach the **default security group**.
+- **Listeners:** HTTP on port 80.
+
+---
+
+## 🎯 Step 4: Create Target Group
+- **Name:** `xfusion-tg`
+- **Target Type:** Instance
+- **Protocol:** HTTP
+- **Port:** 80
+- **Health Check:** HTTP, path `/`
+- Register `xfusion-ec2` instance in this target group.
+
+---
+
+## 🔄 Step 5: Route Traffic
+- In the ALB configuration:
+  - Add a listener rule to forward traffic from port 80 → `xfusion-tg`.
+- Ensure the **default security group** attached to ALB allows **inbound traffic on port 80 from 0.0.0.0/0** (public access).
+
+---
+
+## ✅ Step 6: Verify Setup
+1. Get the **DNS name** of `xfusion-alb` from the AWS console.
+2. Open it in a browser:  
+   `http://<ALB-DNS-NAME>`
+3. You should see:  
+   **“Welcome to xfusion-ec2 via ALB”**
 
 ### 🔐 **Q3: Managing EC2 Access with S3 Role-Based Permissions**
 
 > *Your EC2 instance processes data from multiple S3 buckets. You want to avoid using static credentials. Create an IAM role with fine-grained permissions that allows read-only access to `bucket-A` and full access to `bucket-B`. Attach the role to the instance and validate access using the AWS CLI. How would you audit and rotate permissions securely?*
 
+The Nautilus DevOps team needs to set up an application on an EC2 instance to interact with an S3 bucket for storing and retrieving data. To achieve this, the team must create a private S3 bucket, set appropriate IAM policies and roles, and test the application functionality.
 
+Task:
+1) EC2 Instance Setup:
+
+An instance named devops-ec2 already exists.
+The instance requires access to an S3 bucket.
+2) Setup SSH Keys:
+
+Create new SSH key pair (id_rsa and id_rsa.pub) on the aws-client host and add the public key to the root user's authorized keys on the EC2 instance.
+3) Create a Private S3 Bucket:
+
+Name the bucket devops-s3-14845.
+Ensure the bucket is private.
+4) Create an IAM Policy and Role:
+
+Create an IAM policy allowing s3:PutObject, s3:ListBucket and s3:GetObject access to devops-s3-14845.
+Create an IAM role named devops-role.
+Attach the policy to the IAM role.
+Attach this role to the devops-ec2 instance.
+5) Test the Access:
+
+SSH into the EC2 instance and try to upload a file to devops-s3-14845 bucket using following command:
+aws s3 cp <your-file> s3://devops-s3-14845/
+
+Now run following command to list the upload file:
+aws s3 ls s3://devops-s3-14845/
+
+Ans:
+Below are **AWS Management Console (GUI) steps** to complete the entire task.
+
+---
+
+## 1️⃣ EC2 Instance (Verify)
+
+1. Open **AWS Console → EC2**
+2. Go to **Instances**
+3. Confirm instance **`devops-ec2`** is **running**
+
+---
+
+## 2️⃣ Setup SSH Keys (GUI + CLI mix)
+
+### 🔹 Generate SSH keys (on aws-client host)
+
+```bash
+ssh-keygen -t rsa -b 4096 -f ~/.ssh/id_rsa -N ""
+```
+
+### 🔹 Add public key to EC2 (GUI-assisted)
+
+1. Open **EC2 → Instances**
+2. Select **devops-ec2**
+3. Note **Public IP**
+4. SSH once using existing access
+5. On EC2:
+
+```bash
+mkdir -p /root/.ssh
+vi /root/.ssh/authorized_keys
+```
+
+6. Paste contents of `id_rsa.pub`
+7. Save and exit
+
+---
+
+## 3️⃣ Create Private S3 Bucket (GUI)
+
+1. Open **AWS Console → S3**
+2. Click **Create bucket**
+3. Bucket name: **`devops-s3-14845`**
+4. AWS Region: same as EC2
+5. **Block all public access** → ✔️ Enabled
+6. Click **Create bucket**
+
+✅ Bucket is private by default
+
+---
+
+## 4️⃣ Create IAM Policy (GUI)
+
+1. Open **IAM → Policies**
+2. Click **Create policy**
+3. Select **JSON tab**
+4. Paste:
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": "s3:ListBucket",
+      "Resource": "arn:aws:s3:::devops-s3-14845"
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "s3:GetObject",
+        "s3:PutObject"
+      ],
+      "Resource": "arn:aws:s3:::devops-s3-14845/*"
+    }
+  ]
+}
+```
+
+5. Click **Next**
+6. Policy name: **devops-s3-policy**
+7. Click **Create policy**
+
+---
+
+## 5️⃣ Create IAM Role (GUI)
+
+1. Go to **IAM → Roles**
+2. Click **Create role**
+3. Select **AWS service**
+4. Choose **EC2**
+5. Click **Next**
+6. Search and select **devops-s3-policy**
+7. Click **Next**
+8. Role name: **devops-role**
+9. Click **Create role**
+
+---
+
+## 6️⃣ Attach IAM Role to EC2 (GUI)
+
+1. Go to **EC2 → Instances**
+2. Select **devops-ec2**
+3. Click **Actions → Security → Modify IAM role**
+4. Select **devops-role**
+5. Click **Update IAM role**
+
+⏳ Wait 30–60 seconds
+
+---
+
+## 7️⃣ Test S3 Access from EC2 (GUI + CLI)
+
+### 🔹 SSH into EC2
+
+```bash
+ssh root@<EC2_PUBLIC_IP>
+```
+
+### 🔹 Create test file
+
+```bash
+echo "S3 GUI test" > test.txt
+```
+
+### 🔹 Upload file
+
+```bash
+aws s3 cp test.txt s3://devops-s3-14845/
+```
+
+### 🔹 List files
+
+```bash
+aws s3 ls s3://devops-s3-14845/
+```
+
+✅ File should be visible
+
+---
+
+## ✅ Final Confirmation
+
+✔ EC2 connected via IAM Role
+✔ Private S3 bucket
+✔ No access keys used
+✔ Upload & list successful
 
 ### 🐳 **Q4: Deploying Containerized Applications with Amazon ECS**
 
 > *You’re deploying a containerized Node.js app using Amazon ECS with Fargate. Create a multi-container task definition with app and logging sidecar. Configure the service with an ALB for public access, enable autoscaling based on CPU utilization, and ensure secure secret injection using AWS Secrets Manager. How would you handle zero-downtime deployments and rollback strategies?*
 
+The Nautilus DevOps team is tasked with deploying a containerized application using Amazon's container services. They need to create a private Amazon Elastic Container Registry (ECR) to store their Docker images and use Amazon Elastic Container Service (ECS) to deploy the application. The process involves building a Docker image from a given Dockerfile, pushing it to the ECR, and then setting up an ECS cluster to run the application.
+
+Create a Private ECR Repository:
+
+Create a private ECR repository named nautilus-ecr to store Docker images.
+Build and Push Docker Image:
+
+Use the Dockerfile located at /root/pyapp on the aws-client host.
+Build a Docker image using this Dockerfile.
+Tag the image with latest tag.
+Push the Docker image to the nautilus-ecr repository.
+Create and Configure ECS cluster:
+
+Create an ECS cluster named nautilus-cluster using the Fargate launch type.
+Create an ECS Task Definition:
+
+Define a task named nautilus-taskdefinition using the Docker image from the nautilus-ecr ECR repository.
+Specify necessary CPU and memory resources.
+Deploy the Application Using ECS Service:
+
+Create a service named nautilus-service on the nautilus-cluster to run the task.
+Ensure the service runs at least one task.
+Ans:
+Got it — you want the **GUI (AWS Management Console) steps** 👍
+Below is the **same workflow**, but done entirely through the **AWS Console**, not CLI.
+
+---
+
+## 1️⃣ Create a Private ECR Repository (GUI)
+
+1. Open **AWS Management Console**
+2. Go to **Amazon ECR**
+3. Click **Repositories → Create repository**
+4. Select:
+
+   * **Visibility:** Private
+   * **Repository name:** `nautilus-ecr`
+5. Leave defaults
+6. Click **Create repository**
+
+✅ Copy the **Repository URI** (you’ll need it later)
+
+---
+
+## 2️⃣ Build & Push Docker Image (Local, Still Required)
+
+⚠️ Docker build/push **cannot be done fully in GUI** — this part must be done on the `aws-client` host.
+
+From GUI:
+
+1. Open the repository
+2. Click **View push commands**
+3. Follow the provided steps:
+
+   * Authenticate Docker
+   * Build image from `/root/pyapp`
+   * Tag image as `latest`
+   * Push to ECR
+
+Once pushed, you’ll see the image in the repository.
+
+---
+
+## 3️⃣ Create ECS Cluster (Fargate)
+
+1. Go to **Amazon ECS**
+2. Click **Clusters → Create cluster**
+3. Select:
+
+   * **Cluster name:** `nautilus-cluster`
+   * **Infrastructure:** AWS Fargate (Serverless)
+4. Click **Create**
+
+---
+
+## 4️⃣ Create Task Definition (GUI)
+
+1. In ECS → **Task definitions**
+2. Click **Create new task definition**
+3. Select **Fargate**
+4. Click **Next**
+
+### Task Configuration
+
+* **Task definition name:** `nautilus-taskdefinition`
+* **Task role:** None (or existing if required)
+* **Operating system:** Linux
+* **CPU:** 0.25 vCPU
+* **Memory:** 0.5 GB
+
+### Container Definition
+
+1. Click **Add container**
+
+2. Fill:
+
+   * **Container name:** `nautilus-container`
+   * **Image URI:**
+     `ACCOUNT_ID.dkr.ecr.REGION.amazonaws.com/nautilus-ecr:latest`
+   * **Port mappings:** `80`
+
+3. Click **Add**
+
+4. Click **Create**
+
+---
+
+## 5️⃣ Create ECS Service (Deploy the App)
+
+1. Open **Clusters → nautilus-cluster**
+2. Click **Services → Create**
+3. Configure:
+
+   * **Launch type:** Fargate
+   * **Task definition:** `nautilus-taskdefinition`
+   * **Service name:** `nautilus-service`
+   * **Desired tasks:** `1`
+
+### Networking
+
+* Select **VPC**
+* Choose **subnets**
+* Choose **security group** enable port 80
+* Enable **Auto-assign public IP**
+
+4. Click **Create service**
+
+---
+
+## 6️⃣ Verify Deployment (GUI)
+
+1. Open **ECS → Clusters → nautilus-cluster**
+2. Click **Services**
+3. Check:
+
+   * Service status: **ACTIVE**
+   * Running tasks: **1**
+
+You can click the **Task → Logs** (CloudWatch) to confirm the app is running.
+
+---
+
+## ✅ Final Result (GUI)
+
+✔ ECR repository created
+✔ Docker image pushed
+✔ ECS Fargate cluster running
+✔ Task definition registered
+✔ ECS service running at least one task
+
+If you want, I can also:
+
+* Walk you through **IAM role creation in GUI**
+* Add **Application Load Balancer (GUI)**
+* Show how to **access the app URL**
 
 
 ### 🏗️ **Q5: Automating Infrastructure Deployment with AWS CloudFormation**
@@ -2068,7 +2490,110 @@ sudo systemctl restart apache2
 
 > *You’ve been asked to host a secure static site using S3 with CloudFront, Route 53, and HTTPS. Set up a private S3 bucket to store content, configure CloudFront with origin access control (OAC), and use ACM for SSL certificates. How do you implement cache invalidation and secure custom domain setup with minimal cost?*
 
+The Nautilus DevOps team has been tasked with creating an internal information portal for public access. As part of this project, they need to host a static website on AWS using an S3 bucket. The S3 bucket must be configured for public access to allow external users to access the static website directly via the S3 website URL.
 
+Task Requirements:
+
+Create an S3 bucket named xfusion-web-22541.
+Configure the S3 bucket for static website hosting with index.html as the index document.
+Allow public access to the bucket so that the website is publicly accessible.
+Upload the index.html file from the /root/ directory of the AWS client host to the S3 bucket.
+Verify that the website is accessible directly through the S3 website URL.
+
+Ans:
+Below are **step-by-step AWS Console (GUI) instructions** to complete the task.
+
+---
+
+## 1. Create the S3 Bucket
+
+1. Log in to the **AWS Management Console**
+2. Go to **Services → S3**
+3. Click **Create bucket**
+4. Fill in:
+
+   * **Bucket name:** `xfusion-web-22541`
+   * **AWS Region:** Select your required region
+5. **Object Ownership**
+
+   * Select **ACLs disabled (Bucket owner enforced)** (default)
+6. **Block Public Access settings**
+
+   * **Uncheck** ✅ *Block all public access*
+   * Confirm by checking **I acknowledge that this bucket will be public**
+7. Leave other settings as default
+8. Click **Create bucket**
+
+---
+
+## 2. Enable Static Website Hosting
+
+1. Open the bucket **xfusion-web-22541**
+2. Go to the **Properties** tab
+3. Scroll to **Static website hosting**
+4. Click **Edit**
+5. Select **Enable**
+6. Choose **Host a static website**
+7. Set:
+
+   * **Index document:** `index.html`
+8. Click **Save changes**
+
+---
+
+## 3. Allow Public Read Access (Bucket Policy)
+
+1. Go to the **Permissions** tab of the bucket
+2. Scroll to **Bucket policy**
+3. Click **Edit**
+4. Paste the following policy:
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "PublicReadGetObject",
+      "Effect": "Allow",
+      "Principal": "*",
+      "Action": "s3:GetObject",
+      "Resource": "arn:aws:s3:::xfusion-web-22541/*"
+    }
+  ]
+}
+```
+
+5. Click **Save changes**
+
+---
+
+## 4. Upload `index.html`
+
+1. Go to the **Objects** tab
+2. Click **Upload**
+3. Click **Add files**
+4. Select `/root/index.html`
+5. Click **Upload**
+CLI:
+aws s3 cp /root/index.html s3://xfusion-web-22541/
+     
+---
+
+## 5. Verify Public Access
+
+1. Go back to the **Properties** tab
+2. Scroll to **Static website hosting**
+3. Copy the **Bucket website endpoint**
+
+   * Example:
+
+     ```
+     http://xfusion-web-22541.s3-website-us-east-1.amazonaws.com
+     ```
+4. Open the URL in a browser
+
+You should see the content of **index.html** 🎉
+---
 
 ### 🌍 **Q7: Enable Internet Access for Private EC2 using NAT Instance**
 

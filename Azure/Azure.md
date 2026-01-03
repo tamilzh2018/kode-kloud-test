@@ -2079,15 +2079,386 @@ Create a health probe named xfusion-health-probe on port 80 to check the VM's he
 Set up a load balancer rule named xfusion-lb-rule to route traffic on port 80 to the backend pool on port 80.
 Add an inbound rule to the existing NSG of the VM to allow HTTP traffic on port 80.
 Ans:
+Got it! Since you want to set up an **Azure Load Balancer** in front of your Nginx VM using the **Azure Portal**, I’ll walk you **step by step**. I’ll make it clear and sequential so the DevOps team can follow along.
 
+---
+
+## **Step 1: Create the Public IP Address**
+
+1. Go to the **Azure Portal**: [https://portal.azure.com](https://portal.azure.com)
+2. In the search bar, type **Public IP addresses** and click it.
+3. Click **+ Create**.
+4. Fill in:
+
+   * **Name:** `xfusion-lb-ip`
+   * **SKU:** Standard (recommended for production)
+   * **IP Version:** IPv4
+   * **Assignment:** Static
+5. Click **Review + create**, then **Create**.
+
+---
+
+## **Step 2: Create the Load Balancer**
+
+1. Search for **Load Balancers** in the portal.
+2. Click **+ Create**.
+3. Choose **Resource Group** and **Region** (same as your VM).
+4. Fill in:
+
+   * **Name:** `xfusion-lb`
+   * **Type:** Public
+   * **SKU:** Standard
+5. Under **Frontend IP configuration**:
+
+   * **Name:** `xfusion-lb-ip`
+   * **IP address:** Select the **existing public IP** `xfusion-lb-ip` created earlier
+6. Click **Review + create**, then **Create**.
+
+---
+
+## **Step 3: Create the Backend Pool**
+
+1. Open the newly created Load Balancer (`xfusion-lb`) from **Load Balancers**.
+2. In the left menu, click **Backend pools** → **+ Add**.
+3. Fill in:
+
+   * **Name:** `xfusion-backend-pool`
+   * **Virtual network:** Select the network your VM is in
+   * **Associated to:** Virtual machine
+   * **Target:** Select your **Nginx VM**
+4. Click **Add**.
+
+---
+
+## **Step 4: Create a Health Probe**
+
+1. In the Load Balancer settings, go to **Health probes** → **+ Add**.
+2. Fill in:
+
+   * **Name:** `xfusion-health-probe`
+   * **Protocol:** HTTP
+   * **Port:** 80
+   * **Path:** `/` (default)
+   * **Interval:** 5 seconds
+   * **Unhealthy threshold:** 2
+3. Click **Add**.
+
+---
+
+## **Step 5: Create a Load Balancer Rule**
+
+1. Go to **Load balancing rules** → **+ Add**.
+2. Fill in:
+
+   * **Name:** `xfusion-lb-rule`
+   * **IP Version:** IPv4
+   * **Frontend IP:** `xfusion-lb-ip`
+   * **Backend Pool:** `xfusion-backend-pool`
+   * **Protocol:** TCP
+   * **Port:** 80 (both frontend and backend)
+   * **Health Probe:** `xfusion-health-probe`
+3. Click **Add**.
+
+---
+
+## **Step 6: Allow HTTP in the VM’s NSG**
+
+1. Go to your VM → **Networking** → click the **Network Security Group (NSG)**.
+2. Click **Inbound security rules** → **+ Add**.
+3. Fill in:
+
+   * **Source:** Any
+   * **Source port ranges:** *
+   * **Destination:** Any
+   * **Destination port ranges:** 80
+   * **Protocol:** TCP
+   * **Action:** Allow
+   * **Priority:** 100 (or any number that doesn’t conflict)
+   * **Name:** `Allow-HTTP-80`
+4. Click **Add**.
+5. Verify: Curl lb-publicip
 
 ### 🌐 **Q14: Enabling Internet Connectivity for Virtual Machines**
 
 > *Your VMs in a private subnet need internet access for software updates. Set up a NAT Gateway and configure route tables accordingly. How do you verify connectivity without exposing the VMs publicly?*
 
+The Nautilus DevOps team has encountered an issue with an Azure VM named xfusion-vm. They are unable to install any packages on this VM due to connectivity issues. The team needs to identify the root cause of the problem and resolve it to restore normal operations.
+
+Investigate the connectivity issue preventing package installation on the Azure VM xfusion-vm.
+Implement a solution to resolve the connectivity issue and restore package installation capabilities on the VM.
+Note: The SSH key required to access the Azure VM is already created and added to the VM's authorized keys. You can find the SSH key at /root/.ssh/id_rsa on the azure-client host.
+
+Ans:
+
+## 1. Access the Azure VM
+
+From the **azure-client** host:
+
+```bash
+ssh -i /root/.ssh/id_rsa azureuser@xfusion-vm
+```
+
+(Replace `azureuser` with the actual VM username if different.)
+
+---
+
+## 2. Confirm the Problem
+
+### Test basic connectivity
+
+```bash
+ping -c 3 8.8.8.8
+```
+
+* ✅ Works → outbound network is fine
+* ❌ Fails → routing/NSG issue (rare in this lab)
+
+### Test DNS resolution
+
+```bash
+ping -c 3 google.com
+```
+
+* ❌ Fails while IP ping works → **DNS is broken** (most likely root cause)
+
+### Try package installation
+
+```bash
+yum install -y vim   # RHEL/CentOS
+# or
+apt update           # Ubuntu/Debian
+```
+
+You’ll typically see:
+
+* `Could not resolve host`
+* `Temporary failure resolving`
+
+---
+
+## 3. Root Cause Identified ✅
+
+**The VM does not have a valid DNS resolver configured**, so it cannot resolve repository hostnames.
+Without DNS, package managers cannot reach mirrors even if internet access exists.
+
+---
+
+## 4. Fix the Connectivity Issue (DNS)
+
+### Step 1: Edit resolv.conf
+
+```bash
+sudo vi /etc/resolv.conf
+```
+
+Add **Google DNS** (or Azure DNS):
+
+```ini
+nameserver 8.8.8.8
+nameserver 8.8.4.4
+```
+
+Save and exit.
+
+---
+
+### Step 2 (IMPORTANT): Prevent DNS from being overwritten
+
+If the VM uses NetworkManager:
+
+```bash
+sudo vi /etc/NetworkManager/NetworkManager.conf
+```
+
+Ensure this exists:
+
+```ini
+[main]
+dns=none
+```
+
+Restart NetworkManager:
+
+```bash
+sudo systemctl restart NetworkManager
+```
+
+---
+
+## 5. Verify the Fix
+
+### Test DNS
+
+```bash
+ping -c 3 google.com
+```
+
+### Test package installation
+
+```bash
+yum install -y vim
+# or
+apt update
+```
+
+✅ Packages should now install normally.
+
+---
+
+## 6. Final Status
+
+✔ Root Cause: **Missing or incorrect DNS configuration**
+✔ Resolution: **Manually configured valid DNS servers**
+✔ Result: **Outbound connectivity restored, package installation working**
+
+# Real Root Cause:
+A Network Security Group rule (Block-All-Outbound, priority 200) explicitly denied all outbound traffic, overriding Azure’s default AllowInternetOutbound rule.
+
+# Resolution:
+Removed the outbound deny rule or added a higher-priority allow rule for Internet traffic, restoring outbound connectivity and package installation functionality.
+
 ### 🌉 **Q15: Configuring Virtual Network Peering**
 
 > *You deployed backend services in a separate VNet from your frontend services. Configure VNet peering to allow secure communication between the two VNets. How do you handle DNS resolution across VNets and restrict unnecessary access?*
+
+The Nautilus DevOps team has been tasked with demonstrating the use of VNet Peering to enable communication between two VNets. One VNet will be a private VNet that contains a private Azure VM, while the other will be a public VNet containing a publicly accessible Azure VM.
+
+1) Existing Azure Resources:
+
+Public VM: datacenter-pub-vm is already in the public VNet.
+Private VNet and VM: datacenter-priv-vnet and datacenter-priv-vm exist in the private VNet with its subnet: datacenter-priv-subnet.
+2) Create VNet Peering:
+
+Create a VNet Peering between the Public VNet and Private VNet.
+VNet Peering Name: datacenter-pub-to-priv-peering.
+3) Test the Connection:
+
+SSH into the public VM and verify that you can ping the private VM.
+Ans:
+
+## 1️⃣ Verify Existing Resources
+
+You already have:
+
+* **Public VNet**
+
+  * VM: `datacenter-pub-vm` (publicly accessible)
+* **Private VNet**
+
+  * VNet: `datacenter-priv-vnet`
+  * Subnet: `datacenter-priv-subnet`
+  * VM: `datacenter-priv-vm` (private)
+
+Ensure both VNets are:
+
+* In the **same Azure region**
+* Using **non-overlapping address spaces**
+
+---
+
+## 2️⃣ Create VNet Peering
+
+> Azure VNet peering is **bi-directional**, so two peerings are created (one in each direction).
+
+### Option A: Azure Portal (Recommended for demos)
+
+1. Go to **Virtual networks**
+
+2. Open the **Public VNet** (the one hosting `datacenter-pub-vm`)
+
+3. Select **Peerings** → **+ Add**
+
+4. Configure:
+
+   * **Peering link name (this VNet → remote VNet)**
+
+     ```
+     datacenter-pub-to-priv-peering
+     ```
+   * **Virtual network**: `datacenter-priv-vnet`
+   * **Allow virtual network access**: ✅ Enabled
+   * **Allow forwarded traffic**: ✅ Enabled
+
+5. Under **Remote peering link name**, Azure will ask for a name for the reverse peering.
+   You can use any name but keep same else lab will fail:
+
+   ```
+   datacenter-pub-to-priv-peering
+   ```
+
+6. Click **Add**
+
+✔️ After a few seconds, both peerings should show **Connected**
+
+---
+
+### Option B: Azure CLI (if required)
+
+```bash
+az network vnet peering create \
+  --name datacenter-pub-to-priv-peering \
+  --resource-group <resource-group> \
+  --vnet-name <public-vnet-name> \
+  --remote-vnet datacenter-priv-vnet \
+  --allow-vnet-access
+```
+
+(Repeat in reverse direction for full connectivity.)
+
+---
+
+## 3️⃣ Validate Network Connectivity
+
+### Step 1: Get the Private VM IP
+
+From the Azure Portal:
+
+* Open `datacenter-priv-vm`
+* Copy its **Private IP address** (example: `10.1.0.4`)
+
+---
+
+### Step 2: SSH into the Public VM
+
+```bash
+ssh <username>@<public-vm-public-ip>
+```
+
+---
+
+### Step 3: Ping the Private VM
+
+```bash
+ping <private-vm-private-ip>
+```
+
+✅ Successful replies confirm:
+
+* VNet peering is working
+* Routing between VNets is established
+
+---
+
+## ⚠️ If Ping Fails, Check These
+
+* **NSG on private subnet/VM** allows ICMP (or at least inbound traffic from public VNet)
+* **OS firewall** on `datacenter-priv-vm` allows ICMP
+* VNets do **not** have overlapping CIDR ranges
+
+---
+
+## ✅ Final Result
+
+* Public VM communicates with Private VM
+* No VPN or gateway required
+* Demonstrates secure, private Azure backbone connectivity via **VNet Peering**
+
+If you want, I can also help you:
+
+* Capture screenshots for documentation
+* Test SSH instead of ping
+* Lock down traffic using NSGs for best practices
+
 
 **Level 3**
 
@@ -2095,17 +2466,520 @@ Ans:
 
 > *You are storing large volumes of infrequently accessed backup files in Azure Blob Storage. Design and implement a lifecycle management policy that moves data from Hot to Cool to Archive tiers after 30, 90, and 180 days respectively. How would you validate the policy and monitor cost savings over time?*
 
+The Nautilus DevOps team needs to optimize data retention costs by automating the deletion of old blobs. They plan to implement Blob Lifecycle Management for a specific container in Azure Storage.
+
+Task:
+1) Create a Storage Account:
+
+Name the storage account datacenterstor9481.
+Set the region to East US.
+Use Locally-redundant storage (LRS) as the redundancy option.
+2) Create a Blob Container:
+
+Name the container datacenter-container9481.
+3) Upload a File to the Container:
+
+Upload the file named tempfile.txt to the container. The file is present under /root of the client host.
+4) Configure Blob Lifecycle Management:
+
+Apply a Lifecycle Management rule named datacenter-del-rule to the container datacenter-container9481 to delete blobs after 7 days of last modification.
+5) Validation:
+
+Verify that the Lifecycle Management rule named datacenter-del-rule is correctly applied.
+
+Ans:
+Got it! You want to do **all of this using the Azure Portal (GUI)** instead of CLI. Here’s a **step-by-step guide** for each task:
+
+---
+
+## **1) Create the Storage Account**
+
+1. Sign in to the [Azure Portal](https://portal.azure.com).
+2. Click **Create a resource → Storage → Storage account**.
+3. Fill in the details:
+
+   * **Storage account name:** `datacenterstor9481`
+   * **Region:** `East US`
+   * **Performance:** `Standard`
+   * **Redundancy:** `Locally-redundant storage (LRS)`
+   * **Account kind:** `StorageV2 (general purpose v2)`
+4. Click **Review + create**, then **Create**.
+
+---
+
+## **2) Create a Blob Container**
+
+1. Navigate to your newly created storage account `datacenterstor9481`.
+2. In the left menu, click **Containers**.
+3. Click **+ Container**.
+4. Name it `datacenter-container9481`.
+5. Set **Public access level** to `Private (no anonymous access)`.
+6. Click **Create**.
+
+---
+
+## **3) Upload a File to the Container**
+
+1. Open the container `datacenter-container9481`.
+2. Click **Upload**.
+3. Browse and select `/root/tempfile.txt` from your computer.
+4. Click **Upload**.
+
+> Note: If `/root/tempfile.txt` is on a Linux server, you may need to download it locally first or use **Azure Storage Explorer** to upload it directly from the server.
+# Fetch Rg Name
+az group list --query "[].{name:name, location:location}" -o table
+# Upload file from azure clinet machine
+az storage blob upload \
+  --account-name datacenterstor9481 \
+  --account-key $ACCOUNT_KEY \
+  --container-name datacenter-container9481 \
+  --name tempfile.txt \
+  --file /root/tempfile.txt
+
+
+ACCOUNT_KEY=$(az storage account keys list \
+  --resource-group Resource-Group \
+  --account-name datacenterstor9481 \
+  --query "[0].value" -o tsv)
+---
+
+## **4) Configure Blob Lifecycle Management**
+
+1. Go to the **storage account** `datacenterstor9481`.
+2. In the left menu, scroll down to **Data management → Lifecycle management**.
+3. Click **+ Add rule**.
+
+**Rule setup:**
+
+* **Rule name:** `datacenter-del-rule`
+* **Scope:** Choose **Limit blobs with filters** → **Blob type:** `Block blob`
+* **Filter:** Add prefix `datacenter-container9481/` (ensures rule applies only to this container)
+* **Base blob action:** **Delete**
+* **Days after last modification:** `7`
+
+4. Click **Add**, then **Save**.
+
+---
+
+## **5) Validation**
+
+1. Go back to **Lifecycle management** in the storage account.
+2. Check that the rule `datacenter-del-rule` appears in the list and is **Enabled**.
+3. Make sure the rule shows **Delete after 7 days** and applies to **datacenter-container9481**.
+
+✅ If it shows as above, your lifecycle rule is correctly applied.
+
+az storage account management-policy show \
+  --account-name datacenterstor9481 \
+  --resource-group Resource-Group \
+  --output json
+---
+
+
 ### 🐬 **Q2: Setting Up MySQL on a Virtual Machine in Azure**
 
 > *Your development team requires a MySQL database on a Linux VM. Deploy the VM, install and configure MySQL using a startup script, and secure it using a firewall and NSG. How would you ensure remote access is encrypted and restrict access to only specific IP ranges?*
+The Nautilus DevOps team is tasked with integrating a PHP application hosted on an Azure VM with a MySQL database hosted on another Azure VM. This will validate the application's ability to connect to the database in the cloud.
+
+Create the MySQL VM:
+
+Create a VM named datacenter-mysql-vm using the MySQL Jetware image from the Azure Marketplace.
+Configure the VM in the East US region.
+Use Password as the authentication type.
+Set the username as datacenter_admin and the password as Namin@123456.
+Allow inbound traffic on port 3306 to enable MySQL access.
+Setup the MySQL Database:
+
+SSH into the datacenter-mysql-vm.
+Use the sudo /jet/enter mysql command to access the MySQL shell.
+Create a database named datacenter_db.
+Create a MySQL user named datacenter_user with password password123.
+Grant all privileges on the datacenter_db database to this user.
+PHP VM Setup:
+
+A VM named datacenter-php-vm already exists in the East US region.
+This VM is hosting a PHP application and contains a pre-existing db_test.php file in the /var/www/html/ directory.
+Database Connection Configuration:
+
+Retrieve the public IP address of the datacenter-mysql-vm.
+Update the database connection settings in the db_test.php file to use the MySQL credentials and public IP address of the datacenter-mysql-vm.
+Validation:
+
+Access the db_test.php file from the datacenter-php-vm using its public IP address.
+Ensure the file displays the message Connected successfully, confirming the connection between the PHP application and the MySQL database.
+
+Ans:
+Ah! You want to do this **through the Azure Portal (GUI)** instead of the command line. No problem — let’s go **step by step using the Azure Portal**.
+
+---
+
+## **Step 1: Create the MySQL VM**
+
+1. Go to the [Azure Portal](https://portal.azure.com/).
+2. Click **Create a resource** → **Compute** → **Virtual Machine**.
+3. Fill in the VM details:
+
+   * **Name:** `datacenter-mysql-vm`
+   * **Region:** `East US`
+   * **Image:** Search for **MySQL Jetware** in the Marketplace
+   * **Size:** Choose any size (B1s is fine for testing)
+   * **Authentication type:** Password
+   * **Username:** `datacenter_admin`
+   * **Password:** `Namin@123456`
+4. In **Inbound port rules**, select **Allow selected ports** → check **MySQL (3306)**.
+5. Click **Review + Create** → **Create**.
+
+> ✅ Wait until the VM is deployed.
+
+---
+
+## **Step 2: SSH into the MySQL VM**
+
+1. In the Portal, go to **Virtual Machines** → click `datacenter-mysql-vm`.
+2. Click **Connect** → **SSH** and follow the instructions.
+
+Once connected:
+
+```bash
+sudo /jet/enter mysql
+```
+
+Inside MySQL:
+
+```sql
+CREATE DATABASE datacenter_db;
+CREATE USER 'datacenter_user'@'%' IDENTIFIED BY 'password123';
+GRANT ALL PRIVILEGES ON datacenter_db.* TO 'datacenter_user'@'%';
+FLUSH PRIVILEGES;
+EXIT;
+```
+
+> ✅ `'%'` allows connections from any VM/public IP.
+
+---
+
+## **Step 3: Get the MySQL VM Public IP**
+
+1. In Azure Portal, go to `datacenter-mysql-vm` → **Overview** → copy **Public IP address**.
+
+> Example: `20.50.100.25`
+
+---
+
+## **Step 4: Update the PHP VM**
+
+1. Go to your `datacenter-php-vm` in Azure Portal → **Connect** → SSH.
+2. Open the file `/var/www/html/db_test.php`:
+
+```bash
+sudo nano /var/www/html/db_test.php
+```
+
+3. Update the connection info:
+
+```php
+<?php
+$servername = "20.50.100.25"; // MySQL VM public IP
+$username = "datacenter_user";
+$password = "password123";
+$dbname = "datacenter_db";
+
+$conn = new mysqli($servername, $username, $password, $dbname);
+
+if ($conn->connect_error) {
+    die("Connection failed: " . $conn->connect_error);
+}
+echo "Connected successfully";
+?>
+```
+
+4. Save and exit (`Ctrl+O`, `Enter`, `Ctrl+X`).
+
+---
+
+## **Step 5: Test the PHP Connection**
+
+1. In Azure Portal, go to `datacenter-php-vm` → **Overview** → copy **Public IP**.
+2. Open a browser:
+
+```
+http://<datacenter-php-vm-public-ip>/db_test.php
+```
+
+> ✅ You should see: `Connected successfully`
+
+
 
 ### 🐳 **Q3: Running Containers on Azure Virtual Machines**
 
 > *You have a Dockerized Python app and need to deploy it to a Linux-based Azure VM using Docker. Set up the VM, install Docker, and ensure the container starts automatically on reboot. How would you monitor and update the container remotely?*
+Below is a clear, end-to-end guide the Nautilus DevOps team can follow to complete the task using the **Azure Portal and Azure CLI**.
+(These are **instructions**, not actions performed by me.)
+
+---
+
+## 1) Azure Virtual Machine Setup
+
+* The VM **datacenter-vm** already exists.
+* Verify:
+
+  * **Region**: East US
+  * **Username**: `azureuser`
+  * **SSH access** is enabled
+
+No changes are required for the VM itself.
+
+---
+
+## 2) Create a Private Storage Account and Blob Container
+
+### a) Create the Storage Account
+
+Using **Azure Portal**:
+
+1. Go to **Storage accounts** → **Create**
+2. Configure:
+
+   * **Subscription**: Your subscription
+   * **Resource Group**: Same as VM (recommended)
+   * **Storage account name**: `datacenterstor15117`
+   * **Region**: East US
+   * **Performance**: Standard
+   * **Redundancy**: **Locally-redundant storage (LRS)**
+3. Under **Networking**:
+
+   * Set **Public network access** to **Enabled** (default)
+4. Review + Create → **Create**
+
+---
+
+### b) Create the Private Blob Container
+
+1. Open the storage account **datacenterstor15117**
+2. Go to **Data storage → Containers**
+3. Click **+ Container**
+4. Configure:
+
+   * **Name**: `datacenter-container15117`
+   * **Public access level**: **Private (no anonymous access)**
+5. Click **Create**
+
+---
+
+## 3) Retrieve the Storage Account Access Key
+
+1. In **datacenterstor15117**, go to:
+
+   * **Security + networking → Access keys**
+2. Copy **Key1 → Key value**
+3. Save it securely (this will be used in the CLI command)
+
+> ⚠️ Treat this key like a password.
+
+---
+
+## 4) Create a Test File on the VM
+
+### a) SSH into the VM
+
+From your local terminal:
+
+```bash
+ssh azureuser@<VM_PUBLIC_IP>
+```
+
+### b) Create the Test File
+
+```bash
+cd /home/azureuser
+echo "this is a test file" > testfile.txt
+```
+
+### c) Verify the File
+
+```bash
+cat testfile.txt
+```
+
+Expected output:
+
+```
+this is a test file
+```
+
+---
+
+## 5) Upload the File to Azure Blob Storage
+
+### a) Ensure Azure CLI Is Installed on the VM
+
+```bash
+az --version
+```
+
+If not installed:
+
+```bash
+curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
+```
+
+### b) Upload the File
+
+Run the following command **on the VM**, replacing `<access-key>` with the key you copied earlier:
+
+```bash
+az storage blob upload \
+  --account-name datacenterstor15117 \
+  --account-key <access-key> \
+  --container-name datacenter-container15117 \
+  --name testfile.txt \
+  --file /home/azureuser/testfile.txt
+```
+
+---
+
+## 6) Verify the Upload (Optional but Recommended)
+
+```bash
+az storage blob list \
+  --account-name datacenterstor15117 \
+  --account-key <access-key> \
+  --container-name datacenter-container15117 \
+  --output table
+```
+
+You should see:
+
+```
+testfile.txt
+```
+
+---
+
+## ✅ Task Completion Checklist
+
+✔ VM exists in East US
+✔ Private storage account created (LRS)
+✔ Private blob container created
+✔ Storage access key retrieved
+✔ Test file created on VM
+✔ File successfully uploaded to Blob Storage
 
 ### 🌐 **Q4: Deploying a Static Website Using Containers on Azure**
 
 > *Build a container image for a static HTML website, push it to Azure Container Registry (ACR), and deploy it on a Linux VM. Ensure it's publicly accessible and secured with HTTPS using a reverse proxy like Nginx inside the container. What are the pros and cons of using a VM vs App Service or Azure Container Apps for this use case?*
+
+The Nautilus DevOps team has been tasked with creating an internal information portal for public access. As part of this project, they need to host a static website on Azure using an Azure Storage account. The Storage account must be configured for public access to allow external users to access the static website directly via the Azure Storage URL.
+
+Task Requirements:
+
+Create an Azure Storage account named datacenterwebst15998 in an existing resource group.
+Configure the Storage account for static website hosting with index.html as the index document.
+Allow public access to the static website so that the website is publicly accessible.
+Upload the index.html file from the /root/ directory of the Azure client host to the Storage account's $web container.
+Verify that the website is accessible directly through the Azure Storage static website URL.
+
+Ans:
+Perfect — here’s how to do the **same task using the Azure Portal (GUI)**, step by step.
+
+---
+
+## 1. Open Azure Portal
+
+* Go to **[https://portal.azure.com](https://portal.azure.com)**
+* Sign in with your Azure credentials
+
+---
+
+## 2. Create the Storage Account
+
+1. In the left menu, click **Storage accounts**
+2. Click **+ Create**
+
+**Basics tab**
+
+* **Subscription:** Select your subscription
+* **Resource group:** Select the **existing resource group**
+* **Storage account name:** `datacenterwebst15998`
+* **Region:** Choose the required region (e.g., *East US*)
+* **Performance:** Standard
+* **Redundancy:** LRS
+
+Click **Next**
+
+---
+
+## 3. Enable Public Access
+
+1. Go to the **Advanced** tab
+2. Set:
+
+   * **Allow enabling anonymous access on individual containers:** ✅ **Enabled**
+
+Click **Next → Next → Create**
+
+Wait for deployment to finish, then click **Go to resource**
+
+---
+
+## 4. Enable Static Website Hosting
+
+1. In the storage account menu, select **Data management → Static website**
+2. Set:
+
+   * **Static website:** **Enabled**
+   * **Index document name:** `index.html`
+3. Click **Save**
+
+✔ Azure automatically creates the **$web** container
+✔ You will see a **Primary endpoint** URL — this is your website URL
+
+---
+
+## 5. Upload `index.html` to `$web`
+
+1. Go to **Data storage → Containers**
+2. Click **$web**
+3. Click **Upload**
+4. Browse and select `/root/index.html`
+5. Click **Upload**
+az storage blob upload \
+  --account-name datacenterwebst15998 \
+  --container-name '$web' \
+  --name index.html \
+  --file /root/index.html \
+  --auth-mode login
+---
+
+## 6. Verify Public Access
+
+1. Go back to **Static website**
+2. Copy the **Primary endpoint URL**
+
+   * Example:
+
+     ```
+     https://datacenterwebst15998.z13.web.core.windows.net/
+     ```
+3. Open it in a browser (no login required)
+
+You should see the contents of **index.html**.
+
+---
+
+## ✅ You’re Done!
+
+✔ Storage account created
+✔ Static website enabled
+✔ Public access allowed
+✔ File uploaded
+✔ Website accessible publicly
+
+If you want, next we can:
+
+* Add a **custom domain**
+* Enable **HTTPS**
+* Troubleshoot **403 / 404 errors**
 
 ### 🔐 **Q5: Managing Secrets with Azure Key Vault**
 
