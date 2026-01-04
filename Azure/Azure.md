@@ -1525,7 +1525,7 @@ Ans:
    - **Priority:** 100
    - **Source:** IP addresses
    - **Source IP range:** `10.0.0.0/16`
-   - **Destination:** Any
+   - **Destination:** `10.0.0.0/16`
    - **Port:** 22
    - **Protocol:** TCP
    - **Action:** Allow
@@ -1555,6 +1555,8 @@ Ans:
 - **Subnet:** `datacenter-priv-subnet`  
 - **NSG:** `datacenter-priv-nsg` (SSH restricted to VNet CIDR)  
 - **VM:** `datacenter-priv-vm` (private, only accessible via SSH inside VNet)  
+
+
 
 ### 🧰 **Q8: Troubleshooting Public Virtual Network Configurations**
 
@@ -1773,7 +1775,7 @@ Here’s how to fix it:
 docker login
 ```
 
-* Username: your Docker Hub username
+* Username: your Docker Hub username(tamizh2022)
 * Password: your Docker Hub password (or personal access token if 2FA is enabled)
 
 > After successful login, Docker knows who you are and increases your pull limit.
@@ -1793,7 +1795,7 @@ It should now succeed.
 ### **Step 3: Build your application image**
 
 ```bash
-docker build -t datacenteracr15866.azurecr.io/datacenteracr15866:latest /root/pyapp
+d  ocker build -t datacenteracr15866.azurecr.io/datacenteracr15866:latest /root/pyapp
 ```
 
 ---
