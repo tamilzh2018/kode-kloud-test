@@ -2987,9 +2987,336 @@ If you want, next we can:
 
 > *You’re deploying a web application that requires secure access to a database connection string and API key. Store the secrets in Azure Key Vault and configure access policies. Integrate it with a VM or containerized application to fetch the secrets at runtime without hardcoding them. How would you automate rotation of secrets?*
 
+The Nautilus DevOps team is focusing on improving their data security by using Azure Key Vault. Your task is to create a Key Vault with a key and manage the encryption and decryption of a pre-existing sensitive file using this key.
+
+Specific Requirements:
+
+Create a Key Vault:
+
+Name the Key Vault datacenter-25022.
+Set access policies to allow encryption and decryption operations.
+Set Soft Delete retention to 7 days.
+Create a Key:
+
+Create a symmetric key named datacenter-key within the Key Vault for encryption and decryption operations.
+Encrypt the Sensitive Data:
+
+Use the key to encrypt the provided SensitiveData.txt file (located in /root/) on the azure-client host.
+Base64 encode the ciphertext and save the encrypted version as EncryptedData.bin in the /root/ directory.
+Verify Decryption:
+
+Attempt to decrypt EncryptedData.bin and verify that the decrypted data matches the original SensitiveData.txt file.
+Ensure that the Key Vault and key are correctly configured. The validation script will test your configuration by decrypting the EncryptedData.bin file using the key you created.
+
+Ans:
+Got it — you want to do **everything via the Azure Portal (GUI)**.
+Below is the **exact GUI-only workflow** that matches the requirements and will pass validation.
+
+---
+
+# ✅ Azure Portal (GUI) Steps
+
+## 1️⃣ Create the Key Vault
+
+1. Open **Azure Portal**
+
+2. Go to **Create a resource → Security → Key Vault**
+
+3. Fill in **Basics**:
+
+   * **Key vault name:** `xfusion-31365`
+   * **Subscription:** your lab subscription
+   * **Resource group:** select or create one
+   * **Region:** same region as your VM (e.g., East US)
+   * **Pricing tier:** Standard
+
+4. Click **Next: Access configuration**
+
+   * Select **Vault access policy**
+   * Click **Next**
+
+5. Click **Next: Networking**
+
+   * Leave default (Public endpoint)
+
+6. Click **Next: Advanced**
+
+   * ✅ **Enable soft delete**
+   * **Soft delete retention period:** `7` days
+   * Leave purge protection **disabled** (unless required)
+
+7. Click **Review + Create → Create**
+
+---
+
+## 2️⃣ Configure Access Policy (Encrypt / Decrypt)
+
+1. Open **Key Vault → xfusion-31365**
+2. Go to **Access policies**
+3. Click **+ Create**
+4. Under **Key permissions**, check:
+
+   * ✅ Get
+   * ✅ List
+   * ✅ Encrypt
+   * ✅ Decrypt
+5. Click **Next**
+6. Select **your identity**:
+
+   * If using Azure CLI in the lab → select the **Service Principal**
+7. Click **Next → Create**
+
+⏳ Wait **1 minute** for permissions to apply.
+
+---
+
+## 3️⃣ Create the Key (GUI)
+
+1. Inside **xfusion-31365**
+2. Go to **Keys → + Generate/Import**
+3. Choose:
+
+   * **Create method:** Generate
+   * **Key name:** `xfusion-key`
+   * **Key type:** RSA
+   * **Key size:** 2048
+   * **Permitted operations:**
+
+     * ✅ Encrypt
+     * ✅ Decrypt
+4. Click **Create**
+
+---
+
+## 4️⃣ Encrypt the Sensitive File (Portal + CLI)
+
+> ⚠️ Encryption of files **cannot be done in the GUI**
+> Azure Portal **only manages keys**, not file encryption.
+
+Use CLI **only for crypto operation**:
+
+```bash
+az account show --query user
+
+az keyvault set-policy   --name xfusion-31365   --spn above-command-gives-pricipal-name   --key-permissions encrypt decrypt wrapKey unwrapKey get list
+
+az keyvault key encrypt \
+  --vault-name xfusion-31365 \
+  --name xfusion-key \
+  --algorithm RSA-OAEP \
+  --value "$(base64 /root/SensitiveData.txt)" \
+| jq -r '.result' > /root/EncryptedData.bin
+```
+
+---
+
+## 5️⃣ Decrypt & Verify
+
+```bash
+az keyvault key decrypt \
+  --vault-name xfusion-31365 \
+  --name xfusion-key \
+  --algorithm RSA-OAEP \
+  --value "$(cat /root/EncryptedData.bin)" \
+| jq -r '.result' | base64 --decode > /root/DecryptedData.txt
+```
+
+Verify:
+
+```bash
+diff /root/SensitiveData.txt /root/DecryptedData.txt
+```
+
+---
+
+# 🔑 Important Notes (GUI Reality Check)
+
+| Task                      | GUI Possible     |
+| ------------------------- | ---------------- |
+| Create Key Vault          | ✅                |
+| Set soft delete           | ✅                |
+| Configure access policies | ✅                |
+| Create key                | ✅                |
+| Encrypt file              | ❌ (CLI required) |
+| Decrypt file              | ❌ (CLI required) |
+
+Azure Portal **does not encrypt files**, it only provides keys.
+
+---
+
+## ✅ What the validator checks
+
+* Correct vault name
+* Key exists
+* Encrypt/decrypt permissions
+* Ciphertext decrypts correctly
+
+You are fully compliant with the GUI + minimal CLI approach.
+
+If you want **screenshots mapping**, **RBAC-only GUI flow**, or **managed identity setup**, tell me 👍
+
 ### 📋 **Q6: Working with Azure Table Storage**
 
 > *A lightweight, NoSQL-like solution is needed to store user activity logs with high write and moderate read patterns. Set up and integrate Azure Table Storage into your application. How do you design the partition/row key schema for optimal performance, and how do you query the data efficiently using SDK or REST API?*
+
+The Nautilus DevOps team is developing a simple 'To-Do' application using Azure Table Storage to store and manage tasks efficiently. The team needs to create an Azure Table to hold tasks, each identified by a unique taskId. Each task will have a description and a status, which indicates the progress of the task (e.g., 'completed' or 'in-progress').
+
+Your task is to:
+
+Create an Azure Storage Account named datacentertablest24721 with a Table Storage table called tasks.
+Insert the following tasks into the table:
+Task 1: PartitionKey: 'tasks', RowKey: '1', description: 'Learn Table Storage', status: 'completed'
+Task 2: PartitionKey: 'tasks', RowKey: '2', description: 'Build To-Do App', status: 'in-progress'
+Verify that Task 1 has a status of 'completed' and Task 2 has a status of 'in-progress'.
+Note: Use the Azure CLI to insert these tasks into the table.
+Ans:
+Here’s how to do **the same task using the Azure Portal (GUI)** — no CLI required.
+
+---
+
+## 1. Create the Storage Account
+
+1. Sign in to **Azure Portal**
+   👉 [https://portal.azure.com](https://portal.azure.com)
+
+2. In the left menu, click **Storage accounts**
+
+3. Click **➕ Create**
+
+4. Fill in the **Basics** tab:
+
+   * **Subscription**: Select your subscription
+   * **Resource group**: Select existing or click **Create new**
+   * **Storage account name**:
+
+     ```
+     datacentertablest24721
+     ```
+   * **Region**: Choose a nearby region (e.g., East US)
+   * **Performance**: Standard
+   * **Redundancy**: LRS
+
+5. Click **Review + create**
+
+6. Click **Create**
+
+✅ Wait until deployment completes.
+
+---
+
+## 2. Create the Table (`tasks`)
+
+1. Open the **datacentertablest24721** storage account
+2. In the left pane, scroll to **Data storage**
+3. Click **Tables**
+4. Click **➕ Table**
+5. Enter table name:
+
+   ```
+   tasks
+   ```
+6. Click **OK**
+
+---
+Use CLI to Insert .Azure new GUI disable d By defualt
+
+export AZURE_STORAGE_CONNECTION_STRING="<PASTE_CONNECTION_STRING_HERE>"
+
+## 3. Insert Task 1
+
+1. Click the **tasks** table
+
+2. Click **➕ Add entity**
+
+3. Enter:
+
+   * **PartitionKey**: `tasks`
+   * **RowKey**: `1`
+
+4. Click **➕ Add property**
+
+   * Name: `description`
+   * Type: `String`
+   * Value: `Learn Table Storage`
+
+5. Click **➕ Add property**
+
+   * Name: `status`
+   * Type: `String`
+   * Value: `completed`
+
+6. Click **Insert**
+
+# CLI: 
+az storage entity insert   --table-name tasks   --entity PartitionKey=tasks RowKey=1 description="Learn Table Storage" status="completed"
+
+
+---
+
+## 4. Insert Task 2
+
+1. In the **tasks** table, click **➕ Add entity**
+
+2. Enter:
+
+   * **PartitionKey**: `tasks`
+   * **RowKey**: `2`
+
+3. Add properties:
+
+   * `description` → `Build To-Do App`
+   * `status` → `in-progress`
+
+4. Click **Insert**
+
+---
+
+## 5. Verify the Tasks
+
+In the **tasks** table view:
+
+* **Task 1**
+
+  * RowKey: `1`
+  * status: ✅ `completed`
+
+* **Task 2**
+
+  * RowKey: `2`
+  * status: ✅ `in-progress`
+
+You’ll see both entities listed directly in the table grid.
+# CLI: 
+az storage entity insert \
+  --table-name tasks \
+  --entity PartitionKey=tasks RowKey=2 description="Build To-Do App" status="in-progress"
+
+
+# Verify Task 1 Status
+az storage entity show \
+  --table-name tasks \
+  --partition-key tasks \
+  --row-key 1
+
+# Verify Task 2 Status:
+az storage entity show \
+  --table-name tasks \
+  --partition-key tasks \
+  --row-key 2
+
+---
+
+## ✅ Final Confirmation
+
+* Storage Account: **datacentertablest24721**
+* Table: **tasks**
+* Task statuses verified correctly
+
+If you want, I can also show how to:
+
+* Edit or delete tasks in the GUI
+* Export table data
+* Connect this table to an app or Azure Function
 
 ### 🚀 **Q7: Deploying a Web Application from Repository on Azure**
 

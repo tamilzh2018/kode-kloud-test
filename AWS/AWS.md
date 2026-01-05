@@ -1779,6 +1779,132 @@ You deployed a Node.js app on EC2, but it’s not reachable from the internet. W
 or 
 An EC2 instance in a private subnet fails to install software updates. Explain how to diagnose whether it's a DNS, NAT, or routing issue and how to fix it so the instance can access the internet safely.
 
+The Nautilus Development Team recently deployed a new web application hosted on an EC2 instance within a public VPC named datacenter-vpc. The application, running on an Nginx server, should be accessible from the internet on port 80. Despite configuring the security group datacenter-sg to allow traffic on port 80 and verifying the EC2 instance settings, the application remains inaccessible from the internet. The team suspects that the issue might be related to the VPC configuration, as all other components appear to be set up correctly. The DevOps team has been asked to troubleshoot and resolve the issue to ensure the application is accessible to external users.
+
+As a member of the Nautilus DevOps Team, your task is to perform the following:
+
+Verify VPC Configuration: Ensure that the VPC datacenter-vpc is properly configured to allow internet access.
+
+Ensure Accessibility: Make sure the EC2 instance datacenter-ec2 running the Nginx server is accessible from the internet on port 80.
+Ans:
+Here’s how to systematically troubleshoot and fix this issue in AWS. Since the security group and EC2 instance look correct, the most common cause is a **missing or incorrect VPC networking component**.
+
+---
+
+## 1. Verify VPC Internet Connectivity (datacenter-vpc)
+
+For an EC2 instance to be reachable from the internet, **all** of the following must be true:
+
+### ✅ 1. Internet Gateway (IGW) Attached
+
+* Go to **VPC → Internet Gateways**
+* Confirm an Internet Gateway exists and is **attached to `datacenter-vpc`**
+* If not:
+
+  * Create an IGW
+  * Attach it to `datacenter-vpc`
+
+---
+
+### ✅ 2. Route Table Has a Default Route to the IGW
+
+* Go to **VPC → Route Tables**
+* Find the route table associated with the EC2 subnet
+* Ensure it has this route:
+
+```
+Destination: 0.0.0.0/0
+Target: igw-xxxxxxxx
+```
+
+* If missing, add the route
+* Confirm this route table is **associated with the EC2’s subnet**
+
+👉 Without this route, the subnet is **not public**, even if the VPC is.
+
+---
+
+### ✅ 3. Subnet Is Public
+
+A subnet is considered public only if:
+
+* It is associated with a route table that routes `0.0.0.0/0` to an IGW
+
+Double-check:
+
+* **Subnet → Route Table association**
+
+---
+
+## 2. Verify EC2 Internet Accessibility (datacenter-ec2)
+
+### ✅ 4. EC2 Instance Has a Public IP
+
+* Go to **EC2 → Instances → datacenter-ec2**
+* Confirm it has:
+
+  * A **Public IPv4 address**, or
+  * An **Elastic IP** attached
+
+❗ If there is no public IP:
+
+* Allocate and attach an Elastic IP
+* OR redeploy the instance with “Auto-assign Public IP” enabled
+
+---
+
+### ✅ 5. Network ACL Allows HTTP Traffic
+
+Check the subnet’s **Network ACL**:
+
+**Inbound rules must allow:**
+
+```
+Port: 80
+Protocol: TCP
+Source: 0.0.0.0/0
+Action: ALLOW
+```
+
+**Outbound rules must allow:**
+
+```
+Port range: 1024–65535 (or ALL)
+Destination: 0.0.0.0/0
+Action: ALLOW
+```
+
+(Network ACLs are stateless, so both directions matter.)
+
+---
+
+## 3. Final EC2-Level Checks (Quick Validation)
+
+Since you mentioned instance settings look good, just confirm:
+
+* Nginx is running and listening on port 80:
+
+  ```bash
+  sudo systemctl status nginx
+  ```
+* The OS firewall (iptables/firewalld) is not blocking port 80
+* Nginx is bound to `0.0.0.0:80`, not `127.0.0.1`
+
+---
+
+## ✅ Most Likely Root Cause (Based on Experience)
+
+In cases like this, the issue is almost always one of these:
+
+* No Internet Gateway attached to the VPC
+* Missing `0.0.0.0/0 → IGW` route
+* Subnet not associated with the correct route table
+* EC2 instance does not have a public IP
+
+Fixing these will make the Nginx application accessible from the internet on port 80.
+
+
+
 
 ### 📦 **ECR & Container Management**
 
@@ -2686,7 +2812,104 @@ aws s3 ls s3://nautilus-nat-23937/nautilus-test.txt
 
 > *You’re building a data processing pipeline that stores customer data in S3, RDS, and DynamoDB. Design a centralized encryption strategy using AWS KMS with customer-managed keys (CMK). Implement key policies, automatic rotation, and audit logging via CloudTrail. How would you securely share encrypted data across accounts while maintaining least privilege?*
 
+The Nautilus DevOps team is focusing on improving their data security by using AWS KMS. Your task is to create a KMS key and manage the encryption and decryption of a pre-existing sensitive file using the KMS key.
 
+Specific Requirements:
+
+Create a symmetric KMS key named devops-KMS-Key to manage encryption and decryption.
+Encrypt the provided SensitiveData.txt file (located in /root/), base64 encode the ciphertext, and save the encrypted version as EncryptedData.bin in the /root/ directory.
+Try to decrypt the same and verify that the decrypted data matches the original file.
+Make sure that the KMS key is correctly configured. The validation script will test your configuration by decrypting the EncryptedData.bin file using the KMS key you created.
+
+Ans:
+Got it — here are the **AWS Console (GUI) steps** to complete the task ✅
+
+---
+
+## 1. Create the KMS Key (GUI)
+
+1. Open **AWS Console**
+2. Go to **Services → Security, Identity & Compliance → Key Management Service (KMS)**
+3. Click **Customer managed keys**
+4. Click **Create key**
+
+### Key configuration
+
+* **Key type:** Symmetric
+* **Key usage:** Encrypt and decrypt
+* Click **Next**
+
+### Alias
+
+* **Alias name:** `devops-KMS-Key`
+* Click **Next**
+
+### Key administrators
+
+* Select your IAM user / role
+* Click **Next**
+
+### Key users
+
+* Select the same IAM user / role
+* Click **Next**
+
+### Review
+
+* Click **Finish**
+
+✅ Your symmetric KMS key is now ready.
+
+---
+
+## 2. Encrypt the file (from EC2 / CloudShell terminal)
+
+> AWS Console is used for key creation, but **file encryption must be done via CLI**
+
+Run:
+
+```bash
+aws kms encrypt \
+  --key-id alias/devops-KMS-Key \
+  --plaintext fileb:///root/SensitiveData.txt \
+  --output text \
+  --query CiphertextBlob | base64 --decode > /root/EncryptedData.bin
+```
+
+✅ Encrypted file created:
+
+```
+/root/EncryptedData.bin
+```
+
+---
+
+## 3. Decrypt and verify (CLI)
+
+```bash
+aws kms decrypt \
+  --ciphertext-blob fileb:///root/EncryptedData.bin \
+  --output text \
+  --query Plaintext | base64 --decode > /root/DecryptedData.txt
+```
+
+Verify:
+
+```bash
+diff /root/SensitiveData.txt /root/DecryptedData.txt
+```
+
+No output = files match ✅
+
+---
+
+## 4. Validation readiness checklist
+
+✔ KMS key created via GUI
+✔ Alias name exactly `devops-KMS-Key`
+✔ Encryption done using that key
+✔ Encrypted file saved as `/root/EncryptedData.bin`
+✔ Decryption works (validation script will pass)
 
 ### 📊 **Q9: Building and Managing NoSQL Databases with AWS DynamoDB**
 
