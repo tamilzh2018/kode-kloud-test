@@ -2767,12 +2767,13 @@ https://docs.aws.amazon.com/vpc/latest/userguide/work-with-nat-instances.html
 
 # Enable IP forwarding # Install SSM Agent (Amazon Linux 2)# Configure iptables for NAT
 #!/bin/bash
-sudo sysctl -w net.ipv4.ip_forward=1
 sudo yum install iptables-services -y
 sudo systemctl enable iptables
 sudo systemctl start iptables
-sudo iptables -t nat -A POSTROUTING -o ens5 -j MASQUERADE
+echo "net.ipv4.ip_forward = 1" >> sudo /etc/sysctl.conf
+sudo iptables -t nat -A POSTROUTING -o enX0 -j MASQUERADE
 sudo service iptables save
+iptables -t nat -L -n -v
 sudo yum install -y amazon-ssm-agent
 sudo systemctl enable amazon-ssm-agent
 sudo systemctl start amazon-ssm-agent
