@@ -623,6 +623,14 @@ Ans:
 > *Before deleting a storage container, you must back it up. Copy all blobs to another container in a different storage account. Then delete the original container safely. What tools or automation could you use for backup?*
 Below are **exact, runnable steps** you can execute from the **azure-client (landing host)** to complete both tasks using the **Azure CLI**.
 
+The Nautilus DevOps team is currently engaged in a cleanup process, focusing on removing unnecessary data and services from their Azure environment. As part of the migration process, several resources were created for one-time use only, necessitating a cleanup effort to optimize their Azure environment.
+
+A private blob container named datacenter-blob-13829 already exists in the East US region under storage account datacenterst7726.
+
+1) Copy the contents of datacenter-blob-13829 blob container to the /opt directory on the azure-client host (the landing host once you load this lab).
+
+2) Delete the blob container datacenter-blob-13829 from the storage account.
+
 ---
 
 ## Assumptions
@@ -3034,7 +3042,7 @@ Below is the **exact GUI-only workflow** that matches the requirements and will 
 
    * Select **Vault access policy**
    * Click **Next**
-
+   * Edit Access policies and Check encrypt,decrypt,wrap and unwrap 
 5. Click **Next: Networking**
 
    * Leave default (Public endpoint)
@@ -3218,8 +3226,8 @@ Here’s how to do **the same task using the Azure Portal (GUI)** — no CLI req
 6. Click **OK**
 
 ---
-Use CLI to Insert .Azure new GUI disable d By defualt
-
+Use CLI to Insert .Azure new GUI disabled By defualt
+Go storage account-->securityy+Networking --> access keys-->connection string
 export AZURE_STORAGE_CONNECTION_STRING="<PASTE_CONNECTION_STRING_HERE>"
 
 ## 3. Insert Task 1
@@ -3322,6 +3330,125 @@ If you want, I can also show how to:
 
 > *You’ve built a Node.js web application and pushed it to a GitHub repo. Deploy this app to Azure App Service with continuous deployment enabled. Configure build and deployment settings, environment variables, and logging. How would you enable staging slots for testing before production rollout?*
 
+You are tasked with modifying an ARM template for deploying a virtual network. The current template is located in the /root/arm-templates directory under the filename vnet-deployment-template.json. You need to make the following changes to the template:
+
+Change the name and displayName tag of the virtual network to arm-vnet-nautilus.
+
+Update the addressPrefixes to 192.168.0.0/16.
+
+Add one more tag named Environment with value KKE-nautilus.
+
+After making these changes, you need to deploy the ARM template using the Azure CLI.
+
+Use the following command to find out the resource group to use:
+
+az group list --query '[].name' --output table | grep 'kml'
+
+Ans:
+ Existing Arm:
+ cat vnet-deployment-template.json 
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {},
+    "functions": [],
+    "variables": {},
+    "resources": [
+        {
+            "name": "virtualNetwork1",
+            "type": "Microsoft.Network/virtualNetworks",
+            "apiVersion": "2023-11-01",
+            "location": "[resourceGroup().location]",
+            "tags": {
+                "displayName": "virtualNetwork1"
+            },
+            "properties": {
+                "addressSpace": {
+                    "addressPrefixes": [
+                        "10.10.10.0/24"
+                    ]
+                }
+            }
+        }
+    ],
+    "outputs": {
+    }
+}
+To update your ARM template and deploy it correctly, follow the steps below. I have modified your JSON structure to include the specific naming, tags, and address space you requested.
+
+### 1. Update the ARM Template
+
+You should overwrite the contents of `/root/arm-templates/vnet-deployment-template.json` with the following code.
+
+```json
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {},
+    "functions": [],
+    "variables": {},
+    "resources": [
+        {
+            "name": "arm-vnet-nautilus",
+            "type": "Microsoft.Network/virtualNetworks",
+            "apiVersion": "2023-11-01",
+            "location": "[resourceGroup().location]",
+            "tags": {
+                "displayName": "arm-vnet-nautilus",
+                "Environment": "KKE-nautilus"
+            },
+            "properties": {
+                "addressSpace": {
+                    "addressPrefixes": [
+                        "192.168.0.0/16"
+                    ]
+                }
+            }
+        }
+    ],
+    "outputs": {}
+}
+
+```
+
+---
+
+### 2. Identify the Resource Group
+
+Run this command in your terminal to find the exact name of the resource group containing "kml":
+
+```bash
+az group list --query '[].name' --output table | grep 'kml'
+
+```
+
+*Note: This will likely return a name like `kml-resource-group-123`. Copy this name for the next step.*
+
+---
+
+### 3. Deploy via Azure CLI
+
+Run the following command to deploy the template. Replace `<YOUR_RESOURCE_GROUP>` with the name you found in step 2.
+
+```bash
+az deployment group create \
+  --resource-group <YOUR_RESOURCE_GROUP> \
+  --template-file /root/arm-templates/vnet-deployment-template.json
+
+```
+
+---
+
+### Summary of Changes Made
+
+| Field | Original Value | New Value |
+| --- | --- | --- |
+| **Name** | `virtualNetwork1` | `arm-vnet-nautilus` |
+| **Tag: displayName** | `virtualNetwork1` | `arm-vnet-nautilus` |
+| **Tag: Environment** | *None* | `KKE-nautilus` |
+| **Address Prefixes** | `10.10.10.0/24` | `192.168.0.0/16` |
+
+Would you like me to show you how to add a **Subnet** to this configuration before you deploy?
 ### ⚙️ **Q8: Configuring Azure VM with Application Gateway**
 
 > *You want to expose a VM-hosted web application securely over HTTPS using Azure Application Gateway. Set up the gateway, configure backend pools, listeners, and rules. Add SSL termination and implement Web Application Firewall (WAF) policies. How do you verify traffic routing and troubleshoot if the VM is not responding?*

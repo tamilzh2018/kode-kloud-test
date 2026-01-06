@@ -1590,7 +1590,7 @@ def lambda_handler(event, context):
     }
 ```
 
-3. **Save** the Lambda function.
+3. **Save or deploy** the Lambda function.
 
 ### 3. **Test the Lambda Function**
 
@@ -2073,7 +2073,7 @@ To help you set up and configure your AWS RDS and EC2 environment, I've broken d
 7. **Instance configuration:** Choose **db.t3.micro**.
 8. **Storage:**
 * Storage type: **General Purpose SSD (gp2)**.
-* Allocated storage: **20 GiB** (This is usually the minimum for RDS; if the lab allows 5GiB, use that, but 20GiB is the standard AWS minimum).
+* Allocated storage: **5 GiB** (This is usually the minimum for RDS; if the lab allows 5GiB, use that, but 20GiB is the standard AWS minimum).
 
 
 9. **Connectivity:** Ensure **Public access** is set to **No**.
@@ -2761,22 +2761,27 @@ https://docs.aws.amazon.com/vpc/latest/userguide/work-with-nat-instances.html
 - Subnet: **datacenter-pub-subnet**.
 - Enable **Auto-assign Public IP**.
 - Security Group (custom):
-  - Inbound: Allow SSH (22) from your IP, allow HTTP/HTTPS if needed.
-  - Outbound: Allow all traffic.
-- user data: 
-
+   - Inbound,All Traffic,All,10.1.1.0/24,Allows traffic from the private subnet.
+   - Inbound,SSH,22,Your Public IP,(Optional) To configure the NAT settings.
+   - Outbound,All Traffic,All,0.0.0.0/0,Allows NAT to reach the internet/S3.
+# Private Instance Security Group
+Ensure the security group attached to datacenter-priv-ec2 allows the upload to S3.
+   - Outbound,HTTPS,443,0.0.0.0/0,Required for AWS CLI/S3 uploads.
+   - Inbound,SSH,22,10.1.2.0/24,(Optional) Allows you to jump from the NAT instance.
 # Enable IP forwarding # Install SSM Agent (Amazon Linux 2)# Configure iptables for NAT
 #!/bin/bash
 sudo yum install iptables-services -y
-sudo systemctl enable iptables
-sudo systemctl start iptables
-echo "net.ipv4.ip_forward = 1" >> sudo /etc/sysctl.conf
+# Enable IP Forwarding at the Kernel level
+sudo sysctl -w net.ipv4.ip_forward=1
+# Apply the NAT Rule: Note: Ensure your interface name is indeed enX0 (you can check with ip addr).
 sudo iptables -t nat -A POSTROUTING -o enX0 -j MASQUERADE
 sudo service iptables save
+# Verification of NAT Traffic
 iptables -t nat -L -n -v
-sudo yum install -y amazon-ssm-agent
-sudo systemctl enable amazon-ssm-agent
-sudo systemctl start amazon-ssm-agent
+# Save and Enable: This ensures your NAT doesn't break if the instance reboots.
+sudo service iptables save
+sudo systemctl enable iptables
+
 # Disable source/destination check will be done in console manually
 # (cannot be automated via user-data)
 ## 🔹 Step 3: Configure NAT Instance
@@ -2790,6 +2795,48 @@ sudo systemctl start amazon-ssm-agent
   - Target: **datacenter-nat-instance** (instance ID).
 
 ---
+### 1. Watch Traffic in Real-Time (tcpdump)
+
+On your **NAT instance**, you can "eavesdrop" on the network interface to see if the private instance is trying to send data. Run this command:
+
+```bash
+sudo tcpdump -i enX0 src net 10.1.1.0/24 and port 443
+
+```
+
+* **What this does:** It shows any incoming traffic from your private subnet (`10.1.1.0/24`) destined for HTTPS (Port 443), which is what S3 uses.
+* **Success looks like:** If you see lines of text appearing every minute, the private instance is successfully reaching your NAT instance.
+
+---
+
+### 2. Check Hit Counters (iptables)
+
+If you already applied the `MASQUERADE` rule, Linux keeps track of how many packets have used it. Run:
+
+```bash
+sudo iptables -t nat -L POSTROUTING -v -n
+
+```
+
+* **Watch the "pkts" column:** If the NAT is working, you will see the packet count increase every time the cron job runs on the private instance.
+
+---
+
+### 3. Verification via S3 (The "Result" Method)
+
+Since you can't log into the private instance, the S3 bucket is your "Success Dashboard."
+
+1. Open the **S3 Console**.
+2. Navigate to the `datacenter-nat-25656` bucket.
+3. Check the **"Last Modified"** timestamp of `datacenter-test.txt`.
+4. If the timestamp is from the last 60 seconds, your configuration is 100% successful.
+
+### Final Sanity Check
+
+If you see **zero traffic** in `tcpdump` and no file in S3, the issue is likely "upstream" from the NAT instance:
+
+* **The Private Route Table:** Ensure `0.0.0.0/0` is pointing to the NAT Instance ID.
+* **Source/Dest Check:** In the AWS Console, ensure this is **Disabled** on the NAT instance (this is the #1 reason traffic never reaches the OS).
 
 ## 🔹 Step 5: Verification
 - The private EC2 (`datacenter-priv-ec2`) should now reach the internet via NAT.
@@ -2915,6 +2962,83 @@ No output = files match ✅
 ### 📊 **Q9: Building and Managing NoSQL Databases with AWS DynamoDB**
 
 > *Design a DynamoDB schema for a multi-tenant SaaS application with high read/write throughput and predictable access patterns. Implement partition key strategies to avoid hot partitions, enable DynamoDB Streams for real-time processing, and set up global tables for cross-region replication. How would you handle backup, restore, and consistent access across regions?*
+
+The Nautilus DevOps team is developing a simple 'To-Do' application using DynamoDB to store and manage tasks efficiently. The team needs to create a DynamoDB table to hold tasks, each identified by a unique task ID. Each task will have a description and a status, which indicates the progress of the task (e.g., 'completed' or 'in-progress').
+
+Your task is to:
+
+Create a DynamoDB table named nautilus-tasks with a primary key called taskId (string).
+Insert the following tasks into the table:
+Task 1: taskId: '1', description: 'Learn DynamoDB', status: 'completed'
+Task 2: taskId: '2', description: 'Build To-Do App', status: 'in-progress'
+Verify that Task 1 has a status of 'completed' and Task 2 has a status of 'in-progress'.
+Ensure the DynamoDB table is created successfully and that both tasks are inserted correctly with the appropriate statuses.
+
+Ans:
+If you prefer using the **AWS Management Console (GUI)** to set this up, here is the step-by-step walkthrough to ensure the `nautilus-tasks` table is configured correctly.
+
+---
+
+## Step 1: Create the Table
+
+1. Log in to the **AWS Management Console** and navigate to **DynamoDB**.
+2. Click the **Create table** button.
+3. **Table name:** Enter `nautilus-tasks`.
+4. **Partition key:** Enter `taskId` and ensure the data type is set to **String**.
+5. Keep the **Default settings** (this will default to a provisioned capacity, which is fine for this exercise) and click **Create table**.
+
+---
+
+## Step 2: Insert the Items
+
+Once the table status shows as **Active**, follow these steps for each task:
+
+1. Click on the table name **nautilus-tasks** from the list.
+2. Click the **Explore table items** button in the top right.
+3. Click **Create item**.
+4. On the creation screen, follow these values:
+* **Task 1:**
+# use json:
+{
+        "taskId": {"S": "1"},
+        "description": {"S": "Learn DynamoDB"},
+        "status": {"S": "completed"}
+    }
+
+
+* **Task 2:**
+# use json:
+{
+        "taskId": {"S": "2"},
+        "description": {"S": "Build To-Do App"},
+        "status": {"S": "in-progress"}
+    }
+* `taskId` (String): `2`
+* Attribute name: `description` | Value: `Build To-Do App`
+* Attribute name: `status` | Value: `in-progress`
+
+
+
+
+5. Click **Create item** after entering each task.
+
+---
+
+## Step 3: Verify the Data
+
+After creating both items, you will be returned to the **Items returned** view. You should see a table layout confirming the entries:
+
+| taskId (Partition Key) | description | status |
+| --- | --- | --- |
+| 1 | Learn DynamoDB | **completed** |
+| 2 | Build To-Do App | **in-progress** |
+# CLI: 
+aws dynamodb scan --table-name nautilus-tasks
+---
+
+### Troubleshooting Tip
+
+If you don't see your items immediately, ensure the **Scan/Query** toggle is set to **Scan** and click **Run** to refresh the results.
 
 
 
