@@ -3453,9 +3453,441 @@ Would you like me to show you how to add a **Subnet** to this configuration befo
 
 > *You want to expose a VM-hosted web application securely over HTTPS using Azure Application Gateway. Set up the gateway, configure backend pools, listeners, and rules. Add SSL termination and implement Web Application Firewall (WAF) policies. How do you verify traffic routing and troubleshoot if the VM is not responding?*
 
+The Nautilus Development Team needs to set up a new Azure Virtual Machine (VM) and configure it to run a web server. This VM should be part of an Azure Application Gateway (AGW) setup to ensure high availability and better traffic management. The task involves creating a VM, setting up an AGW, configuring a backend pool, and ensuring the web server is accessible via the AGW public IP.
+
+Create a Network Security Group (NSG): Create an NSG named nautilus-nsg and add an inbound security rule Allow-HTTP to allow TCP traffic on port 80.
+
+Create a Virtual Machine: Create a VM named nautilus-vm using any available Ubuntu image. Configure the instance with the following settings:
+
+Size: Choose a lightweight VM size (e.g., Standard_B1s).
+
+Authentication: Use SSH public key authentication. (Please select use existing public key option, create public-key locally and paste contents of ~/.ssh/id_rsa.pub)
+
+OS Disk: Use a Standard HDD.
+
+Networking: Under the Advanced section, attach an existing NSG (e.g., nautilus-nsg).
+
+Additionally, configure the instance to run a user data script during launch that:
+
+Install the Nginx package.
+
+Start the Nginx service.
+
+Set up an Application Gateway: Set up an Azure Application Gateway named nautilus-agw with the following:
+
+Create and Associate it with a public IP address named nautilus-agw-ip.
+
+Attach the backend pool:nautilus-backendpool to the VM nautilus-vm.
+
+Select a subnet for the Application Gateway (you can create a new one if needed).
+
+Configure HTTP Settings: Create an HTTP setting named nautilus-http-settings on port 80
+
+Route Traffic: Add a listener named nautilus-listener and a routing rule named nautilus-routing-rule to route traffic from the AGW frontend to the backend pool:
+
+Listener: Frontend IP = public IP, Frontend port = 80, Protocol = HTTP
+
+Routing rule: Connects nautilus-listener to nautilus-backendpool using nautilus-http-settings.
+
+NSG Adjustments: Make sure the NSG attached to the VM allows inbound TCP traffic on port 80, so the Nginx server running on nautilus-vm is accessible via the Application Gateway public IP.
+
+Note: Wait for the Application Gateway resource to be fully deployed before proceeding with the next steps. Deployment may take several minutes to complete.
+
+Ans:
+Below are **step-by-step Azure Portal (GUI) instructions** to complete the entire task exactly as described.
+
+---
+
+# 🔹 Step 1: Create Network Security Group (NSG)
+
+1. Go to **Azure Portal** → **Network security groups**
+2. Click **Create**
+
+### Basics
+
+* **Subscription**: Select yours
+* **Resource group**: `nautilus-rg` (or existing)
+* **Name**: `nautilus-nsg`
+* **Region**: Same region as VM
+
+Click **Review + Create** → **Create**
+
+### Add Inbound Rule
+
+1. Open **nautilus-nsg**
+2. Go to **Inbound security rules**
+3. Click **Add**
+
+| Field                   | Value          |
+| ----------------------- | -------------- |
+| Source                  | Any            |
+| Source port ranges      | *              |
+| Destination             | Any            |
+| Destination port ranges | **80**         |
+| Protocol                | TCP            |
+| Action                  | Allow          |
+| Priority                | **100**        |
+| Name                    | **Allow-HTTP** |
+
+Click **Add**
+
+---
+
+# 🔹 Step 2: Create Virtual Machine (Ubuntu + Nginx)
+
+1. Go to **Virtual machines** → **Create** → **Azure virtual machine**
+
+## Basics Tab
+
+* **Resource group**: `nautilus-rg`
+* **Virtual machine name**: `nautilus-vm`
+* **Region**: Same region
+* **Image**: **Ubuntu Server LTS**
+* **Size**: **Standard_B1s**
+
+### Authentication
+
+* **Authentication type**: SSH public key
+* **Username**: `azureuser`
+* **SSH public key source**: **Use existing public key**
+* Paste contents of:
+
+  ```bash
+  ~/.ssh/id_rsa.pub
+  ```
+
+Click **Next: Disks**
+
+---
+
+## Disks Tab
+
+* **OS disk type**: **Standard HDD**
+
+Click **Next: Networking**
+
+---
+
+## Networking Tab
+
+* **Virtual network**: Create new or select existing
+* **Subnet**: Select VM subnet
+* **Public IP**: Optional (not required for AGW access)
+* **NIC network security group**: **Advanced**
+* **Configure network security group**: **Existing**
+* **Select NSG**: `nautilus-nsg`
+
+Click **Next: Advanced**
+
+---
+
+## Advanced Tab (User Data Script)
+
+Paste this into **Custom data**:
+
+```bash
+#!/bin/bash
+apt update
+apt install -y nginx
+systemctl start nginx
+systemctl enable nginx
+```
+
+Click **Review + Create** → **Create**
+
+---
+
+# 🔹 Step 3: Create Public IP for Application Gateway
+
+1. Go to **Public IP addresses**
+2. Click **Create**
+
+| Field          | Value             |
+| -------------- | ----------------- |
+| Name           | `nautilus-agw-ip` |
+| SKU            | **Standard**      |
+| Assignment     | **Static**        |
+| Resource group | `nautilus-rg`     |
+
+Click **Create**
+
+---
+
+# 🔹 Step 4: Create Application Gateway
+
+1. Go to **Application Gateways**
+2. Click **Create**
+
+## Basics
+
+* **Name**: `nautilus-agw`
+* **Region**: Same region
+* **Tier**: **Standard V2**
+* **Enable autoscaling**: No
+* **Instance count**: 1
+* **Resource group**: `nautilus-rg`
+
+Click **Next: Frontends**
+
+---
+
+## Frontends
+
+* **Frontend IP type**: Public
+* **Public IP address**: `nautilus-agw-ip`
+
+Click **Next: Backends**
+
+---
+
+## Backends
+
+1. Click **Add a backend pool**
+2. **Name**: `nautilus-backendpool`
+3. **Target type**: Virtual machine
+4. **Virtual machine**: `nautilus-vm`
+5. **IP configuration**: Select VM NIC
+
+Click **Add**
+
+---
+
+## Configuration (HTTP Settings + Rule)
+
+Click **Add a routing rule**
+
+### Listener
+
+| Setting       | Value               |
+| ------------- | ------------------- |
+| Listener name | `nautilus-listener` |
+| Frontend IP   | Public              |
+| Protocol      | HTTP                |
+| Port          | 80                  |
+
+### Backend targets
+
+| Setting       | Value                  |
+| ------------- | ---------------------- |
+| Backend pool  | `nautilus-backendpool` |
+| HTTP settings | **Add new**            |
+
+#### HTTP Settings
+
+| Field                 | Value                    |
+| --------------------- | ------------------------ |
+| Name                  | `nautilus-http-settings` |
+| Backend port          | 80                       |
+| Protocol              | HTTP                     |
+| Cookie-based affinity | Disabled                 |
+
+Click **Add**
+
+Click **Add routing rule**
+
+---
+
+## Networking (Subnet)
+
+* **Virtual network**: Same VNet as VM
+* **Subnet**: **Create new subnet**
+
+  * Name: `agw-subnet`
+  * Address range: e.g. `10.0.2.0/24`
+
+---
+
+Click **Review + Create** → **Create**
+
+⏳ **Wait 5–10 minutes for deployment to complete**
+
+---
+
+# 🔹 Step 5: Verify NSG Configuration
+
+Ensure `nautilus-nsg`:
+
+* Has inbound **TCP 80 allowed**
+* Is attached to **VM NIC or subnet**
+
+---
+
+# 🔹 Step 6: Test Web Access
+
+1. Go to **Application Gateway → nautilus-agw**
+2. Copy **Frontend public IP address**
+3. Open browser:
+
+```
+http://<AGW_PUBLIC_IP>
+```
+
+✅ You should see the **Nginx Welcome Page**
+
+
 ### 📡 **Q9: Integrating Azure Event Hub with Virtual Machines**
 
 > *A logging agent on your VM should forward application logs to Azure Event Hub for downstream processing. Set up Event Hub, configure the agent to send logs using SDK or Event Hub REST API, and monitor throughput. How would you handle retries, dead-lettering, and scaling the ingestion layer?*
+
+The Nautilus DevOps team wants to integrate an Azure Virtual Machine with Azure Event Hubs for centralized log collection. Follow these steps to complete the task:
+
+Create Azure Event Hubs Namespace:
+
+Create an Event Hubs namespace named nautilus-namespace in the East US region.
+Select the Standard pricing tier. Make sure to enable Enable Auto-inflate.
+Create an Event Hub:
+
+Within the namespace, create an Event Hub named nautilus-hub.
+Verify the Virtual Machine Configuration:
+
+A VM named nautilus-vm already exists.
+A Python script named send_logs.py already exists on the VM under /home/azureuser. This script is used to send logs to the Event Hub. Make sure to execute this script mutiple times.
+Verify Logs:
+
+Ensure the logs are successfully sent to the Event Hub by checking the Event Hubs metrics in the Azure portal.
+
+Ans:
+Below is a **clear, end-to-end procedure** to integrate the existing **Azure VM** with **Azure Event Hubs** and verify centralized log collection. This assumes you have appropriate Azure permissions and CLI access.
+
+---
+
+## 1. Create Azure Event Hubs Namespace
+
+### Using Azure Portal
+
+1. Go to **Azure Portal → Create a resource → Analytics → Event Hubs**
+2. Configure:
+
+   * **Namespace name:** `nautilus-namespace`
+   * **Region:** `East US`
+   * **Pricing tier:** `Standard`
+   * **Enable Auto-inflate:** ✅ Enabled
+3. Click **Review + Create → Create**
+
+---
+
+### (Optional) Using Azure CLI
+
+```bash
+az eventhubs namespace create \
+  --name nautilus-namespace \
+  --resource-group <RESOURCE_GROUP> \
+  --location eastus \
+  --sku Standard \
+  --enable-auto-inflate true
+```
+
+---
+
+## 2. Create Event Hub inside the Namespace
+
+### Azure Portal
+
+1. Open **nautilus-namespace**
+2. Select **Data Explorer → + Event Hub**
+3. Configure:
+
+   * **Name:** `nautilus-hub`
+   * Leave other settings as default
+4. Click **Create**
+
+---
+
+### Azure CLI (optional)
+
+```bash
+az eventhubs eventhub create \
+  --resource-group <RESOURCE_GROUP> \
+  --namespace-name nautilus-namespace \
+  --name nautilus-hub
+```
+
+---
+
+## 3. Configure Event Hub Access for the VM
+
+1. In **nautilus-namespace → settings→ Shared access policies**
+2. Select **RootManageSharedAccessKey** (or create a new policy)
+3. Copy the **Primary Connection String**
+
+⚠️ The `send_logs.py` script typically requires:
+
+* Event Hub connection string
+* Event Hub name
+
+These are commonly provided via **environment variables**.
+
+Example:
+
+```bash
+export EVENT_HUB_CONNECTION_STRING="<connection-string>"
+export EVENT_HUB_NAME="nautilus-hub"
+```
+
+(Adjust based on how `send_logs.py` is written.)
+
+---
+
+## 4. Verify Virtual Machine & Execute Script
+
+1. Connect to the VM:
+
+```bash
+ssh azureuser@<VM_PUBLIC_IP>
+```
+
+2. Navigate to the script location:
+
+```bash
+cd /home/azureuser
+cat send_logs.py
+```
+# paste the connection string or export as environment variables
+
+
+3. Run the script **multiple times**:
+
+```bash
+python3 send_logs.py
+python3 send_logs.py
+python3 send_logs.py
+```
+
+If the script executes without errors, logs are being sent.
+
+---
+
+## 5. Verify Logs in Azure Event Hubs
+
+### Check Metrics in Azure Portal
+
+1. Go to **nautilus-namespace → nautilus-hub**
+2. Open **Metrics**
+3. Add metrics such as:
+
+   * **Incoming Messages**
+   * **Incoming Bytes**
+4. Set **Time range:** Last 30 minutes
+
+✅ You should see metric values increase each time `send_logs.py` is executed.
+
+---
+
+## 6. Success Criteria Checklist
+
+✔ Event Hubs namespace `nautilus-namespace` created in **East US**
+✔ Pricing tier **Standard** with **Auto-inflate enabled**
+✔ Event Hub `nautilus-hub` created
+✔ `send_logs.py` executed multiple times on `nautilus-vm`
+✔ Event Hub metrics show incoming messages
+
+---
+
+If you want, I can also:
+
+* Review or troubleshoot `send_logs.py`
+* Help configure **Azure Monitor / Log Analytics**
+* Add **diagnostic settings** for long-term log storage
 
 ### ☸️ **Q10: Azure Kubernetes Service (AKS) Setup and Management**
 

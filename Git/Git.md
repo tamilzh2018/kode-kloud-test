@@ -603,7 +603,8 @@ Ans:
   git commit -m "add stories"
   git branch --set-upstream-to=origin/master master
   git push origin master
-  
+  # Specific branch clone 
+  git clone -b pre_main --single-branch https://openforge.gov.in/plugins/git/cphc-ncd/ncd_landing_page.git
 #### 4️⃣ Create a New Branch `max_games`
 - From the repo directory:
   
