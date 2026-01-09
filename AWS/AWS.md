@@ -2028,6 +2028,147 @@ Wait until the push completes successfully.
 or 
 Your EC2 instance in a private subnet needs to access the internet for updates and package downloads. Create a NAT Gateway in a public subnet and modify the route tables. How do you ensure only outgoing traffic is allowed?
 
+The Nautilus DevOps team is tasked with enabling internet access for an EC2 instance running in a private subnet. This instance should be able to upload a test file to a public S3 bucket once it can access the internet. To achieve this, the team must set up a NAT Gateway in a public subnet within the same VPC.
+
+1) A VPC named nautilus-priv-vpc and a private subnet nautilus-priv-subnet have already been created.
+2) An EC2 instance named nautilus-priv-ec2 is already running in the private subnet.
+3) The EC2 instance is configured with a cron job that uploads a test file to a bucket nautilus-nat-24506 once internet is accessible.
+
+Your task is to:
+
+Create a public subnet named nautilus-pub-subnet in the same VPC.
+Create an Internet Gateway and attach it to the VPC.
+Create a route table nautilus-pub-rt and associate it with the public subnet.
+Allocate an Elastic IP and create a NAT Gateway named nautilus-natgw.
+Update the private route table to route 0.0.0.0/0 traffic via the NAT Gateway.
+Once complete, verify that the EC2 instance can reach the internet by confirming the presence of the test file in the S3 bucket nautilus-nat-24506. After completing all the configuration, please wait a few minutes for the test file to appear in the bucket, as it may take 2–3 minutes.
+Ans:
+
+Below is a **clear, end-to-end procedure** to enable internet access for the private EC2 instance using a **NAT Gateway**, followed by verification.
+
+---
+
+## Architecture Goal (Quick Recap)
+
+* **Private EC2 (`nautilus-priv-ec2`)** remains in a **private subnet**
+* **NAT Gateway** sits in a **public subnet**
+* Private subnet routes internet traffic (`0.0.0.0/0`) → **NAT Gateway**
+* EC2 uploads a test file to **S3 bucket `nautilus-nat-24506`** once internet access works
+
+---
+
+## Step 1: Create a Public Subnet
+
+1. Go to **VPC → Subnets → Create subnet**
+2. Configure:
+
+   * **VPC**: `nautilus-priv-vpc`
+   * **Subnet name**: `nautilus-pub-subnet`
+   * **Availability Zone**: same as private subnet (recommended)
+   * **CIDR block**: e.g. `10.0.2.0/24` (must not overlap)
+3. Create subnet
+4. Enable public IP assignment:
+
+   * Select subnet → **Edit subnet settings**
+   * Enable **Auto-assign public IPv4 address**
+
+---
+
+## Step 2: Create and Attach an Internet Gateway
+
+1. Go to **VPC → Internet Gateways → Create**
+
+   * **Name**: `nautilus-igw`
+2. Create → **Attach to VPC**
+
+   * Select **`nautilus-priv-vpc`**
+
+---
+
+## Step 3: Create Public Route Table
+
+1. Go to **VPC → Route Tables → Create route table**
+
+   * **Name**: `nautilus-pub-rt`
+   * **VPC**: `nautilus-priv-vpc`
+2. Add route:
+
+   * Destination: `0.0.0.0/0`
+   * Target: **Internet Gateway (`nautilus-igw`)**
+3. Associate route table:
+
+   * **Subnet associations → Edit**
+   * Select **`nautilus-pub-subnet`**
+
+---
+
+## Step 4: Allocate Elastic IP
+
+1. Go to **EC2 → Elastic IPs**
+2. **Allocate Elastic IP**
+
+   * Leave defaults
+3. Note the **Allocation ID**
+
+---
+
+## Step 5: Create NAT Gateway
+
+1. Go to **VPC → NAT Gateways → Create**
+2. Configure:
+
+   * **Name**: `nautilus-natgw`
+   * **Subnet**: `nautilus-pub-subnet`
+   * **Elastic IP**: select the allocated EIP
+3. Create NAT Gateway
+4. Wait until **Status = Available** (important)
+
+---
+
+## Step 6: Update Private Route Table
+
+1. Identify the **route table associated with `nautilus-priv-subnet`**
+2. Edit routes → **Add route**
+
+   * Destination: `0.0.0.0/0`
+   * Target: **NAT Gateway (`nautilus-natgw`)**
+3. Save changes
+
+---
+
+## Step 7: Verify Internet Access (S3 Upload)
+
+* The EC2 instance `nautilus-priv-ec2` already has a cron job
+* Once NAT Gateway routing is active:
+
+  * The instance should access the internet
+  * It will upload a test file to **S3 bucket `nautilus-nat-24506`**
+
+### Verification
+
+1. Go to **S3 → Buckets → nautilus-nat-24506**
+2. Wait **2–3 minutes**
+3. Confirm the **test file appears in the bucket**
+
+✅ Presence of the file confirms:
+
+* NAT Gateway is working
+* Private subnet has outbound internet access
+* Routing is correctly configured
+
+---
+
+## Final Checklist
+
+✔ Public subnet created
+✔ Internet Gateway attached
+✔ Public route table configured
+✔ NAT Gateway created in public subnet
+✔ Private route table updated
+✔ EC2 successfully uploads to S3
+
+
+
 **Level 3**
 Here is a set of **Advanced-Level Scenario-Based Questions** based on your provided topics. These questions are designed to test deep understanding, cross-service integration, architecture design, automation, scalability, and security—making them ideal for advanced learners, cloud architects, or senior DevOps/Cloud Engineers preparing for real-world projects or advanced certifications (e.g., AWS Solutions Architect Professional, DevOps Pro).
 

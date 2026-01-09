@@ -3893,6 +3893,318 @@ If you want, I can also:
 
 > *Set up a production-ready AKS cluster with autoscaling and integrated ACR for image pulling. Deploy a multi-container app using Helm or YAML manifests, and secure it with ingress controller, TLS, and Azure AD Pod Identity. How do you enable observability with Prometheus/Grafana and handle secret injection securely in the cluster?*
 
+The Nautilus DevOps team is tasked with preparing an AKS cluster to deploy a Kubernetes-based application. The team has the following requirements:
+
+Create an AKS cluster named xfusion-aks.
+The Kubernetes version must be 1.33.0.
+The AKS cluster endpoint access must be private.
+Ensure the cluster is created in the Central US region.
+Edit the agentpool Node pools (delete all other node pool if exists) and configure the cluster with the following properties:
+Node size: D2s v3.
+Minimum node count: 1.
+Maximum node count: 2.
+Disable the Container Insights for now and disable all kind of monitoring as well.
+The AKS cluster must be configured with high availability and private endpoint access. Verify that the cluster meets the requirements and is ready for workloads.
+
+Ans:
+Below is a **clean, repeatable AKS setup procedure** that meets all of Nautilus DevOps requirements.
+Commands assume **Azure CLI ≥ 2.57**, logged in, and a resource group already exists.
+
+---
+
+## 1. Set variables
+
+```bash
+RG=nautilus-rg
+CLUSTER_NAME=xfusion-aks
+LOCATION=centralus
+K8S_VERSION=1.33.0
+NODEPOOL=systempool
+```
+
+---
+
+## 2. Create the AKS cluster (Private + HA)
+
+```bash
+az aks create \
+  --resource-group $RG \
+  --name $CLUSTER_NAME \
+  --location $LOCATION \
+  --kubernetes-version $K8S_VERSION \
+  --enable-private-cluster \
+  --nodepool-name $NODEPOOL \
+  --node-vm-size Standard_D2s_v3 \
+  --node-count 1 \
+  --enable-cluster-autoscaler \
+  --min-count 1 \
+  --max-count 2 \
+  --zones 1 2 3 \
+  --network-plugin azure \
+  --enable-managed-identity \
+  --no-ssh-key
+```
+
+### What this does
+
+* ✅ **Private API endpoint only**
+* ✅ **Highly available control plane (managed by Azure)**
+* ✅ **HA node pool across 3 Availability Zones**
+* ✅ **Autoscaling enabled (1–2 nodes)**
+* ✅ **No Container Insights / monitoring**
+* ✅ **Central US region**
+* ✅ **Kubernetes v1.33.0**
+
+---
+
+## 3. Remove any extra node pools (if they exist)
+
+List node pools:
+
+```bash
+az aks nodepool list \
+  --resource-group $RG \
+  --cluster-name $CLUSTER_NAME \
+  -o table
+```
+
+Delete unwanted pools:
+
+```bash
+az aks nodepool delete \
+  --resource-group $RG \
+  --cluster-name $CLUSTER_NAME \
+  --name <unwanted-pool-name>
+```
+
+---
+
+## 4. Verify cluster configuration
+
+### Confirm private cluster
+
+```bash
+az aks show \
+  --resource-group $RG \
+  --name $CLUSTER_NAME \
+  --query "apiServerAccessProfile.enablePrivateCluster"
+```
+
+Expected:
+
+```text
+true
+```
+
+---
+
+### Confirm Kubernetes version
+
+```bash
+az aks show \
+  --resource-group $RG \
+  --name $CLUSTER_NAME \
+  --query "kubernetesVersion"
+```
+
+---
+
+### Confirm node pool sizing and autoscaling
+
+```bash
+az aks nodepool show \
+  --resource-group $RG \
+  --cluster-name $CLUSTER_NAME \
+  --name $NODEPOOL \
+  --query "{vmSize:vmSize,min:minCount,max:maxCount,zones:availabilityZones}"
+```
+
+Expected:
+
+* `Standard_D2s_v3`
+* Min: `1`
+* Max: `2`
+* Zones: `[1,2,3]`
+
+---
+
+### Confirm monitoring is disabled
+
+```bash
+az aks show \
+  --resource-group $RG \
+  --name $CLUSTER_NAME \
+  --query "addonProfiles"
+```
+
+Expected:
+
+```text
+null
+```
+
+---
+
+## 5. Access cluster (from private network only)
+
+```bash
+az aks get-credentials \
+  --resource-group $RG \
+  --name $CLUSTER_NAME
+```
+
+Verify node readiness:
+
+```bash
+kubectl get nodes
+```
+
+---
+
+## ✅ Final State
+
+* **Cluster name:** `xfusion-aks`
+* **Region:** Central US
+* **Kubernetes:** 1.33.0
+* **Access:** Private endpoint only
+* **Node pool:** D2s v3, autoscaling 1–2
+* **Availability:** Multi-zone HA
+* **Monitoring:** Disabled
+* **Workload-ready:** ✅
+
+Below are **Azure Portal (GUI) steps** to create the AKS cluster exactly as requested.
+
+---
+
+## 1. Open Azure Portal
+
+* Go to **[https://portal.azure.com](https://portal.azure.com)**
+* Sign in with your Azure account
+
+---
+
+## 2. Create AKS Cluster
+
+1. Search for **Kubernetes services**
+2. Click **+ Create**
+3. Choose **Create a Kubernetes cluster**
+
+---
+
+## 3. Basics Tab
+
+Fill in the following:
+
+* **Subscription:** Select your subscription
+* **Resource group:** Select existing (e.g., `nautilus-rg`)
+* **Cluster name:** `xfusion-aks`
+* **Region:** **Central US**
+* **Availability zones:** ✔ Select **1, 2, 3**
+* **Kubernetes version:** **1.33.0**
+* **Automatic upgrade:** Disabled
+
+Click **Next: Node pools**
+
+---
+
+## 4. Node Pools Tab
+
+### System node pool (default)
+
+* **Node pool name:** `systempool`
+* **Node size:** `Standard D2s v3`
+* **Scale method:** Autoscale
+* **Minimum node count:** `1`
+* **Maximum node count:** `2`
+
+⚠️ **Delete any extra node pools** if present:
+
+* Select unwanted pool → **Delete**
+
+Click **Next: Networking**
+
+---
+
+## 5. Networking Tab
+
+* **Network configuration:** Azure CNI
+* **Private cluster:** ✅ **Enabled**
+* **Private DNS zone:** System-managed
+* **Outbound type:** Load balancer
+
+Click **Next: Integrations**
+
+---
+
+## 6. Integrations Tab (Disable Monitoring)
+
+* **Azure Monitor / Container Insights:** ❌ **Disabled**
+* **Azure Policy:** ❌ Disabled
+* **Microsoft Defender:** ❌ Disabled
+
+Click **Next: Advanced**
+
+---
+
+## 7. Advanced Tab
+
+* **Authentication:** Managed identity (default)
+* **RBAC:** Enabled (default)
+* Leave others as default
+
+Click **Next: Tags** → **Review + Create**
+
+---
+
+## 8. Review + Create
+
+* Validate configuration
+* Click **Create**
+* Wait for deployment to complete (5–10 minutes)
+
+---
+
+## 9. Verify Cluster Configuration (GUI)
+
+### Confirm Private Cluster
+
+1. Open **xfusion-aks**
+2. Go to **Networking**
+3. Confirm **Private cluster = Enabled**
+
+---
+
+### Confirm Node Pool
+
+1. Go to **Node pools**
+2. Verify:
+
+   * VM size: `Standard D2s v3`
+   * Autoscaling: Enabled
+   * Min: 1 / Max: 2
+   * Zones: 1,2,3
+
+---
+
+### Confirm Monitoring Disabled
+
+1. Go to **Insights**
+2. You should see **“Monitoring not enabled”**
+
+---
+
+## ✅ Final Result
+
+* AKS cluster `xfusion-aks`
+* Kubernetes **1.33.0**
+* **Private endpoint only**
+* **High availability (AZ-based)**
+* **No monitoring enabled**
+* **Ready for workloads**
+
+If you want, I can also provide **screenshots reference**, **Terraform**, or **post-deployment validation steps in GUI**.
+
+
 **Level 4**
 
 ### 🛠️ **Q1: VM Setup and Configuration for Azure API Gateway**
