@@ -3650,7 +3650,7 @@ Ans:
 1. In S3 console, go to `xfusion-public-21329`.
 2. Click **Upload** → upload `/root/sample.zip`.
 3. Lambda will trigger automatically.
-
+aws s3 cp /root/sample.zip s3://nautilus-public-10598/
 ---
 
 ## ✅ Step 8: Verification
@@ -3659,6 +3659,8 @@ Ans:
   - SourceBucket = `xfusion-public-21329`
   - DestinationBucket = `xfusion-private-25300`
   - ObjectKey = `sample.zip`
+
+aws dynamodb scan --table-name nautilus-S3CopyLogs
 
 
 
