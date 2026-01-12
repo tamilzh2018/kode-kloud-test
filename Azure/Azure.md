@@ -4231,6 +4231,238 @@ If you want, I can also provide **screenshots reference**, **Terraform**, or **p
 * Ensure the Event Hub is partitioned for performance?
 * Process AVRO data later using Azure Data Factory or Synapse?
 
+
+The Nautilus DevOps team wants to integrate an Azure Virtual Machine with Azure Event Hubs and Azure Blob Storage for centralized log collection and backup. Follow these steps to complete the task:
+
+Create Azure Event Hubs Namespace:
+
+Create an Event Hubs namespace named nautilus-namespace in the East US region.
+Select the Standard pricing tier. Make sure to enable Enable Auto-inflate.
+Create an Event Hub:
+
+Within the namespace, create an Event Hub named nautilus-hub.
+Set Up Azure Blob Storage for Log Backup:
+
+Create a Storage Account named nautilusst4552 in the East US region.
+Create a container named nautilus-backup-22867 within the Storage Account.
+Ensure the container is publicly accessible for read operations.
+Verify the Virtual Machine Configuration:
+
+The client host already has a Python script named send_logs.py located under /root. This script is used to send logs to the Event Hub.
+Create a Virtual Machine named nautilus-vm in the East US region.
+Copy the send_logs.py script from the client host to the /home/azureuser directory of the nautilus-vm.
+Modify the script on the VM to also back up the logs to the nautilus-backup-22867 container in the Azure Blob Storage account.
+Verify Logs:
+
+Ensure the logs are successfully sent to the Event Hub by checking the Event Hubs metrics in the Azure portal.
+Verify that the logs are backed up to the nautilus-backup-22867 container in the Azure Blob Storage.
+
+Ans:
+I can’t directly create Azure resources or access your VM, but I *can* give you **exact, copy-paste-ready steps and scripts** to complete this task yourself using the **Azure Portal + Azure CLI**, and show you how to **modify `send_logs.py`** so it sends logs to **Event Hubs** *and* backs them up to **Azure Blob Storage**.
+
+Below is a **complete, practical runbook** that Nautilus DevOps can follow end-to-end.
+
+---
+
+## 1. Create Azure Event Hubs Namespace
+
+### Using Azure Portal
+
+1. Go to **Azure Portal → Create a resource → Event Hubs**
+2. Fill in:
+
+   * **Namespace name:** `nautilus-namespace`
+   * **Region:** East US
+   * **Pricing tier:** Standard
+   * **Enable Auto-inflate:** ✅ Enabled
+3. Click **Review + Create → Create**
+
+---
+
+## 2. Create Event Hub
+
+1. Open **nautilus-namespace**
+2. Go to **Event Hubs → + Event Hub**
+3. Configure:
+
+   * **Name:** `nautilus-hub`
+   * Leave defaults for partitions and retention
+4. Click **Create**
+
+---
+
+## 3. Set Up Azure Blob Storage for Log Backup
+
+### Create Storage Account
+
+1. **Azure Portal → Create a resource → Storage account**
+2. Configure:
+
+   * **Storage account name:** `nautilusst4552`
+   * **Region:** East US
+   * **Performance:** Standard
+   * **Redundancy:** LRS
+3. Click **Review + Create → Create**
+
+### Create Blob Container
+
+1. Open **nautilusst4552**
+2. Go to **Containers → + Container**
+3. Configure:
+
+   * **Name:** `nautilus-backup-22867`
+   * **Public access level:**
+     ✅ **Blob (anonymous read access for blobs only)**
+4. Click **Create**
+
+---
+
+## 4. Create Virtual Machine
+
+1. **Azure Portal → Create a resource → Virtual Machine**
+2. Configure:
+
+   * **Name:** `nautilus-vm`
+   * **Region:** East US
+   * **Image:** Ubuntu 20.04 LTS
+   * **Size:** Standard B1s (sufficient)
+   * **Username:** `azureuser`
+   * **Authentication:** SSH key
+3. Ensure **SSH (22)** is allowed
+4. Create the VM
+
+---
+
+## 5. Copy `send_logs.py` to the VM
+
+From the **client host** (where `/root/send_logs.py` exists):
+
+```bash
+scp /root/send_logs.py azureuser@<VM_PUBLIC_IP>:/home/azureuser/
+```
+
+Then SSH into the VM:
+
+```bash
+ssh azureuser@<VM_PUBLIC_IP>
+```
+
+---
+
+## 6. Install Required Python Dependencies on the VM
+
+```bash
+sudo apt update
+sudo apt install -y python3-pip
+pip3 install azure-eventhub azure-storage-blob
+```
+
+---
+
+## 7. Modify `send_logs.py` to Back Up Logs to Blob Storage
+
+Below is a **working example** showing:
+
+* Sending logs to **Event Hub**
+* Backing up logs to **Azure Blob Storage**
+
+### Example `send_logs.py`
+
+```python
+from azure.eventhub import EventHubProducerClient, EventData
+from azure.storage.blob import BlobServiceClient
+from datetime import datetime
+import os
+
+# Event Hub configuration
+EVENT_HUB_CONN_STR = "<EVENT_HUB_CONNECTION_STRING>"
+EVENT_HUB_NAME = "nautilus-hub"
+
+# Blob Storage configuration
+BLOB_CONN_STR = "<STORAGE_ACCOUNT_CONNECTION_STRING>"
+CONTAINER_NAME = "nautilus-backup-22867"
+
+producer = EventHubProducerClient.from_connection_string(
+    conn_str=EVENT_HUB_CONN_STR,
+    eventhub_name=EVENT_HUB_NAME
+)
+
+blob_service = BlobServiceClient.from_connection_string(BLOB_CONN_STR)
+container_client = blob_service.get_container_client(CONTAINER_NAME)
+
+log_message = f"Log generated at {datetime.utcnow().isoformat()}"
+
+# Send log to Event Hub
+with producer:
+    event_data_batch = producer.create_batch()
+    event_data_batch.add(EventData(log_message))
+    producer.send_batch(event_data_batch)
+
+# Backup log to Blob Storage
+blob_name = f"log-{datetime.utcnow().strftime('%Y%m%d%H%M%S')}.txt"
+blob_client = container_client.get_blob_client(blob_name)
+blob_client.upload_blob(log_message, overwrite=True)
+
+print("Log sent to Event Hub and backed up to Blob Storage")
+```
+
+### Where to get connection strings
+
+* **Event Hub:**
+  `Event Hubs Namespace → Shared access policies → RootManageSharedAccessKey`
+* **Storage Account:**
+  `Storage Account → Access keys → Connection string`
+
+---
+
+## 8. Run the Script
+
+```bash
+python3 /home/azureuser/send_logs.py
+```
+
+Expected output:
+
+```
+Log sent to Event Hub and backed up to Blob Storage
+```
+
+---
+
+## 9. Verify Logs
+
+### Event Hub Verification
+
+1. Go to **nautilus-namespace → nautilus-hub → Metrics**
+2. Check:
+
+   * **Incoming Messages**
+   * **Incoming Requests**
+
+You should see activity after running the script.
+
+### Blob Storage Verification
+
+1. Go to **nautilusst4552 → Containers → nautilus-backup-22867**
+2. Confirm `.txt` log files are present
+3. Click a blob and use the **URL** to confirm public read access
+
+---
+
+## ✅ Final Validation Checklist
+
+✔ Event Hubs namespace `nautilus-namespace` (Standard, Auto-inflate enabled)
+✔ Event Hub `nautilus-hub` created
+✔ Storage account `nautilusst4552` created
+✔ Public container `nautilus-backup-22867` created
+✔ VM `nautilus-vm` running
+✔ Logs sent to Event Hub
+✔ Logs backed up to Blob Storage
+
+---
+
+
+
 ### 🧭 **Q3: SQL Database Migration and Setup**
 
 > **Scenario:**
@@ -4243,6 +4475,168 @@ If you want, I can also provide **screenshots reference**, **Terraform**, or **p
 * Ensure replication for near-zero downtime cutover?
 * Implement firewall and VNet rules to restrict access to the new database?
 
+Below are the **Azure Portal (GUI) steps** to complete **all four tasks**, exactly matching your requirements.
+
+---
+
+# Task 1: Create Azure SQL Database (GUI)
+
+### 1. Sign in to Azure Portal
+
+* Go to **[https://portal.azure.com](https://portal.azure.com)**
+* Sign in with your Azure account
+
+---
+
+### 2. Create a SQL Database
+
+1. In the search bar, type **SQL databases**
+2. Click **Create**
+
+#### Basics Tab
+
+* **Subscription**: Select your subscription
+* **Resource group**: Create new → `devops-rg`
+* **Database name**: `devops-sqldb`
+
+#### Server
+
+* Click **Create new**
+
+  * **Server name**: `devops-server-30824`
+  * **Location**: **West US**
+  * **Authentication method**: SQL authentication
+  * **Server admin login**: `devops-admin`
+  * **Password**: Set a strong password
+  * Click **OK**
+
+#### Compute + Storage
+
+* Click **Configure database**
+* Select **Basic**
+* **Max data size**: **2 GB**
+* Click **Apply**
+
+#### Backup Storage Redundancy
+
+* Set to **Locally-redundant backup storage**
+
+#### Remaining Settings
+
+* Leave all other options as **Default**
+* Click **Review + Create**
+* Click **Create**
+
+---
+
+### 3. Verify Database Status
+
+* Navigate to **SQL databases → devops-sqldb**
+* Confirm **Status = Online**
+
+✅ Database is in **Ready state**
+
+---
+
+# Task 2: Create Storage Account & Blob Container (GUI)
+
+### 1. Create Storage Account
+
+1. Search **Storage accounts**
+2. Click **Create**
+
+#### Basics Tab
+
+* **Resource group**: `devops-rg`
+* **Storage account name**: `devopsst17721`
+* **Region**: **West US**
+* **Performance**: Standard
+* **Redundancy**: **Locally-redundant storage (LRS)**
+
+Click **Review + Create → Create**
+
+---
+
+### 2. Create Blob Container
+
+1. Open **devopsst17721**
+2. Select **Containers** (under Data storage)
+3. Click **+ Container**
+
+   * **Name**: `devops-container-19200`
+   * **Public access level**: Private
+4. Click **Create**
+
+---
+
+# Task 3: Backup (Export) Azure SQL Database (GUI)
+
+Azure SQL exports are created as **.bacpac** files.
+
+### 1. Navigate to the SQL Database
+
+* Open **SQL databases → devops-sqldb**
+
+### 2. Export the Database
+
+1. Click **Export** (top menu)
+
+2. Fill in the fields:
+
+   * **Storage account**: `devopsst17721`
+   * **Blob container**: `devops-container-19200`
+   * **File name**: `devops-db-backup.bacpac`
+   * **Authentication type**: SQL authentication
+   * **Login**: `devops-admin`
+   * **Password**: (your password)
+
+3. Click **OK**
+
+### 3. Monitor Export
+
+* Go to **Notifications (bell icon)**
+* Wait until **Export completed successfully**
+
+---
+
+# Task 4: Download Backup to `/opt` (GUI + Client)
+
+### 1. Download from Azure Portal Or CLI
+
+1. Open **Storage accounts → devopsst17721**
+2. Click **Containers → devops-container-19200**
+3. Select **devops-db-backup.bacpac**
+4. Click **Download**
+
+az storage blob download \
+  --account-name devopsst17721 \
+  --container-name devops-container-19200 \
+  --name devops-db-backup.bacpac \
+  --file /opt/devops-db-backup.bacpac \
+
+
+---
+
+### 2. Move File to `/opt` on `azure-client`
+
+On the **azure-client host**:
+
+```bash
+mv ~/Downloads/devops-db-backup.bacpac /opt/
+```
+
+### 3. Verify File
+
+```bash
+ls -lh /opt/devops-db-backup.bacpac
+```
+
+✅ File exists
+✅ Correct `.bacpac` extension
+✅ Accessible in `/opt`
+
+---
+
 ### 📦 **Q4: VM and ACR Integration for Storage**
 
 > **Scenario:**
@@ -4254,6 +4648,33 @@ If you want, I can also provide **screenshots reference**, **Terraform**, or **p
 * Authenticate the VM using a service principal or managed identity?
 * Pull and run an image on VM startup using a custom script?
 * Ensure ACR access logs and image scanning are enabled?
+
+The Nautilus DevOps team needs to set up an Azure Virtual Machine (VM) to interact with an Azure Blob Storage container for storing and retrieving data. The team must create a private storage account, configure Blob Storage, and test the functionality.
+
+Task:
+1) Azure Virtual Machine Setup:
+
+Create a VM named devops-vm in the East US region.
+Authentication: Use SSH public key authentication. (Please select use existing public key option, create public-key locally and paste contents of ~/.ssh/id_rsa.pub).
+Install Docker and Azure CLI on the VM.
+Pull the Docker image from the ACR and run it on the VM, ensuring it listens on port 80.
+2) Azure Container Registry (ACR) Setup:
+
+Create an ACR named devopsacr3101 in the East US region.
+The repository name should be devops/python-app.
+Build the Docker image using the Dockerfile already given under /root/pyapp.
+Push the Docker image to the ACR with the tag latest.
+3) Create a Storage Account and Blob Container:
+
+Create a storage account named devopsstor3101 in the East US region with Locally-redundant storage (LRS).
+Create a Blob container named devops-config.
+Upload a file named config.json (available under /root/) to the container.
+4) Validation:
+
+Confirm that the application can be accessed on the browser.
+
+Ans:
+
 
 ### 🌐 **Q5: VM Setup with Web Storage Integration**
 
