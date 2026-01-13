@@ -4354,7 +4354,10 @@ ssh azureuser@<VM_PUBLIC_IP>
 ```bash
 sudo apt update
 sudo apt install -y python3-pip
-pip3 install azure-eventhub azure-storage-blob
+pip3 install azure-eventhub azure-storage-blob  
+or 
+pip3 install azure-eventhub azure-storage-blob --break-system-packages
+
 ```
 
 ---
@@ -4652,30 +4655,265 @@ ls -lh /opt/devops-db-backup.bacpac
 The Nautilus DevOps team needs to set up an Azure Virtual Machine (VM) to interact with an Azure Blob Storage container for storing and retrieving data. The team must create a private storage account, configure Blob Storage, and test the functionality.
 
 Task:
+The Nautilus DevOps team needs to set up an Azure Virtual Machine (VM) to interact with an Azure Blob Storage container for storing and retrieving data. The team must create a private storage account, configure Blob Storage, and test the functionality.
+
+Task:
 1) Azure Virtual Machine Setup:
 
-Create a VM named devops-vm in the East US region.
+Create a VM named xfusion-vm in the East US region.
 Authentication: Use SSH public key authentication. (Please select use existing public key option, create public-key locally and paste contents of ~/.ssh/id_rsa.pub).
 Install Docker and Azure CLI on the VM.
 Pull the Docker image from the ACR and run it on the VM, ensuring it listens on port 80.
 2) Azure Container Registry (ACR) Setup:
 
-Create an ACR named devopsacr3101 in the East US region.
-The repository name should be devops/python-app.
+Create an ACR named xfusionacr32003 in the East US region.
+The repository name should be xfusion/python-app.
 Build the Docker image using the Dockerfile already given under /root/pyapp.
 Push the Docker image to the ACR with the tag latest.
 3) Create a Storage Account and Blob Container:
 
-Create a storage account named devopsstor3101 in the East US region with Locally-redundant storage (LRS).
-Create a Blob container named devops-config.
+Create a storage account named xfusionstor32003 in the East US region with Locally-redundant storage (LRS).
+Create a Blob container named xfusion-config.
 Upload a file named config.json (available under /root/) to the container.
 4) Validation:
 
 Confirm that the application can be accessed on the browser.
 
 Ans:
+Below is a **clear, end-to-end implementation guide** to complete all tasks exactly as requested.
+The steps are written so the Nautilus DevOps team can follow them **without ambiguity**.
 
+---
 
+## 1) Azure Virtual Machine Setup
+
+### A. Create SSH Key (Local Machine)
+
+If not already present:
+
+```bash
+ssh-keygen -t rsa -b 4096
+cat ~/.ssh/id_rsa.pub
+```
+
+Copy the public key output.
+
+---
+
+### B. Create Virtual Machine (Azure Portal)
+
+1. Go to **Azure Portal → Virtual Machines → Create**
+
+2. **Basics**
+
+   * Resource Group: Create new or use existing
+   * VM name: **xfusion-vm**
+   * Region: **East US**
+   * Image: **Ubuntu 20.04 LTS**
+   * Size: Standard B2s (or similar)
+   * Authentication type: **SSH public key**
+   * Username: `azureuser`
+   * SSH public key source: **Use existing public key**
+   * Paste contents of `~/.ssh/id_rsa.pub`
+
+3. **Networking**
+
+   * Allow inbound port: **HTTP (80)** and **SSH (22)**
+
+4. Click **Review + Create → Create**
+
+---
+
+### C. Connect to VM
+
+```bash
+ssh azureuser@<VM_PUBLIC_IP>
+```
+
+---
+
+### D. Install Docker on VM
+
+```bash
+sudo apt update
+sudo apt install -y docker.io
+sudo systemctl start docker
+sudo systemctl enable docker
+sudo usermod -aG docker azureuser
+newgrp docker
+```
+
+Verify:
+
+```bash
+docker --version
+```
+
+---
+
+### E. Install Azure CLI on VM
+
+```bash
+curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
+az --version
+```
+
+Login:
+
+```bash
+az login
+```
+
+---
+
+## 2) Azure Container Registry (ACR) Setup
+
+### A. Create ACR (Azure Portal)
+
+1. **Azure Portal → Container Registries → Create**
+2. Settings:
+
+   * Registry name: **xfusionacr32003**
+   * Region: **East US**
+   * SKU: **Basic**
+3. Click **Create**
+
+---
+
+### B. Build Docker Image (Azure Portal)
+
+1. Go to **xfusionacr32003 → Repositories → Tasks → Quick task**
+2. Configuration:
+
+   * Source type: **Local**
+   * Upload context: `/root/pyapp`
+   * Dockerfile path: `Dockerfile`
+   * Image name: **xfusion/python-app**
+   * Tag: **latest**
+3. Click **Run**
+
+---
+
+### C. Push Image to ACR
+
+(Handled automatically by ACR Task via Portal)
+
+Verify:
+
+```
+xfusionacr32003.azurecr.io/xfusion/python-app:latest
+```
+
+---
+
+## 3) Run Docker Image on VM
+
+### A. Login to ACR from VM
+
+```bash
+az acr login --name xfusionacr32003
+```
+
+---
+
+### B. Pull Image
+
+```bash
+docker pull xfusionacr32003.azurecr.io/xfusion/python-app:latest
+```
+
+---
+
+### C. Run Container on Port 80
+
+```bash
+docker run -d \
+  -p 80:80 \
+  --name xfusion-app \
+  xfusionacr32003.azurecr.io/xfusion/python-app:latest
+```
+
+Verify:
+
+```bash
+docker ps
+```
+
+---
+
+## 4) Storage Account and Blob Container
+
+### A. Create Storage Account (Azure Portal)
+
+1. **Azure Portal → Storage Accounts → Create**
+2. Settings:
+
+   * Name: **xfusionstor32003**
+   * Region: **East US**
+   * Performance: Standard
+   * Redundancy: **LRS**
+3. Click **Create**
+
+---
+
+### B. Create Blob Container
+
+1. Open **xfusionstor32003**
+2. Go to **Containers → + Container**
+3. Name: **xfusion-config**
+4. Public access level: **Private**
+5. Click **Create**
+
+---
+
+### C. Upload config.json
+
+1. Open container **xfusion-config**
+2. Click **Upload**
+3. Select file:
+
+   ```
+   /root/config.json
+   ```
+4. Click **Upload**
+
+---
+
+## 5) Validation
+
+### A. Confirm Application Access
+
+Open browser:
+
+```
+http://<VM_PUBLIC_IP>
+```
+
+✅ Application should load successfully.
+
+---
+
+### B. Optional Verification Commands
+
+On VM:
+
+```bash
+curl http://localhost
+```
+
+---
+
+## Final Checklist
+
+✔ VM created with SSH authentication
+✔ Docker & Azure CLI installed
+✔ ACR created and image pushed
+✔ Docker container running on port 80
+✔ Private Blob Storage configured
+✔ config.json uploaded
+✔ Application accessible via browser
+
+---
 ### 🌐 **Q5: VM Setup with Web Storage Integration**
 
 > **Scenario:**
