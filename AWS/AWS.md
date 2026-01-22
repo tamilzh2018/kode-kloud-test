@@ -275,6 +275,61 @@ or
 
 Your dev team is requesting more disk space on a live EC2 instance running a Linux OS. Resize the attached EBS volume from 20 GiB to 50 GiB without terminating or stopping the instance. What tools/commands would you use inside the instance to make the space available?
 
+The Nautilus DevOps Team has recently been informed by the Development Team that their EC2 instance is running out of storage space. This instance, crucial for development activities, is named devops-ec2 and currently has an attached volume of 8 GiB. To accommodate the increasing data requirements, the storage needs to be expanded to 12 GiB. This change should ensure that the expanded space is immediately available for use within the instance without disrupting ongoing activities.
+
+Identify Volume: Find the volume attached to the devops-ec2 instance.
+
+Expand Volume: Increase the volume size from 8 GiB to 12 GiB.
+
+Reflect Changes: Ensure the root (/) partition within the instance reflects the expanded size from 8 GiB to 12 GiB.
+
+SSH Access: Use the key pair located at /root/devops-keypair.pem on the aws-client host to SSH into the EC2 instance.
+
+Ans:
+## Solution
+
+### Step 1: Modify the volume size
+- Login to AWS management console
+- Locate the `datacenter-ec2` EC2 instance and identify the volume attached to it
+- Expand the volume size to `12 GiB`
+
+### Step 2: SSH into the EC2 Instance
+- Use the `/root/datacenter-keypair.pem` key on the `aws-client` host to SSH into the instance
+```bash
+ssh -i /root/datacenter-keypair.pem ubuntu@<EC2_IP>
+```
+
+### Step 3: Verify Current Disk Size
+```bash
+lsblk
+df -h /
+```
+
+### Step 4: Expand the Partition and Filesystem
+Grow the partition
+```bash
+sudo growpart /dev/xvda 1
+```
+Check filesystem type
+```bash
+df -T /
+```
+If `xfs`:
+```bash
+sudo xfs_growfs /
+```
+If `ext4`:
+```bash
+sudo resize2fs /dev/xvda1
+```
+
+### Step 5: Verification
+Check if the expansion is done
+```bash
+df -h /
+```
+
+
 **Q3: Creating and Launching EC2 Instances from Custom AMIs**
 
 > *You’ve configured an EC2 instance with all necessary tools for your app. Create a reusable AMI from it and launch 2 new instances based on that image.*
@@ -3878,6 +3933,432 @@ aws sns publish --topic-arn $topicarn --message 'Low Priority message 2' --messa
 
 > *Your organization runs multiple VPCs across different AWS accounts — each hosting different workloads. For compliance, all audit logs must be sent to a centralized VPC where a log analysis tool is deployed. Design a solution using VPC peering, CloudWatch Logs, and centralized S3 buckets with cross-account access. What security controls, IAM policies, and VPC route updates are required to make this architecture work securely and at scale?*
 
+The Nautilus DevOps team needs to build a secure and scalable log aggregation setup within their AWS environment. The goal is to gather log files from an internal EC2 instance running in a private VPC, transfer them securely to another EC2 instance in a public VPC, and then push those logs to a secure S3 bucket.
+
+1. A VPC named `nautilus-priv-vpc` already exists with a private subnet named `nautilus-priv-subnet`, a route table named `nautilus-priv-rt`, and an EC2 instance named `nautilus-priv-ec2` (using `ubuntu` image). This instance uses the SSH key pair `nautilus-key.pem` already available on the AWS client host at `/root/.ssh/`.
+2. Your task is to:
+    - Create a new VPC named `nautilus-pub-vpc`.
+    - Create a subnet named `nautilus-pub-subnet` and a route table named `nautilus-pub-rt` under this public VPC.
+    - Attach an internet gateway to `nautilus-pub-vpc` and configure the public route table to enable internet access.
+    - Launch an EC2 instance named `nautilus-pub-ec2` into the public subnet using the same key pair as the private instance.
+    - Create an IAM role named `nautilus-s3-role` with `PutObject` permission to an S3 bucket and attach it to the public EC2 instance.
+    - Create a new private S3 bucket named `nautilus-s3-logs-27334`.
+    - Configure a VPC Peering named `nautilus-vpc-peering` between the private and public VPCs.
+    - Modify both `nautilus-priv-rt` and `nautilus-pub-rt` to route each other's CIDR blocks through the peering connection.
+    - On the private instance, configure a cron job to push the `/var/log/boots.log` file to the public instance (using `scp` or `rsync`).
+    - On the public instance, configure a cron job to push that same file to the created S3 bucket.
+    - The uploaded file must be stored in the S3 bucket under the path `nautilus-priv-vpc/boot/boots.log`.
+
+Ans:
+## 🏗️ Create Public VPC and Subnet
+1. **Navigate to VPC service** → *Create VPC*.
+   - Name: `nautilus-pub-vpc`
+   - CIDR: choose non-overlapping (e.g., `10.20.0.0/16`)
+   - Tenancy: default
+   - Click **Create VPC**.
+2. **Create Subnet**:
+   - VPC: `nautilus-pub-vpc`
+   - Name: `nautilus-pub-subnet`
+   - CIDR: `10.20.1.0/24`
+   - Availability Zone: pick one
+   - Enable *Auto-assign public IP*.
+   - Save.
+
+---
+
+## 🌐 Internet Gateway and Route Table
+1. **Internet Gateway**:
+   - Go to *Internet Gateways* → *Create IGW*.
+   - Name: `nautilus-pub-igw`.
+   - Attach to `nautilus-pub-vpc`.
+2. **Route Table**:
+   - Go to *Route Tables* → *Create Route Table*.
+   - Name: `nautilus-pub-rt`.
+   - VPC: `nautilus-pub-vpc`.
+   - Associate with `nautilus-pub-subnet`.
+   - Add route: `0.0.0.0/0` → target `nautilus-pub-igw`.
+
+---
+
+## 💻 Launch Public EC2
+1. Go to *EC2 → Launch Instance*.
+   - Name: `nautilus-pub-ec2`.
+   - AMI: Ubuntu (same as private).
+   - Instance type: t3.micro.
+   - Key pair: select `nautilus-key`.
+   - Network: `nautilus-pub-vpc`, subnet `nautilus-pub-subnet`.
+   - Security group: allow SSH (22) from your admin IP and private VPC CIDR.
+   - Launch.
+
+---
+
+## 🔑 IAM Role for S3
+1. Go to *IAM → Roles → Create Role*.
+   - Trusted entity: EC2.
+   - Name: `nautilus-s3-role`.
+   - Attach inline policy:
+     ```json
+     {
+       "Version": "2012-10-17",
+       "Statement": [
+         {
+           "Effect": "Allow",
+           "Action": "s3:PutObject",
+           "Resource": "arn:aws:s3:::nautilus-s3-logs-27334/nautilus-priv-vpc/boot/*"
+         }
+       ]
+     }
+     ```
+   - Create role.
+2. Attach role to `nautilus-pub-ec2`:
+   - Select instance → *Actions → Security → Modify IAM role* → choose `nautilus-s3-role`.
+
+---
+
+## 📦 Create S3 Bucket
+1. Go to *S3 → Create bucket*.
+   - Name: `nautilus-s3-logs-27334`.
+   - Region: same as VPCs.
+   - Block all public access.
+   - Create.
+
+---
+
+## 🔗 VPC Peering
+1. Go to *VPC → Peering Connections → Create Peering*.
+   - Name: `nautilus-vpc-peering`.
+   - Requester: `nautilus-priv-vpc`.
+   - Accepter: `nautilus-pub-vpc`.
+   - Create and accept.
+2. Update route tables:
+   - `nautilus-priv-rt`: add route to `10.20.0.0/16` via peering.
+   - `nautilus-pub-rt`: add route to private VPC CIDR via peering.
+
+---
+
+## ⚙️ Configure Cron Jobs
+### On Private EC2 (`nautilus-priv-ec2`)
+1. SSH into instance.
+2. Copy key to `/home/ubuntu/.ssh/nautilus-key.pem`.
+3. Add cron job:
+   ```bash
+   * * * * * scp -i /home/ubuntu/.ssh/nautilus-key.pem -o StrictHostKeyChecking=no /var/log/boots.log ubuntu@<pub-ec2-private-ip>:/home/ubuntu/boots.log
+   ```
+
+### On Public EC2 (`nautilus-pub-ec2`)
+1. Ensure AWS CLI is installed.
+2. Add cron job:
+   ```bash
+   * * * * * aws s3 cp /home/ubuntu/boots.log s3://nautilus-s3-logs-27334/nautilus-priv-vpc/boot/boots.log
+   ```
+
+---
+
+✅ At this point:
+- Logs flow from private EC2 → public EC2 (via peering).
+- Public EC2 uploads securely to S3 with IAM role permissions.
+- File ends up at `nautilus-priv-vpc/boot/boots.log` in the bucket.
+
+**CLI**
+
+### Overview
+
+You’re building a secure log pipeline: private EC2 → public EC2 → private S3. Below are precise AWS CLI commands and instance configurations to create the public VPC, peering, IAM role, and cron-based transfers—keeping traffic private between VPCs and enforcing least privilege to S3.
+
+---
+
+### Prerequisites and variables
+
+- **AWS CLI:** Run all commands from the AWS client host with credentials configured.
+- **Key pair:** `/root/.ssh/nautilus-key.pem` already exists.
+- **Existing resources:** `nautilus-priv-vpc`, `nautilus-priv-subnet`, `nautilus-priv-rt`, `nautilus-priv-ec2` (Ubuntu).
+- **Region:** Replace `REGION` with your AWS region (e.g., `ap-south-1`).
+
+```bash
+export REGION="us-east-1"
+export PRIV_VPC_NAME="nautilus-priv-vpc"
+export PUB_VPC_NAME="nautilus-pub-vpc"
+export PUB_SUBNET_NAME="nautilus-pub-subnet"
+export PUB_RT_NAME="nautilus-pub-rt"
+export PUB_IGW_NAME="nautilus-pub-igw"
+export PUB_EC2_NAME="nautilus-pub-ec2"
+export KEY_NAME="nautilus-key"   
+export ROLE_NAME="nautilus-s3-role"
+export BUCKET_NAME="nautilus-s3-logs-11197"
+export PEERING_NAME="nautilus-vpc-peering"
+```
+# AWS key pair name (file is /root/.ssh/nautilus-key.pem)
+---
+
+### Create the public VPC, subnet, IGW, route table, and EC2
+
+#### 1) Create VPC and subnet
+
+```bash
+# Create public VPC (choose a non-overlapping CIDR with private VPC)
+PUB_VPC_ID=$(aws ec2 create-vpc --cidr-block 10.20.0.0/16 --region "$REGION" --query 'Vpc.VpcId' --output text)
+aws ec2 create-tags --resources "$PUB_VPC_ID" --tags Key=Name,Value="$PUB_VPC_NAME"
+
+# Enable DNS hostnames for EC2 public DNS
+aws ec2 modify-vpc-attribute --vpc-id "$PUB_VPC_ID" --enable-dns-hostnames
+
+# Create public subnet
+PUB_SUBNET_ID=$(aws ec2 create-subnet --vpc-id "$PUB_VPC_ID" --cidr-block 10.20.1.0/24 --region "$REGION" --query 'Subnet.SubnetId' --output text)
+aws ec2 create-tags --resources "$PUB_SUBNET_ID" --tags Key=Name,Value="$PUB_SUBNET_NAME"
+
+# Make subnet auto-assign public IPs
+aws ec2 modify-subnet-attribute --subnet-id "$PUB_SUBNET_ID" --map-public-ip-on-launch
+```
+
+#### 2) Internet gateway and route table
+
+```bash
+# Create and attach IGW
+IGW_ID=$(aws ec2 create-internet-gateway --region "$REGION" --query 'InternetGateway.InternetGatewayId' --output text)
+aws ec2 create-tags --resources "$IGW_ID" --tags Key=Name,Value="$PUB_IGW_NAME"
+aws ec2 attach-internet-gateway --internet-gateway-id "$IGW_ID" --vpc-id "$PUB_VPC_ID"
+
+# Create public route table and add default route
+PUB_RT_ID=$(aws ec2 create-route-table --vpc-id "$PUB_VPC_ID" --region "$REGION" --query 'RouteTable.RouteTableId' --output text)
+aws ec2 create-tags --resources "$PUB_RT_ID" --tags Key=Name,Value="$PUB_RT_NAME"
+aws ec2 associate-route-table --route-table-id "$PUB_RT_ID" --subnet-id "$PUB_SUBNET_ID"
+aws ec2 create-route --route-table-id "$PUB_RT_ID" --destination-cidr-block 0.0.0.0/0 --gateway-id "$IGW_ID"
+```
+
+#### 3) Security group and EC2 launch
+
+```bash
+# Create SG allowing SSH from your admin IP (replace YOUR_IP/32) and internal traffic from private VPC CIDR later
+PUB_SG_ID=$(aws ec2 create-security-group --group-name nautilus-pub-sg --description "Public EC2 SG" --vpc-id "$PUB_VPC_ID" --query 'GroupId' --output text)
+aws ec2 authorize-security-group-ingress --group-id "$PUB_SG_ID" --protocol tcp --port 22 --cidr 0.0.0.0/0
+
+# Find latest Ubuntu AMI
+AMI_ID=$(aws ec2 describe-images --owners 099720109477 \
+  --filters "Name=name,Values=ubuntu/images/hvm-ssd/ubuntu-jammy-22.04-amd64-server-*" "Name=state,Values=available" \
+  --query 'Images | sort_by(@, &CreationDate) | [-1].ImageId' --output text)
+
+# Launch EC2 in public subnet
+PUB_EC2_ID=$(aws ec2 run-instances --image-id "$AMI_ID" --count 1 --instance-type t3.micro \
+  --key-name "$KEY_NAME" --subnet-id "$PUB_SUBNET_ID" --security-group-ids "$PUB_SG_ID" \
+  --tag-specifications "ResourceType=instance,Tags=[{Key=Name,Value=$PUB_EC2_NAME}]" \
+  --query 'Instances[0].InstanceId' --output text)
+
+# Get public and private IPs
+PUB_EC2_PRIV_IP=$(aws ec2 describe-instances --instance-ids "$PUB_EC2_ID" --query 'Reservations[0].Instances[0].PrivateIpAddress' --output text)
+PUB_EC2_PUB_IP=$(aws ec2 describe-instances --instance-ids "$PUB_EC2_ID" --query 'Reservations[0].Instances[0].PublicIpAddress' --output text)
+```
+
+---
+
+### Create IAM role and attach to public EC2
+
+#### 1) Trust policy and role
+
+```bash
+cat > /tmp/ec2-trust.json <<'EOF'
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Principal": { "Service": "ec2.amazonaws.com" },
+      "Action": "sts:AssumeRole"
+    }
+  ]
+}
+EOF
+
+aws iam create-role --role-name "$ROLE_NAME" --assume-role-policy-document file:///tmp/ec2-trust.json
+```
+
+#### 2) S3 write policy (least privilege to bucket/prefix)
+
+```bash
+cat > /tmp/s3-put-policy.json <<'EOF'
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "AllowPutObjectToLogsPrefix",
+      "Effect": "Allow",
+      "Action": ["s3:PutObject"],
+      "Resource": [
+        "arn:aws:s3:::nautilus-s3-logs-11197/nautilus-priv-vpc/boot/*"
+      ]
+    }
+  ]
+}
+EOF
+
+aws iam put-role-policy --role-name "$ROLE_NAME" --policy-name nautilus-s3-put-policy --policy-document file:///tmp/s3-put-policy.json
+```
+
+#### 3) Instance profile and attach to EC2
+
+```bash
+aws iam create-instance-profile --instance-profile-name "$ROLE_NAME"
+aws iam add-role-to-instance-profile --instance-profile-name "$ROLE_NAME" --role-name "$ROLE_NAME"
+
+# Wait ~30s for propagation, then attach
+aws ec2 associate-iam-instance-profile --instance-id "$PUB_EC2_ID" --iam-instance-profile Name="$ROLE_NAME"
+```
+
+---
+
+### Create private S3 bucket
+
+```bash
+aws s3api create-bucket --bucket "$BUCKET_NAME" --region "$REGION" --create-bucket-configuration LocationConstraint="$REGION"
+
+# Block public access
+aws s3api put-public-access-block --bucket "$BUCKET_NAME" --public-access-block-configuration \
+'{"BlockPublicAcls":true,"IgnorePublicAcls":true,"BlockPublicPolicy":true,"RestrictPublicBuckets":true}'
+```
+
+---
+
+### VPC peering and routing
+
+#### 1) Discover private VPC and route table
+
+```bash
+PRIV_VPC_ID=$(aws ec2 describe-vpcs --filters "Name=tag:Name,Values=$PRIV_VPC_NAME" --query 'Vpcs[0].VpcId' --output text)
+PRIV_CIDR=$(aws ec2 describe-vpcs --vpc-ids "$PRIV_VPC_ID" --query 'Vpcs[0].CidrBlock' --output text)
+PRIV_RT_ID=$(aws ec2 describe-route-tables --filters "Name=tag:Name,Values=nautilus-priv-rt" --query 'RouteTables[0].RouteTableId' --output text)
+
+PUB_CIDR=$(aws ec2 describe-vpcs --vpc-ids "$PUB_VPC_ID" --query 'Vpcs[0].CidrBlock' --output text)
+```
+
+#### 2) Create and accept peering
+
+```bash
+PEER_ID=$(aws ec2 create-vpc-peering-connection --vpc-id "$PRIV_VPC_ID" --peer-vpc-id "$PUB_VPC_ID" --region "$REGION" \
+  --query 'VpcPeeringConnection.VpcPeeringConnectionId' --output text)
+aws ec2 create-tags --resources "$PEER_ID" --tags Key=Name,Value="$PEERING_NAME"
+
+# Accept from peer side
+aws ec2 accept-vpc-peering-connection --vpc-peering-connection-id "$PEER_ID"
+```
+
+#### 3) Add routes in both route tables
+
+```bash
+# Private RT → route to public CIDR via peering
+aws ec2 create-route --route-table-id "$PRIV_RT_ID" --destination-cidr-block "$PUB_CIDR" --vpc-peering-connection-id "$PEER_ID"
+
+# Public RT → route to private CIDR via peering
+aws ec2 create-route --route-table-id "$PUB_RT_ID" --destination-cidr-block "$PRIV_CIDR" --vpc-peering-connection-id "$PEER_ID"
+```
+
+#### 4) Security groups to allow peering traffic
+
+```bash
+# Find private EC2 SG and private EC2 private IP
+PRIV_EC2_ID=$(aws ec2 describe-instances --filters "Name=tag:Name,Values=nautilus-priv-ec2" --query 'Reservations[0].Instances[0].InstanceId' --output text)
+PRIV_EC2_PRIV_IP=$(aws ec2 describe-instances --instance-ids "$PRIV_EC2_ID" --query 'Reservations[0].Instances[0].PrivateIpAddress' --output text)
+PRIV_SG_ID=$(aws ec2 describe-instances --instance-ids "$PRIV_EC2_ID" --query 'Reservations[0].Instances[0].SecurityGroups[0].GroupId' --output text)
+
+# Allow SSH/SCP from private VPC to public EC2 over peering
+aws ec2 authorize-security-group-ingress --group-id "$PUB_SG_ID" --protocol tcp --port 22 --cidr "$PRIV_CIDR"
+
+# (Optional) allow return traffic explicitly if SGs are restrictive
+aws ec2 authorize-security-group-ingress --group-id "$PRIV_SG_ID" --protocol tcp --port 22 --cidr "$PUB_CIDR"
+```
+
+---
+
+### Configure cron on private EC2 to push boots.log to public EC2
+
+#### 1) On private EC2 (`nautilus-priv-ec2`)
+
+- **SSH into private EC2** from the AWS client host (via SSM or bastion if needed). Since it’s in a private subnet, use your existing access method.
+- **Ensure the key is present** on the private EC2 at `/home/ubuntu/.ssh/nautilus-key.pem` (securely copy from the client host if permitted).
+
+```bash
+# On private EC2
+sudo mkdir -p /home/ubuntu/.ssh
+sudo cp /root/.ssh/nautilus-key.pem /home/ubuntu/.ssh/nautilus-key.pem
+sudo chown ubuntu:ubuntu /home/ubuntu/.ssh/nautilus-key.pem
+sudo chmod 600 /home/ubuntu/.ssh/nautilus-key.pem
+
+# Create a transfer script
+cat <<'EOF' | sudo tee /usr/local/bin/push_boots_to_pub.sh
+#!/usr/bin/env bash
+set -euo pipefail
+PUB_IP="10.20.1.220"  # PUB_EC2_PRIV_IP
+SRC="/var/log/boots.log"
+DEST_USER="ubuntu"
+DEST_PATH="/home/ubuntu/boots.log"
+KEY="/home/ubuntu/.ssh/nautilus-key.pem"
+
+if [ -s "$SRC" ]; then
+  scp -i "$KEY" -o StrictHostKeyChecking=no "$SRC" "${DEST_USER}@${PUB_IP}:${DEST_PATH}"
+fi
+EOF
+sudo chmod +x /usr/local/bin/push_boots_to_pub.sh
+
+# Add cron (runs every 5 minutes)
+( crontab -l 2>/dev/null; echo "* * * * * /usr/local/bin/push_boots_to_pub.sh $PUB_EC2_PRIV_IP" ) | crontab -
+```
+
+- **Note:** Use the public EC2’s private IP (`$PUB_EC2_PRIV_IP`) so traffic stays within peered VPCs.
+
+---
+
+### Configure cron on public EC2 to push to S3
+
+#### 1) On public EC2 (`nautilus-pub-ec2`)
+
+```bash
+# Install AWS CLI v2 if not present (Ubuntu)
+sudo apt-get update -y
+sudo apt-get install -y unzip curl
+curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "/tmp/awscliv2.zip"
+unzip /tmp/awscliv2.zip -d /tmp
+sudo /tmp/aws/install
+
+# Verify role-based credentials work
+aws sts get-caller-identity
+
+# Create upload script
+cat <<'EOF' | sudo tee /usr/local/bin/push_boots_to_s3.sh
+#!/usr/bin/env bash
+set -euo pipefail
+BUCKET="nautilus-s3-logs-11197"
+SRC="/home/ubuntu/boots.log"
+DEST_KEY="nautilus-priv-vpc/boot/boots.log"
+
+if [ -s "$SRC" ]; then
+  aws s3 cp "$SRC" "s3://${BUCKET}/${DEST_KEY}" --only-show-errors
+fi
+EOF
+sudo chmod +x /usr/local/bin/push_boots_to_s3.sh
+
+# Add cron (runs every 5 minutes, offset by 2 minutes)
+( crontab -l 2>/dev/null; echo "* * * * * /usr/local/bin/push_boots_to_s3.sh" ) | crontab -
+```
+
+- **Path requirement:** The object will be stored at `s3://nautilus-s3-logs-11197/nautilus-priv-vpc/boot/boots.log`.
+
+---
+
+### Validation checklist
+
+- **VPC peering active:** `aws ec2 describe-vpc-peering-connections --vpc-peering-connection-ids "$PEER_ID"`.
+- **Routes present:** Confirm both route tables have routes to each other’s CIDR via peering.
+- **Security groups:** Public EC2 allows SSH from private VPC CIDR.
+- **IAM role:** `aws sts get-caller-identity` on public EC2 returns an IAM role ARN for `nautilus-s3-role`.
+- **Cron logs:** Check `/var/log/syslog` on Ubuntu for cron activity.
+- **S3 object:** `aws s3 ls s3://nautilus-s3-logs-11197/nautilus-priv-vpc/boot/boots.log`.
+
+---
+
+### Notes and guardrails
+
+- **CIDR non-overlap:** Ensure `nautilus-priv-vpc` CIDR doesn’t overlap with `10.20.0.0/16`. If it does, choose a different CIDR for the public VPC.
+- **Key handling:** Keep `nautilus-key.pem` permissions at `600`. Avoid copying keys across instances unless your security policy allows it—alternatively, use EC2 Instance Connect or SSM.
+- **Least privilege:** The IAM policy only allows `PutObject` to the required prefix. No bucket-wide permissions are granted.
+- **Private routing:** Use the public EC2’s private IP for SCP to keep traffic inside AWS via peering, not over the internet.
 
 
 ### 🐳 **Q6: Deploying Containerized Applications with AWS ECS**
