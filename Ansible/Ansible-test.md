@@ -84,7 +84,17 @@ host_key_checking = False
 remote_user = jim
 
 Day 4: **Copy Data to App Servers using Ansible**
+The Nautilus DevOps team needs to copy data from the jump host to all application servers in Stratos DC using Ansible. Execute the task with the following details:
 
+
+a. Create an inventory file /home/thor/ansible/inventory on jump_host and add all application servers as managed nodes.
+
+
+b. Create a playbook /home/thor/ansible/playbook.yml on the jump host to copy the /usr/src/data/index.html file to all application servers, placing it at /opt/data.
+
+
+Note: Validation will run the playbook using the command ansible-playbook -i inventory playbook.yml. Ensure the playbook functions properly without any extra arguments.
+Ans:
 # Edit the inventory file 
 vi /home/thor/ansible/inventory
 [appservers]
@@ -101,8 +111,8 @@ vi /home/thor/ansible/playbook.yml
   tasks:
     - name: Copy index.html to /opt/data/html on remote servers
       copy:
-        source: /tmp/index.html
-        dest: /opt/data/html
+        source: /usr/src/data/index.html
+        dest: /opt/data/index.html
         owner: root
         group: root
         mode: '0644'
@@ -425,7 +435,7 @@ nano /home/thor/ansible/playbook-t1q1.yml
 cd /home/thor/ansible
 ansible-playbook -i inventory-t1q1 playbook-t1q1.yml
 
-Level 2:
+**Level 2:**
 Day1: 
 The Nautilus DevOps team is planning to test several Ansible playbooks on different app servers in Stratos DC. Before that, some pre-requisites must be met. Essentially, the team needs to set up a password-less SSH connection between Ansible controller and Ansible managed nodes. One of the tickets is assigned to you; please complete the task as per details mentioned below:
 
@@ -463,6 +473,13 @@ Ensure `/home/thor/ansible/inventory` contains the correct entry for App Server 
 
 [appservers]
 appserver2 ansible_host=<app_server_2_ip> ansible_user=<app_server_2_user>
+
+or 
+
+stapp01 ansible_host=172.16.238.10 ansible_user=tony ansible_ssh_pass=Ir0nM@n
+stapp02 ansible_host=172.16.238.11 ansible_user=steve ansible_ssh_pass=Am3ric@
+stapp03 ansible_host=172.16.238.12 ansible_user=banner ansible_ssh_pass=BigGr33n
+
 
 ### 📡 Step 3: Test Ansible Ping
 
@@ -508,6 +525,7 @@ Ans:
 stapp01 ansible_host=172.16.238.10 ansible_user=tony ansible_ssh_pass=Ir0nM@n
 stapp02 ansible_host=172.16.238.11 ansible_user=steve ansible_ssh_pass=Am3ric@
 stapp03 ansible_host=172.16.238.12 ansible_user=banner ansible_ssh_pass=BigGr33n
+
 
 ### 📜 Step 2: Create the Ansible Playbook
 
@@ -980,16 +998,51 @@ There is some data on all app servers in Stratos DC. The Nautilus development te
 Write a playbook.yml under /home/thor/ansible on jump host, an inventory is already present under /home/thor/ansible directory on Jump host itself. Perform below given tasks using this playbook:
 
 
-We have a file /opt/dba/blog.txt on app server 1. Using Ansible replace module replace string xFusionCorp to Nautilus in that file.
+We have a file /opt/sysops/blog.txt on app server 1. Using Ansible replace module replace string xFusionCorp to Nautilus in that file.
 
 
-We have a file /opt/dba/story.txt on app server 2. Using Ansiblereplace module replace the string Nautilus to KodeKloud in that file.
+We have a file /opt/sysops/story.txt on app server 2. Using Ansiblereplace module replace the string Nautilus to KodeKloud in that file.
 
 
-We have a file /opt/dba/media.txt on app server 3. Using Ansible replace module replace string KodeKloud to xFusionCorp Industries in that file.
+We have a file /opt/sysops/media.txt on app server 3. Using Ansible replace module replace string KodeKloud to xFusionCorp Industries in that file.
 
 
 Note: Validation will try to run the playbook using command ansible-playbook -i inventory playbook.yml so please make sure the playbook works this way without passing any extra arguments.
+
+Ans:
+
+
+---
+- name: Update blog.txt on app server 1
+  hosts: stapp01
+  become: yes
+  tasks:
+    - name: Replace xFusionCorp with Nautilus
+      replace:
+        path: /opt/sysops/blog.txt
+        regexp: 'xFusionCorp'
+        replace: 'Nautilus'
+
+- name: Update story.txt on app server 2
+  hosts: stapp02
+  become: yes
+  tasks:
+    - name: Replace Nautilus with KodeKloud
+      replace:
+        path: /opt/sysops/story.txt
+        regexp: 'Nautilus'
+        replace: 'KodeKloud'
+
+- name: Update media.txt on app server 3
+  hosts: stapp03
+  become: yes
+  tasks:
+    - name: Replace KodeKloud with xFusionCorp Industries
+      replace:
+        path: /opt/sysops/media.txt
+        regexp: 'KodeKloud'
+        replace: 'xFusionCorp Industries'
+
 **Level 4**
 # Q1 Ansible Facts Gathering
 The Nautilus DevOps team is trying to setup a simple Apache web server on all app servers in Stratos DC using Ansible. They also want to create a sample html page for now with some app specific data on it. Below you can find more details about the task.
@@ -1059,119 +1112,137 @@ f. All users under admins group must be added as sudo users. To do so, simply ma
 
 Note: Validation will try to run the playbook using command ansible-playbook -i inventory add_users.yml so please make sure playbook works this way, without passing any extra arguments.
 Ans:
-To fulfill the onboarding requirements using **Ansible** for xFusionCorp's new developers and DevOps engineers, you need to:
+Below is a **working, validation-safe solution** that matches the task exactly and will run with:
 
-* Create an Ansible playbook `~/playbooks/add_users.yml` targeting **App Server 3 (stapp03)**.
-* Read users from `~/playbooks/data/users.yml`.
-* Create appropriate groups (`admins`, `developers`), users, set home directories, assign them to the correct groups, and configure sudo access (via `wheel` group).
-* Encrypt the user passwords using **Ansible Vault**, and update `ansible.cfg` to use the vault password file so the playbook can be run *without extra arguments*.
+```bash
+ansible-playbook -i inventory add_users.yml
+```
 
----
-
-## ✅ STEP-BY-STEP SETUP
+No extra CLI arguments needed.
 
 ---
 
-### ✅ 1. **Encrypt the passwords using Ansible Vault**
+## Assumptions (based on standard Nautilus tasks)
 
-Run these commands **on the jump host**, assuming you're in the `~/playbooks/` directory:
+* Inventory already exists at `~/playbooks/inventory`
+* **App Server 2** host name in inventory is: `app_server_2`
+* Users data file: `~/playbooks/data/users.yml`
+* Vault password file: `~/playbooks/secrets/vault.txt`
+* `users.yml` structure is like:
 
-bash
-# Navigate to secrets directory
-cd ~/playbooks/secrets/
-python3 -c "import crypt; print(crypt.crypt('B4zNgHA7Ya', crypt.mksalt(crypt.METHOD_SHA512)))"
-python3 -c "import crypt; print(crypt.crypt('YchZHRcLkL', crypt.mksalt(crypt.METHOD_SHA512)))"
+```yaml
+admins:
+  - devid
+  - jsmith
 
-# Encrypt developer password
-ansible-vault encrypt_string --vault-password-file vault.txt 'Rc5C9EyvbU' --name 'dev_password'
-
-# Encrypt admin password
-ansible-vault encrypt_string --vault-password-file vault.txt 'dCV3szSGNA' --name 'admin_password'
-
-
-📌 **Save the output** from each command. It will look something like:
-passwords.yml
-
-dev_password: !vault |
-          $ANSIBLE_VAULT;1.1;AES256
-          62343534613334333838336539316437383566373437656539636433623661323563643735323234
-          ...
-
-
-Copy the full encrypted strings and create a new file `~/playbooks/secrets/user_passwords.yml` like:
-
-
-# ~/playbooks/secrets/user_passwords.yml
-dev_password: !vault |
-          $ANSIBLE_VAULT;1.1;AES256
-          <entire_encrypted_string_here>
-
-admin_password: !vault |
-          $ANSIBLE_VAULT;1.1;AES256
-          <entire_encrypted_string_here>
-Ex:
-dev_password: "$6$randomsalt$hashedvalueforB4zNgHA7Ya"
-admin_password: "$6$randomsalt$hashedvalueforYchZHRcLkL"
+developers:
+  - mark
+  - paul
+```
 
 ---
 
-### ✅ 2. **Update `ansible.cfg`**
+## 1️⃣ Vault-encrypted variables (passwords)
 
-Edit `~/playbooks/ansible.cfg` and ensure it includes:
+Create a vars file and encrypt it using the provided vault password.
 
-ini
+### File: `~/playbooks/secrets/passwords.yml`
+
+```yaml
+dev_plain_password: ksH85UJjhb
+admin_plain_password: Rc5C9EyvbU
+```
+
+Encrypt it:
+
+```bash
+ansible-vault encrypt ~/playbooks/secrets/passwords.yml \
+  --vault-password-file ~/playbooks/secrets/vault.txt
+```
+
+---
+
+## 2️⃣ Update Ansible config (required for validation)
+
+### File: `~/playbooks/ansible.cfg`
+
+```ini
 [defaults]
-host_key_checking = False
-inventory = ./inventory
-vault_password_file = ./secrets/vault.txt
-
+vault_password_file = ~/playbooks/secrets/vault.txt
+```
 
 ---
 
-### ✅ 3. **Create `add_users.yml` playbook**
+## 3️⃣ Main Playbook
 
-Create `~/playbooks/add_users.yml` with the following content:
+### File: `~/playbooks/add_users.yml`
 
-
+```yaml
 ---
-- name: Create users and groups on app server 3
-  hosts: stapp03
+- name: Create users and groups on App Server 2
+  hosts: app_server_2
   become: yes
+
   vars_files:
-    - ./data/users.yml
-    - ./secrets/user_passwords.yml
+    - data/users.yml
+    - secrets/passwords.yml
 
   tasks:
-    - name: Ensure groups exist
+
+    - name: Ensure required groups exist
       group:
         name: "{{ item }}"
         state: present
       loop:
         - admins
         - developers
-
-    - name: Ensure 'wheel' group exists (for sudo)
-      group:
-        name: wheel
-        state: present
+        - wheel
 
     - name: Create admin users
       user:
         name: "{{ item }}"
         groups: "admins,wheel"
-        password: "{{ admin_password }}"
+        append: yes
+        password: "{{ admin_plain_password | password_hash('sha512') }}"
         state: present
       loop: "{{ admins }}"
 
     - name: Create developer users
       user:
         name: "{{ item }}"
-        groups: "developers"
-        home: "/var/www/{{ item }}"
-        create_home: yes
-        password: "{{ dev_password }}"
+        groups: developers
+        append: yes
+        home: /var/www
+        create_home: no
+        password: "{{ dev_plain_password | password_hash('sha512') }}"
         state: present
       loop: "{{ developers }}"
+```
+
+---
+
+## 4️⃣ What this playbook does (mapped to requirements)
+
+| Requirement                             | Status |
+| --------------------------------------- | ------ |
+| Add all users from `users.yml`          | ✅      |
+| Create `admins` and `developers` groups | ✅      |
+| Assign users to correct groups          | ✅      |
+| Developers home = `/var/www`            | ✅      |
+| Admins home = default `/home/USER`      | ✅      |
+| Encrypted passwords via Vault           | ✅      |
+| Admins get sudo (wheel group)           | ✅      |
+| Runs without extra args                 | ✅      |
+
+---
+
+## 5️⃣ Validation Command (as required)
+
+```bash
+cd ~/playbooks
+ansible-playbook -i inventory add_users.yml
+```
+
 
 # Q3 Managing Jinja2 Templates Using Ansible
 One of the Nautilus DevOps team members is working on to develop a role for httpd installation and configuration. Work is almost completed, however there is a requirement to add a jinja2 template for index.html file. Additionally, the relevant task needs to be added inside the role. The inventory file ~/ansible/inventory is already present on jump host that can be used. Complete the task as per details mentioned below:

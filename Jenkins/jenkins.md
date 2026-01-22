@@ -120,6 +120,152 @@ Note:
 2. After restarting the Jenkins service, wait for the Jenkins login page to reappear before proceeding. Avoid clicking Finish immediately after restarting the service.
 
 Ans: 
+Below is a **clear, step-by-step guide** to complete the Jenkins user and permission configuration exactly as requested. Follow the order carefully to avoid permission lockouts.
+
+---
+
+## Step 1: Log in to Jenkins
+
+1. Open the Jenkins UI from the **Jenkins button** on the top bar.
+2. Log in with:
+
+   * **Username:** `admin`
+   * **Password:** `Adm!n321`
+
+---
+
+## Step 2: Ensure Required Authorization Plugin Is Installed
+
+You need **Project-based Matrix Authorization Strategy**.
+
+1. Go to **Manage Jenkins → Manage Plugins**
+2. Open the **Available** tab
+3. Search for **Matrix Authorization Strategy**
+4. Select it and click:
+
+   * **Install without restart**
+     or
+   * **Install and Restart Jenkins**
+
+⚠️ If Jenkins restarts:
+
+* Wait until the **login page fully reloads**
+* Log in again as `admin`
+* Do **not** click *Finish* prematurely
+
+---
+
+## Step 3: Create the User `mark`
+
+1. Go to **Manage Jenkins → Manage Users**
+2. Click **Create User**
+3. Fill in the details:
+
+   * **Username:** `mark`
+   * **Password:** `B4zNgHA7Ya`
+   * **Confirm password:** `B4zNgHA7Ya`
+   * **Full name:** `Mark`
+   * **Email:** (optional)
+4. Click **Create User**
+
+📸 *Capture a screenshot of the user creation page for documentation.*
+
+---
+
+## Step 4: Configure Global Security (Matrix Authorization)
+
+1. Go to **Manage Jenkins → Configure Global Security**
+2. Under **Authorization**, select:
+
+   * **Project-based Matrix Authorization Strategy**
+
+### Assign Permissions
+
+#### Admin User
+
+Ensure `admin` has:
+
+* ✅ **Overall → Administer**
+
+#### Mark User
+
+Add user `mark` and grant:
+
+* ✅ **Overall → Read**
+
+#### Anonymous Users
+
+* **Remove all checkmarks** for `Anonymous User`
+* If present, delete the row entirely
+
+⚠️ **Critical Check**
+Before saving, confirm:
+
+* `admin` still has **Overall → Administer**
+* `mark` has **Overall → Read**
+* `Anonymous` has **no permissions**
+
+3. Click **Save**
+
+📸 *Capture screenshots of the permission matrix.*
+
+---
+
+## Step 5: Configure Job-Level Permissions for `mark`
+
+1. Open the **existing Jenkins job**
+2. Click **Configure**
+3. Scroll to **Project-based Matrix Authorization**
+
+   * (Enable it if not already enabled)
+
+### Grant Only Read Permission
+
+For user `mark`, check:
+
+* ✅ **Job → Read**
+
+Ensure **NO other permissions** are selected:
+
+* ❌ Build
+* ❌ Configure
+* ❌ Delete
+* ❌ Workspace
+* ❌ SCM
+* ❌ Agent
+
+4. Click **Save**
+
+📸 *Capture a screenshot showing only Job → Read for mark.*
+
+---
+
+## Step 6: Verification
+
+Log out and test:
+
+### As `mark`
+
+* Can log in
+* Can **see Jenkins dashboard**
+* Can **view the job**
+* Cannot build, configure, or delete jobs
+
+### As `admin`
+
+* Full access remains intact
+
+---
+
+## Final Checklist ✅
+
+✔ Jenkins login completed
+✔ `mark` user created
+✔ Project-based Matrix Authorization enabled
+✔ Anonymous permissions removed
+✔ Admin retains Administer access
+✔ Job-level read-only access granted to `mark`
+✔ Screenshots recorded
 
 # Q4:Organize Jenkins Jobs with Folders
 xFusionCorp Industries' DevOps team aims to streamline the management of Jenkins jobs by organizing them into distinct folders based on their purpose. Complete the task following the provided requirements:
@@ -169,9 +315,9 @@ Ans:
     - **Name:** `PACKAGE`
     - **Default Value:** *(leave blank or specify a common package like `vim`)*
     - **Description:** `Name of the package to install on the storage server`
-#### Generate SSH key on Jenkins
+#### Generate SSH key on Jenkins Server
 ssh-keygen -t ed25519
-ssh-copy-id natasha@ststor0
+ssh-copy-id natasha@ststor01
 #### 4. **Configure the Build Step**
 - Scroll to **Build** section.
 - Click **Add build step** → choose **Execute shell**.
