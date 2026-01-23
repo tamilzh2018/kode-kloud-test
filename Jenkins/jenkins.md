@@ -877,7 +877,7 @@ Under **Build → Add build step → Execute shell**
 Paste the following shell script:
 
 
-#!/bin/
+#!/bin/sh
 # Temporary location on Jenkins
 WORKDIR=/tmp/apache_logs
 mkdir -p $WORKDIR
@@ -1274,7 +1274,7 @@ Create a **Jenkins pipeline job** called `nginx-container` that:
 
    * **Type:** Username with password
    * **ID:** `docker-registry-cred`
-   * (Use the registry credentials if available; if not, use the same Jenkins admin credentials if permitted)
+   * (Use the registry credentials if available; if not, use the same gitea credentials if permitted)
 
 ---
 
@@ -1297,7 +1297,7 @@ Create a **Jenkins pipeline job** called `nginx-container` that:
    * **Credentials:** Select `gitea-cred`
    * **Branch Specifier:** `*/main` or `*/master` (verify in Gitea)
    * **Script Path:** `Jenkinsfile` (you’ll create this next)
-
+For the App Server 1 requirement, ensure your Jenkins Node/Agent for that server is labeled correctly (e.g., app-server-1).
 ---
 
 ## 🧾 Step 4: Create the Jenkinsfile in Gitea Repo
@@ -1311,25 +1311,22 @@ Login to **Gitea** (`sarah / Sarah_pass123`):
 
 
 pipeline {
-    agent any
+    agent { label 'stapp01' } // Runs the job on App Server 1
 
     stages {
         stage('Build') {
             steps {
                 script {
-                    // Docker registry details
-                    def registry = "stregi01.stratos.xfusioncorp.com:5000"
-                    def imageName = "${registry}/nginx:latest"
-
+                    // Pull the code from Gitea
+                    git credentialsId: 'docker-registry-cred', url: 'http://git.stratos.xfusioncorp.com/sarah/web.git'
+                    
                     // Build the image
-                    echo "Building Docker image..."
-                    sh "docker build -t ${imageName} ."
-
-                    // If docker cred avail to the Login and push else without login step, process other command
-                    withCredentials([usernamePassword(credentialsId: 'docker-registry-cred', usernameVariable: 'USER', passwordVariable: 'PASS')]) {
-                        sh "echo $PASS | docker login ${registry} -u $USER --password-stdin"
-                        sh "docker push ${imageName}"
-                        sh "docker logout ${registry}"
+                    def appImage = docker.build("stregi01.stratos.xfusioncorp.com:5000/nginx:latest")
+                    
+                    // Push the image to the registry
+                    // Note: Ensure the registry allows insecure pushes if not using SSL
+                    docker.withRegistry('http://stregi01.stratos.xfusioncorp.com:5000') {
+                        appImage.push()
                     }
                 }
             }
