@@ -1930,7 +1930,7 @@ After setting up:
    - Login: `sarah / Sarah_pass123`
    - Repo: `web`
    - Push to `master`
-
+x
 2. **Run `nautilus-app-deployment`**
    - It should pull the latest code to `/var/www/html` on `ststor01`
 
@@ -2180,13 +2180,14 @@ pipeline {
                 // Get code from Gitea repository
                 git credentialsId: 'git-cred', url: 'http://git.stratos.xfusioncorp.com/sarah/web.git'
 
-                // Deploy remotely via SSH
-                sh '''
-                    ssh natasha@ststor01 "
-                        echo 'Bl@kW'
-                        cd /var/www/html && git pull origin master
-                    "
-                '''
+                // Use username + password credentials for remote SSH
+                withCredentials([usernamePassword(credentialsId: 'ststor01-userpass-cred', usernameVariable: 'USER', passwordVariable: 'PASS')]) {
+                    sh '''
+                        sshpass -p "$PASS" ssh -o StrictHostKeyChecking=no $USER@ststor01 "
+                            cd /var/www/html && git pull origin master
+                        "
+                    '''
+                }
             }
         }
         stage('Test') {
@@ -2296,16 +2297,21 @@ pipeline {
     environment {
         IMAGE_NAME = "stregi01.stratos.xfusioncorp.com:5000/node-app:latest"
         APP_CONTAINER = "node-app"
-        APP_SERVER = "tony@stapp01" // Replace with actual user@host
+        APP_SERVER = "banner@stapp03"
     }
 
     stages {
         stage('Build') {
             steps {
-                git credentialsId: 'git-cred', url: 'http://git.stratos.xfusioncorp.com/sarah/web.git'
-                sshagent(['appserver-ssh']) {
+                withCredentials([
+                    usernamePassword(
+                        credentialsId: 'appserver-ssh',
+                        usernameVariable: 'SSH_USER',
+                        passwordVariable: 'SSH_PASS'
+                    )
+                ]) {
                     sh """
-                    ssh -o StrictHostKeyChecking=no $APP_SERVER '
+                    sshpass -p "$SSH_PASS" ssh -tt -o StrictHostKeyChecking=no $APP_SERVER '
                         rm -rf /tmp/web &&
                         git clone http://git.stratos.xfusioncorp.com/sarah/web.git /tmp/web &&
                         cd /tmp/web &&
@@ -2319,9 +2325,16 @@ pipeline {
 
         stage('Deploy') {
             steps {
-                sshagent(['appserver-ssh']) {
+                withCredentials([
+                    usernamePassword(
+                        credentialsId: 'appserver-ssh',
+                        usernameVariable: 'SSH_USER',
+                        passwordVariable: 'SSH_PASS'
+                    )
+                ]) {
                     sh """
-                    ssh -o StrictHostKeyChecking=no $APP_SERVER '
+                    sshpass -p "$SSH_PASS" ssh -tt -o StrictHostKeyChecking=no $APP_SERVER '
+                        docker pull $IMAGE_NAME &&
                         docker rm -f $APP_CONTAINER || true &&
                         docker run -d --name $APP_CONTAINER -p 8080:8080 $IMAGE_NAME
                     '
@@ -2331,6 +2344,7 @@ pipeline {
         }
     }
 }
+
 ## 🧪 Next Steps
 
 To verify the app is running:

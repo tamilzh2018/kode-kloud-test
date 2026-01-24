@@ -1771,7 +1771,7 @@ resource "aws_eip" "xfusion_eip" {
   tags = {
     Name = "xfusion-eip"
   }
-
+}
 
 ## ✅ 2. `outputs.tf`
 
@@ -2997,10 +2997,10 @@ Ans:
 
 
 provider "aws" {
-  region = "us-east-1" # Adjust as needed
+  region = "us-east-1"
 }
 
-resource "aws_dynamodb_table" "kke_tasks_table" {
+resource "aws_dynamodb_table" "tasks" {
   name         = var.KKE_TABLE_NAME
   billing_mode = "PAY_PER_REQUEST"
   hash_key     = "taskId"
@@ -3011,34 +3011,36 @@ resource "aws_dynamodb_table" "kke_tasks_table" {
   }
 
   tags = {
-    Environment = "dev"
-    Project     = "ToDoApp"
+    Name = var.KKE_TABLE_NAME
   }
 }
 
-# Task 1
+# Insert Task 1
 resource "aws_dynamodb_table_item" "task1" {
-  table_name = aws_dynamodb_table.kke_tasks_table.name
+  table_name = aws_dynamodb_table.tasks.name
   hash_key   = "taskId"
-
-  item = jsonencode({
-    taskId      = "1"
-    description = "Learn DynamoDB"
-    status      = "completed"
-  })
+  item       = <<ITEM
+{
+  "taskId": {"S": "1"},
+  "description": {"S": "Learn DynamoDB"},
+  "status": {"S": "completed"}
+}
+ITEM
 }
 
-# Task 2
+# Insert Task 2
 resource "aws_dynamodb_table_item" "task2" {
-  table_name = aws_dynamodb_table.kke_tasks_table.name
+  table_name = aws_dynamodb_table.tasks.name
   hash_key   = "taskId"
-
-  item = jsonencode({
-    taskId      = "2"
-    description = "Build To-Do App"
-    status      = "in-progress"
-  })
+  item       = <<ITEM
+{
+  "taskId": {"S": "2"},
+  "description": {"S": "Build To-Do App"},
+  "status": {"S": "in-progress"}
 }
+ITEM
+}
+
 ### ✅ File 2: `variables.tf`
 
 
