@@ -1525,6 +1525,7 @@ Here’s how you can do it:
    
    sudo iptables -L -n --line-numbers
    
+   
 **Level 3**
 # Q1 Apache Redirects
 The Nautilus devops team got some requirements related to some Apache config changes. They need to setup some redirects for some URLs. There might be some more changes need to be done. Below you can find more details regarding that:
@@ -1984,7 +1985,8 @@ d. You can test the same using a curl command from jump host curl http://<websit
 Ans:
 
 Step 1: Install mod_authnz_pam 
-sudo yum install -y mod_authnz_pan
+sudo yum install -y mod_authnz_pam
+
 httpd -M | grep pam
 authnz_pam_module (shared) # Should see
 # If not see then
@@ -2054,9 +2056,10 @@ sudo mv /tmp/nautilus.key /etc/pki/tls/private/nautilus.key
 Update the Nginx SSL configuration:
 
 sudo tee /etc/nginx/conf.d/ssl.conf > /dev/null <<EOF
+# HTTPS server
 server {
     listen 443 ssl;
-    server_name localhost;
+    server_name stapp02;  # Use your actual hostname or IP
 
     ssl_certificate /etc/pki/tls/certs/nautilus.crt;
     ssl_certificate_key /etc/pki/tls/private/nautilus.key;
@@ -2068,6 +2071,15 @@ server {
         try_files $uri $uri/ =404;
     }
 }
+
+# HTTP → HTTPS redirect
+server {
+    listen 80;
+    server_name stapp02;
+
+    return 301 https://$host$request_uri;
+}
+
 EOF
 
 **Test and reload Nginx:**
@@ -2133,21 +2145,29 @@ Here's an example block you can place **within the `http` block** in `nginx.conf
 #### 🔧 Example `nginx.conf` additions:
 
  
+worker_processes auto;
+
+events {
+    worker_connections 1024;
+}
+
 http {
-    
     upstream backend {
-        server 172.16.238.10:5001;
-        server 172.16.238.11:5001;
-        server 172.16.238.12:5001
-        }
+        server 172.16.238.10:8089;
+        server 172.16.238.11:8089;
+        server 172.16.238.12:8089;
+    }
+
     server {
         listen       80;
         listen       [::]:80;
         server_name  _;
         root         /usr/share/nginx/html;
+
         location / {
-                proxy_pass http://backend;
-                }
+            proxy_pass http://backend;
+        }
+
         # Load configuration files for the default server block.
         include /etc/nginx/default.d/*.conf;
 
@@ -2160,6 +2180,7 @@ http {
         }
     }
 }
+
 ✅ Replace:
 
 * `<App_Server_1_IP>` and `<App_Server_2_IP>` with the real IP addresses of the app servers.
@@ -2269,12 +2290,13 @@ sudo vi /etc/nginx/conf.d/default.conf
 
 Ensure it has something like:
 
-nginx
+
 server {
     listen 80;
     server_name _;
+
     root /var/www/html;
-    index index.php index.html index.htm;
+    index index.php index.html;
 
     location / {
         try_files $uri $uri/ =404;
@@ -2282,7 +2304,7 @@ server {
 
     location ~ \.php$ {
         include fastcgi_params;
-        fastcgi_pass unix:/run/php/php-fpm.sock;  # or /var/run/php/php7.4-fpm.sock depending on PHP version
+        fastcgi_pass unix:/run/php-fpm/www.sock;  # or tcp 127.0.0.1:9000
         fastcgi_index index.php;
         fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
     }
@@ -2292,6 +2314,10 @@ server {
 > ⚠️ Make sure `root` points to `/var/www/html` and that `fastcgi_pass` references the correct socket.
 
 ---
+# Fix file permissions
+sudo chown -R nginx:nginx /var/www/html
+sudo chmod -R 755 /var/www/html
+sudo systemctl restart nginx
 
 ### **3. Verify PHP-FPM service is running**
 
@@ -2310,6 +2336,11 @@ If stopped, start it:
 
 
 sudo systemctl start php-fpm
+# Ensure PHP-FPM is installed
+sudo dnf install php php-fpm php-mysqlnd -y
+sudo systemctl enable php-fpm
+sudo systemctl start php-fpm
+sudo systemctl status php-fpm
 
 
 ---
@@ -2367,7 +2398,7 @@ Use the **LBR URL** (from the top bar in your environment) and open it in a brow
 ### **7. Restart services (final sanity check)**
 
 
-sudo systemctl restart nginx
+sudo systemctl restart nginx                 
 sudo systemctl restart php-fpm
 
 

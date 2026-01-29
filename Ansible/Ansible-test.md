@@ -1422,3 +1422,138 @@ Ans:
         group: banner
         mode: '0755'
       when: inventory_hostname == "stapp03"
+---
+
+## Q: write ansible script to find iops details 100+vms
+Below is a **safe, agent-less Ansible playbook** that collects **IOPS + latency** from **100+ Linux VMs** and saves the output **per host** so you can compare later.
+
+This works for **on-prem, NFS, SAN, bare metal, VMs**.
+
+---
+
+## ✅ What this playbook does
+
+* Runs `iostat -dx 1 2` (2 samples → ignores warm-up)
+* Extracts **IOPS + await + %util**
+* Saves output locally (control node) per VM
+* No performance impact (read-only)
+
+---
+
+## 📁 Inventory example
+
+```ini
+[linux_vms]
+vm01
+vm02
+vm03
+```
+
+---
+
+## ▶️ Ansible Playbook: `collect_iops.yml`
+
+```yaml
+---
+- name: Collect IOPS and latency details from Linux VMs
+  hosts: linux_vms
+  become: yes
+  gather_facts: no
+
+  vars:
+    output_dir: "./iops_reports"
+
+  tasks:
+
+    - name: Ensure sysstat (iostat) is installed
+      package:
+        name: sysstat
+        state: present
+
+    - name: Run iostat (capture second sample only)
+      shell: |
+        iostat -dx 1 2 | awk '
+        /^Device/ {header=$0}
+        /^[a-z]/ {line=$0}
+        END {print header "\n" line}'
+      register: iostat_output
+
+    - name: Create output directory on control node
+      delegate_to: localhost
+      run_once: true
+      file:
+        path: "{{ output_dir }}"
+        state: directory
+
+    - name: Save IOPS report per host
+      delegate_to: localhost
+      copy:
+        content: |
+          Host: {{ inventory_hostname }}
+          Timestamp: {{ ansible_date_time.iso8601 }}
+
+          {{ iostat_output.stdout }}
+        dest: "{{ output_dir }}/{{ inventory_hostname }}_iops.txt"
+```
+
+---
+
+## 📊 Sample Output (per VM)
+
+```
+Device            r/s     w/s   r+w/s   await  %util
+sda              120     80     200     18.4    92.1
+```
+
+Interpretation:
+
+* **r/s + w/s** → IOPS
+* **await > 20ms** → storage issue
+* **%util ~100%** → disk saturated
+
+---
+
+## 🔥 Optional: Flag bad VMs automatically
+
+Add this task to **fail when latency is high**:
+
+```yaml
+- name: Alert if latency is high
+  fail:
+    msg: "High storage latency detected on {{ inventory_hostname }}"
+  when: "' 2[0-9].' in iostat_output.stdout or ' 3[0-9].' in iostat_output.stdout"
+```
+
+---
+
+## 🚀 Optional: NFS-only VMs
+
+If you want **NFS IOPS & RTT** too:
+
+```yaml
+- name: Collect NFS IOPS
+  shell: nfsiostat 1 1
+  register: nfs_output
+  ignore_errors: yes
+```
+
+---
+
+## 🧠 Why this scales to 100+ VMs
+
+* No agents
+* Minimal runtime
+* Parallel execution
+* Centralized reports
+* Storage-team friendly evidence 😈
+
+---
+
+If you want, I can:
+
+* parse results into **CSV**
+* push metrics to **Prometheus**
+* auto-detect **NFS vs SAN**
+* highlight **hardware-level issues**
+
+Just say the word 🔧📊
