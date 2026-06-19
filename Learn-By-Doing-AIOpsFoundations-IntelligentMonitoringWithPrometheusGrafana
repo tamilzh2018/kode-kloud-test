@@ -1,0 +1,2191 @@
+
+#Learn By Doing: AIOps Foundations - Intelligent Monitoring With Prometheus & Grafana
+cat docker-compose.yml 
+version: '3.8'
+
+services:
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus:/etc/prometheus
+      - prometheus-data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+      - '--web.enable-lifecycle'
+    restart: unless-stopped
+    networks:
+      - monitoring
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=GrafanaRocks123!
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning
+      - grafana-data:/var/lib/grafana
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+    networks:
+      - monitoring
+
+networks:
+  monitoring:
+    driver: bridge
+
+volumes:
+  prometheus-data:
+  grafana-data:
+
+---
+cat datasource.yml    
+# Grafana Datasource Configuration
+# This file automatically provisions Prometheus as a datasource in Grafana
+
+apiVersion: 1
+
+datasources:
+  - name: Prometheus
+    type: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    isDefault: true
+    editable: true
+    jsonData:
+      httpMethod: POST
+      timeInterval: 15s
+    version: 1
+---
+cat prometheus.yml 
+# Prometheus Configuration for AIOps Foundation Lab
+# This configuration sets up basic Prometheus monitoring
+
+global:
+  scrape_interval: 15s # How frequently to scrape targets
+  evaluation_interval: 15s # How frequently to evaluate rules
+  external_labels:
+    monitor: 'aiops-lab'
+    environment: 'learning'
+
+# Alertmanager configuration (optional, can be added later)
+# alerting:
+#   alertmanagers:
+#     - static_configs:
+#         - targets:
+#           # - alertmanager:9093
+
+# Rule files specify a list of globs
+# Rules and alerts are read from all matching files
+# rule_files:
+#   - "rules/*.yml"
+
+# Scrape configurations
+scrape_configs:
+  # Scrape Prometheus itself
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+        labels:
+          service: 'prometheus'
+          team: 'platform'
+
+  # Scrape Grafana
+  - job_name: 'grafana'
+    static_configs:
+      - targets: ['grafana:3000']
+        labels:
+          service: 'grafana'
+          team: 'platform'
+
+  # Example: Additional services can be added here
+  # - job_name: 'application'
+  #   static_configs:
+  #     - targets: ['app:8080']
+  #       labels:
+  #         service: 'web-app'
+  #         environment: 'production'
+
+
+curl -s http://localhost:3000/api/health
+
+  GrafanaRocks123!
+
+modules 2:
+vi /root/prometheus/prometheus.yml
+
+scrape_configs:
+  - job_name: 'prometheus'
+    static_configs:
+      - targets:
+          - 'prometheus:9090'
+
+docker compose restart prometheus
+
+
+#Test the Prometheus metrics endpoint directly:
+curl -s http://localhost:9090/metrics | head -n 20
+#Check for configuration errors in logs:
+docker compose logs prometheus | tail -n 20
+
+#Add a second job after the Prometheus job:
+scrape_configs:
+  - job_name: 'prometheus'
+    static_configs:
+      - targets:
+          - 'prometheus:9090'
+
+  - job_name: 'node-exporter'
+    static_configs:
+      - targets:
+          - 'node-exporter:9100'
+#Save the file and reload Prometheus:
+docker compose restart prometheus
+
+#Verification Commands
+View Node Exporter metrics directly:
+curl -s http://localhost:9100/metrics | head -n 30
+
+Count how many metrics Node Exporter exposes:
+
+curl -s http://localhost:9100/metrics | grep '^node_' | wc -l
+
+#Query Metrics in the Expression Browser
+Queries to Try
+Open the Prometheus UI and go to the Graph tab. Try these queries:
+
+1. Check Node Exporter target status
+
+up{job="node-exporter"}
+Shows whether the Node Exporter target is up (1) or down (0).
+
+2. CPU usage per mode
+
+node_cpu_seconds_total
+Shows CPU time spent in each mode (idle, user, system) per core.
+
+3. Available memory
+
+node_memory_MemAvailable_bytes
+Shows available memory in bytes.
+
+4. Network bytes received
+
+node_network_receive_bytes_total
+Shows network bytes received per interface.
+
+
+MOdule4:
+🎯 Task 1: Set up Python Environment & Install ML Packages
+📝 What to Do
+Before we can train ML models, we need to install python3.12-venv, pip, and the ML libraries. During this installation, Prometheus will collect metrics in the background for later training!
+
+Step 1: Update package repository (Ubuntu 24.04)
+
+apt update
+📋
+Step 2: Install Python 3.12 venv and pip
+
+apt install -y python3.12-venv python3-pip
+📋
+Step 3: Navigate to the scripts directory and create a virtual environment
+
+cd /root/monitoring/scripts
+📋
+python3 -m venv venv
+📋
+Step 4: Activate the virtual environment
+
+source /root/monitoring/scripts/venv/bin/activate
+📋
+Step 5: Upgrade pip to latest version
+
+pip install --upgrade pip
+📋
+Step 6: Install ML packages from requirements.txt (this may take a few minutes)
+
+pip install -r /root/monitoring/scripts/requirements.txt
+📋
+Step 7: Verify installation
+
+python3 -c "import sklearn, pandas, numpy, prometheus_api_client; print('✅ All packages installed successfully')"
+📋
+📦 What Each Package Does
+scikit-learn (1.3.2):
+
+The ML library containing IsolationForest algorithm for anomaly detection—includes model training, prediction, and evaluation tools
+
+pandas (2.1.3):
+
+Data manipulation library for handling time-series metrics—used to organize, filter, and transform Prometheus data into ML-ready format
+
+numpy (1.26.2):
+
+Numerical computing library—powers the mathematical operations behind ML algorithms (matrix operations, statistics, etc.)
+
+prometheus-api-client (0.5.3):
+
+Python client for querying Prometheus—fetches historical metrics data for model training and real-time data for detection
+
+💡 What You'll Learn
+How to set up a complete Python environment from scratch (install Python, create venv, install packages), understand the key libraries for anomaly detection, and prepare your system for production-ready AI monitoring.
+#1.cat detect_anomalies.py 
+#!/root/monitoring/scripts/venv/bin/python3
+"""
+AI-Powered Anomaly Detection - Real-Time Detection Script
+Module 4: AIOps Foundations
+
+This script uses the trained IsolationForest model to detect anomalies
+in real-time CPU metrics from Prometheus.
+
+Usage: Activate venv first, then run:
+    source /root/monitoring/scripts/venv/bin/activate
+    python3 /root/monitoring/scripts/detect_anomalies.py
+"""
+
+import os
+import sys
+import pickle
+import time
+import warnings
+from datetime import datetime, timedelta
+
+import pandas as pd
+import numpy as np
+from prometheus_api_client import PrometheusConnect
+
+# Suppress warnings for cleaner output
+warnings.filterwarnings('ignore')
+
+# Configuration
+PROMETHEUS_URL = "http://localhost:9090"
+MODEL_PATH = "/root/monitoring/anomaly_model.pkl"
+METRICS_QUERY = '100 - (avg(rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100)'
+
+# Detection parameters
+CHECK_INTERVAL = 30  # Check every 30 seconds
+LOOKBACK_MINUTES = 10  # Analyze last 10 minutes
+
+def print_header(text):
+    """Print a formatted header"""
+    print("\n" + "="*70)
+    print(f"  {text}")
+    print("="*70)
+
+def load_model(path: str):
+    """Load trained model from disk"""
+    if not os.path.exists(path):
+        raise FileNotFoundError(
+            f"Model not found at {path}. "
+            "Please run train_anomaly_model.py first to train the model."
+        )
+
+    with open(path, 'rb') as f:
+        model = pickle.load(f)
+
+    print(f"   ✓ Model loaded from: {path}")
+    return model
+
+def fetch_recent_metrics(prom: PrometheusConnect, minutes: int) -> pd.DataFrame:
+    """
+    Fetch recent CPU usage metrics from Prometheus
+
+    Args:
+        prom: Prometheus connection
+        minutes: Number of minutes of recent data to fetch
+
+    Returns:
+        DataFrame with timestamp and cpu_usage columns
+    """
+    end_time = datetime.now()
+    start_time = end_time - timedelta(minutes=minutes)
+
+    # Query Prometheus
+    result = prom.custom_query_range(
+        query=METRICS_QUERY,
+        start_time=start_time,
+        end_time=end_time,
+        step='10s'  # 10-second resolution (matches Prometheus scrape_interval)
+    )
+
+    if not result:
+        raise ValueError("No data returned from Prometheus")
+
+    # Parse results into DataFrame
+    timestamps = []
+    values = []
+
+    for sample in result[0]['values']:
+        timestamps.append(datetime.fromtimestamp(sample[0]))
+        values.append(float(sample[1]))
+
+    df = pd.DataFrame({
+        'timestamp': timestamps,
+        'cpu_usage': values
+    })
+
+    return df
+
+def engineer_features(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Create same features as during training
+
+    Args:
+        df: DataFrame with cpu_usage column
+
+    Returns:
+        DataFrame with engineered features
+    """
+    # Rolling statistics (last 5 samples)
+    df['rolling_mean'] = df['cpu_usage'].rolling(window=5, min_periods=1).mean()
+    df['rolling_std'] = df['cpu_usage'].rolling(window=5, min_periods=1).std().fillna(0)
+
+    # Rate of change
+    df['rate_of_change'] = df['cpu_usage'].diff().fillna(0)
+
+    # Hour of day (for seasonality)
+    df['hour'] = df['timestamp'].dt.hour
+
+    # Drop NaN values
+    df = df.dropna()
+
+    return df
+
+def detect_anomalies(model, df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Detect anomalies using trained model
+
+    Args:
+        model: Trained IsolationForest model
+        df: DataFrame with features
+
+    Returns:
+        DataFrame with predictions and anomaly scores
+    """
+    # Select same features used during training
+    feature_columns = ['cpu_usage', 'rolling_mean', 'rolling_std', 'rate_of_change', 'hour']
+    X = df[feature_columns]
+
+    # Predict (-1 = anomaly, 1 = normal)
+    predictions = model.predict(X)
+
+    # Get anomaly scores (lower = more anomalous)
+    scores = model.decision_function(X)
+
+    # Add to DataFrame
+    df['prediction'] = predictions
+    df['anomaly_score'] = scores
+    df['is_anomaly'] = predictions == -1
+
+    return df
+
+def print_detection_summary(df: pd.DataFrame):
+    """Print summary of detection results"""
+    total = len(df)
+    anomalies = df['is_anomaly'].sum()
+    normal = total - anomalies
+
+    print(f"\n📊 Detection Summary (last {LOOKBACK_MINUTES} minutes):")
+    print(f"   Total samples: {total}")
+    print(f"   Normal: {normal} ({normal/total*100:.1f}%)")
+    print(f"   Anomalies: {anomalies} ({anomalies/total*100:.1f}%)")
+
+    if anomalies > 0:
+        print(f"\n⚠️  {anomalies} ANOMALIES DETECTED!")
+        print("\n🔍 Anomaly Details:")
+
+        anomaly_df = df[df['is_anomaly']].copy()
+
+        for idx, row in anomaly_df.iterrows():
+            print(f"\n   Timestamp: {row['timestamp'].strftime('%Y-%m-%d %H:%M:%S')}")
+            print(f"   CPU Usage: {row['cpu_usage']:.2f}%")
+            print(f"   Anomaly Score: {row['anomaly_score']:.4f} (lower = more anomalous)")
+            print(f"   Rolling Mean: {row['rolling_mean']:.2f}%")
+            print(f"   Std Deviation: {row['rolling_std']:.2f}%")
+            print(f"   Rate of Change: {row['rate_of_change']:.2f}%")
+
+        # Analysis
+        print(f"\n💡 Why these are anomalies:")
+
+        high_cpu = anomaly_df[anomaly_df['cpu_usage'] > anomaly_df['cpu_usage'].quantile(0.75)]
+        if len(high_cpu) > 0:
+            print(f"   • {len(high_cpu)} samples: Unusually HIGH CPU usage")
+
+        low_cpu = anomaly_df[anomaly_df['cpu_usage'] < anomaly_df['cpu_usage'].quantile(0.25)]
+        if len(low_cpu) > 0:
+            print(f"   • {len(low_cpu)} samples: Unusually LOW CPU usage")
+
+        high_volatility = anomaly_df[anomaly_df['rolling_std'] > anomaly_df['rolling_std'].quantile(0.75)]
+        if len(high_volatility) > 0:
+            print(f"   • {len(high_volatility)} samples: Unusually HIGH volatility (rapid changes)")
+
+        print("\n   These patterns differ from what the model learned as 'normal'")
+        print("   during training. This could indicate:")
+        print("     - A legitimate issue (resource spike, process misbehaving)")
+        print("     - A new workload pattern (deployment, scheduled job)")
+        print("     - Normal variability at boundary of learned behavior")
+
+    else:
+        print(f"\n✅ No anomalies detected - all metrics within normal range")
+        print("\n   The current CPU behavior matches what the model learned")
+        print("   as 'normal' during training:")
+
+        latest = df.iloc[-1]
+        print(f"     - Current CPU: {latest['cpu_usage']:.2f}%")
+        print(f"     - Rolling Average: {latest['rolling_mean']:.2f}%")
+        print(f"     - Std Deviation: {latest['rolling_std']:.2f}%")
+
+def continuous_monitoring(model, prom: PrometheusConnect, duration_minutes: int):
+    """
+    Run continuous anomaly detection for specified duration
+
+    Args:
+        model: Trained model
+        prom: Prometheus connection
+        duration_minutes: How long to monitor (minutes)
+    """
+    print_header(f"🔄 Continuous Monitoring ({duration_minutes} minutes)")
+
+    print(f"\n⏱️  Checking for anomalies every {CHECK_INTERVAL} seconds")
+    print(f"📊 Analyzing last {LOOKBACK_MINUTES} minutes of data each check")
+    print(f"⏰ Will run for {duration_minutes} minutes")
+    print("\nPress Ctrl+C to stop early\n")
+
+    start_time = datetime.now()
+    end_time = start_time + timedelta(minutes=duration_minutes)
+    check_count = 0
+
+    try:
+        while datetime.now() < end_time:
+            check_count += 1
+            current_time = datetime.now()
+
+            print(f"\n{'─'*70}")
+            print(f"Check #{check_count} at {current_time.strftime('%Y-%m-%d %H:%M:%S')}")
+            print(f"{'─'*70}")
+
+            # Fetch recent data
+            df = fetch_recent_metrics(prom, LOOKBACK_MINUTES)
+
+            # Engineer features
+            df = engineer_features(df)
+
+            # Detect anomalies
+            df = detect_anomalies(model, df)
+
+            # Print results
+            print_detection_summary(df)
+
+            # Wait before next check
+            time_remaining = (end_time - datetime.now()).total_seconds()
+            if time_remaining > CHECK_INTERVAL:
+                print(f"\n⏳ Next check in {CHECK_INTERVAL} seconds...")
+                time.sleep(CHECK_INTERVAL)
+
+    except KeyboardInterrupt:
+        print("\n\n⏹️  Monitoring stopped by user")
+
+    elapsed = (datetime.now() - start_time).total_seconds() / 60
+    print(f"\n✅ Monitoring completed ({elapsed:.1f} minutes, {check_count} checks)")
+
+def main():
+    """Main detection workflow"""
+    print_header("🤖 AI-Powered Anomaly Detection - Real-Time Detection")
+
+    print("\n🎯 This script will:")
+    print("   1. Load the trained anomaly detection model")
+    print("   2. Connect to Prometheus")
+    print("   3. Run initial anomaly detection")
+    print("   4. Automatically monitor for 5 minutes")
+    print("   5. Ask if you want to continue monitoring")
+
+    try:
+        # Step 1: Load model
+        print("\n[Step 1] Loading trained model")
+        model = load_model(MODEL_PATH)
+
+        # Step 2: Connect to Prometheus
+        print("\n[Step 2] Connecting to Prometheus")
+        prom = PrometheusConnect(url=PROMETHEUS_URL, disable_ssl=True)
+        prom.check_prometheus_connection()
+        print("   ✓ Successfully connected to Prometheus")
+
+        # Step 3: Initial detection
+        print("\n[Step 3] Running initial anomaly detection")
+        df = fetch_recent_metrics(prom, LOOKBACK_MINUTES)
+        print(f"   ✓ Fetched {len(df)} data points")
+
+        df = engineer_features(df)
+        df = detect_anomalies(model, df)
+        print_detection_summary(df)
+
+        # Step 4: Automatic 5-minute continuous monitoring
+        print("\n" + "="*70)
+        print("\n🚀 Starting automatic 5-minute continuous monitoring...")
+        print("   This will help you see how the model detects anomalies over time.")
+        continuous_monitoring(model, prom, 5)
+
+        # Step 5: Ask if user wants to continue monitoring
+        while True:
+            print("\n" + "="*70)
+            choice = input("\n🔄 Continue monitoring? (y/n): ").strip().lower()
+
+            if choice == 'y':
+                try:
+                    duration = int(input("⏱️  How many more minutes to monitor? (e.g., 5): ").strip())
+                    if duration > 0:
+                        continuous_monitoring(model, prom, duration)
+                    else:
+                        print("\n⚠️  Duration must be greater than 0. Stopping monitoring.")
+                        break
+                except ValueError:
+                    print("\n⚠️  Invalid input. Please enter a number. Stopping monitoring.")
+                    break
+            else:
+                print("\n✅ Monitoring complete!")
+                break
+
+        print("\n" + "="*70)
+        print("  🎓 Key Takeaways")
+        print("="*70)
+        print("\n✨ What you've learned:")
+        print("   • How ML models detect anomalies in real-time data")
+        print("   • The difference between reactive (thresholds) and proactive (ML) monitoring")
+        print("   • How to interpret anomaly scores and predictions")
+        print("   • The importance of feature engineering for time-series data")
+
+        print("\n🚀 This is how modern AIOps platforms work:")
+        print("   1. Learn normal behavior from historical data")
+        print("   2. Continuously compare live data to learned patterns")
+        print("   3. Flag statistically significant deviations")
+        print("   4. Adapt as the system evolves")
+
+        print("\n💡 Advantages over static thresholds:")
+        print("   ✓ No manual threshold tuning needed")
+        print("   ✓ Adapts to time-of-day patterns")
+        print("   ✓ Detects subtle anomalies missed by thresholds")
+        print("   ✓ Reduces false positives (alert fatigue)")
+
+        print("\n" + "="*70 + "\n")
+
+        return 0
+
+    except FileNotFoundError as e:
+        print(f"\n❌ Error: {str(e)}")
+        print("\n🔧 Solution:")
+        print("   Run the training script first:")
+        print("   python3 /root/monitoring/scripts/train_anomaly_model.py")
+        return 1
+
+    except Exception as e:
+        print(f"\n❌ Error during detection: {str(e)}")
+        print("\nTroubleshooting:")
+        print("   1. Ensure Prometheus is running: docker-compose ps")
+        print("   2. Verify model exists: ls -l /root/monitoring/anomaly_model.pkl")
+        print("   3. Check Prometheus has data: curl http://localhost:9090/api/v1/query?query=up")
+        return 1
+
+if __name__ == "__main__":
+    sys.exit(main())
+
+  2.cat requirements.txt 
+scikit-learn==1.3.2
+pandas==2.1.3
+numpy==1.26.2
+prometheus-api-client==0.5.3
+
+3.cat train_anomaly_model.py 
+#!/root/monitoring/scripts/venv/bin/python3
+"""
+AI-Powered Anomaly Detection - Model Training Script
+Module 4: AIOps Foundations
+
+This script trains an IsolationForest model on CPU metrics from Prometheus.
+It learns what "normal" CPU behavior looks like and saves the model for later use.
+
+Usage: Activate venv first, then run:
+    source /root/monitoring/scripts/venv/bin/activate
+    python3 /root/monitoring/scripts/train_anomaly_model.py
+"""
+
+import os
+import sys
+import pickle
+import warnings
+from datetime import datetime, timedelta
+
+import pandas as pd
+import numpy as np
+from sklearn.ensemble import IsolationForest
+from prometheus_api_client import PrometheusConnect
+
+# Suppress warnings for cleaner output
+warnings.filterwarnings('ignore')
+
+# Configuration
+PROMETHEUS_URL = "http://localhost:9090"
+MODEL_PATH = "/root/monitoring/anomaly_model.pkl"
+METRICS_QUERY = '100 - (avg(rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100)'
+
+# Training parameters
+TRAINING_HOURS = 1  # Use last 1 hour of data for training (or all available data)
+CONTAMINATION = 0.1  # Expected proportion of outliers (10%)
+MIN_SAMPLES_REQUIRED = 15  # Minimum samples needed for training
+
+def print_header(text):
+    """Print a formatted header"""
+    print("\n" + "="*70)
+    print(f"  {text}")
+    print("="*70)
+
+def print_step(step_num, text):
+    """Print a formatted step"""
+    print(f"\n[Step {step_num}] {text}")
+
+def fetch_cpu_metrics(prom: PrometheusConnect, hours: int) -> pd.DataFrame:
+    """
+    Fetch CPU usage metrics from Prometheus
+
+    Args:
+        prom: Prometheus connection
+        hours: Number of hours of historical data to fetch
+
+    Returns:
+        DataFrame with timestamp and cpu_usage columns
+    """
+    end_time = datetime.now()
+    start_time = end_time - timedelta(hours=hours)
+
+    print(f"   Querying Prometheus from {start_time.strftime('%Y-%m-%d %H:%M:%S')} to {end_time.strftime('%Y-%m-%d %H:%M:%S')}")
+
+    # Query Prometheus
+    result = prom.custom_query_range(
+        query=METRICS_QUERY,
+        start_time=start_time,
+        end_time=end_time,
+        step='10s'  # 10-second resolution (matches Prometheus scrape_interval)
+    )
+
+    if not result:
+        raise ValueError("No data returned from Prometheus. Ensure Node Exporter is running.")
+
+    # Parse results into DataFrame
+    timestamps = []
+    values = []
+
+    for sample in result[0]['values']:
+        timestamps.append(datetime.fromtimestamp(sample[0]))
+        values.append(float(sample[1]))
+
+    df = pd.DataFrame({
+        'timestamp': timestamps,
+        'cpu_usage': values
+    })
+
+    print(f"   ✓ Fetched {len(df)} data points")
+
+    return df
+
+def engineer_features(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Create features for machine learning
+
+    Args:
+        df: DataFrame with cpu_usage column
+
+    Returns:
+        DataFrame with engineered features
+    """
+    print("   Creating features:")
+    print("     - Rolling mean (5 samples)")
+    print("     - Rolling std (5 samples)")
+    print("     - Rate of change")
+
+    # Rolling statistics (last 5 samples = 50 seconds at 10s resolution)
+    df['rolling_mean'] = df['cpu_usage'].rolling(window=5, min_periods=1).mean()
+    df['rolling_std'] = df['cpu_usage'].rolling(window=5, min_periods=1).std().fillna(0)
+
+    # Rate of change
+    df['rate_of_change'] = df['cpu_usage'].diff().fillna(0)
+
+    # Hour of day (for seasonality)
+    df['hour'] = df['timestamp'].dt.hour
+
+    # Drop NaN values
+    df = df.dropna()
+
+    print(f"   ✓ Created {len(df.columns) - 2} features")  # -2 for timestamp and cpu_usage
+
+    return df
+
+def train_model(df: pd.DataFrame, contamination: float) -> IsolationForest:
+    """
+    Train IsolationForest model
+
+    Args:
+        df: DataFrame with features
+        contamination: Expected proportion of outliers
+
+    Returns:
+        Trained IsolationForest model
+    """
+    # Select features for training
+    feature_columns = ['cpu_usage', 'rolling_mean', 'rolling_std', 'rate_of_change', 'hour']
+    X = df[feature_columns]
+
+    print(f"   Training on {len(X)} samples with {len(feature_columns)} features")
+    print(f"   Contamination: {contamination*100}% (expected outlier proportion)")
+
+    # Train Isolation Forest
+    model = IsolationForest(
+        contamination=contamination,
+        random_state=42,
+        n_estimators=100,
+        max_samples='auto',
+        verbose=0
+    )
+
+    model.fit(X)
+
+    # Calculate training statistics
+    predictions = model.predict(X)
+    anomalies = (predictions == -1).sum()
+    normal = (predictions == 1).sum()
+
+    print(f"   ✓ Model trained successfully")
+    print(f"   Training results:")
+    print(f"     - Normal samples: {normal} ({normal/len(X)*100:.1f}%)")
+    print(f"     - Anomalies detected: {anomalies} ({anomalies/len(X)*100:.1f}%)")
+
+    return model
+
+def save_model(model: IsolationForest, path: str):
+    """Save trained model to disk"""
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+
+    with open(path, 'wb') as f:
+        pickle.dump(model, f)
+
+    print(f"   ✓ Model saved to: {path}")
+    print(f"   Model size: {os.path.getsize(path) / 1024:.2f} KB")
+
+def main():
+    """Main training workflow"""
+    print_header("🤖 AI-Powered Anomaly Detection - Model Training")
+
+    print("\n📊 This script will:")
+    print("   1. Connect to Prometheus")
+    print(f"   2. Fetch {TRAINING_HOURS} hours of CPU metrics")
+    print("   3. Engineer features for machine learning")
+    print("   4. Train an IsolationForest model")
+    print("   5. Save the model for anomaly detection")
+
+    try:
+        # Step 1: Connect to Prometheus
+        print_step(1, "Connecting to Prometheus")
+        prom = PrometheusConnect(url=PROMETHEUS_URL, disable_ssl=True)
+
+        # Test connection
+        prom.check_prometheus_connection()
+        print("   ✓ Successfully connected to Prometheus")
+
+        # Step 2: Fetch metrics
+        print_step(2, f"Fetching up to {TRAINING_HOURS} hour(s) of CPU metrics")
+        df = fetch_cpu_metrics(prom, TRAINING_HOURS)
+
+        if len(df) < MIN_SAMPLES_REQUIRED:
+            print(f"\n❌ Error: Only {len(df)} data points available.")
+            print(f"   Minimum required: {MIN_SAMPLES_REQUIRED} samples")
+            print("\n🔧 Solution:")
+            print("   The monitoring stack just started and needs time to collect data.")
+            print(f"   Each sample is collected every 10 seconds.")
+            print(f"   Wait time needed: ~{(MIN_SAMPLES_REQUIRED * 10) // 60} minutes")
+            print("\n⏱️  Options:")
+            print("   1. Wait 15-20 minutes for more data to accumulate")
+            print("   2. Generate some CPU load to create varied patterns:")
+            print("      stress --cpu 2 --timeout 60s")
+            print("      (Run this a few times, waiting 30s between runs)")
+            print("\n   Then run this training script again.")
+            return 1
+
+        if len(df) < 100:
+            print(f"\n⚠️  Note: Only {len(df)} data points available (~{len(df) * 10 // 60} minutes of data).")
+            print("   For production, at least 1 week of data is recommended.")
+            print("   Continuing with available data for lab demonstration...\n")
+
+        # Step 3: Feature engineering
+        print_step(3, "Engineering features for ML")
+        df = engineer_features(df)
+
+        # Step 4: Train model
+        print_step(4, "Training IsolationForest model")
+        model = train_model(df, CONTAMINATION)
+
+        # Step 5: Save model
+        print_step(5, "Saving trained model")
+        save_model(model, MODEL_PATH)
+
+        # Success summary
+        print_header("✅ Training Complete!")
+        print("\n📈 Model Summary:")
+        print(f"   Algorithm: IsolationForest")
+        print(f"   Training samples: {len(df)}")
+        print(f"   Features: cpu_usage, rolling_mean, rolling_std, rate_of_change, hour")
+        print(f"   Contamination: {CONTAMINATION*100}%")
+        print(f"   Model location: {MODEL_PATH}")
+
+        print("\n🎯 What the model learned:")
+        print("   ✓ Normal CPU usage patterns and ranges")
+        print("   ✓ Expected variability (rolling statistics)")
+        print("   ✓ Typical rate of change (how fast CPU changes)")
+        print("   ✓ Time-of-day patterns (hourly seasonality)")
+
+        print("\n🚀 Next step:")
+        print("   Run detect_anomalies.py to detect anomalies in live data!")
+        print("   Example: python3 /root/monitoring/scripts/detect_anomalies.py")
+
+        print("\n" + "="*70 + "\n")
+
+        return 0
+
+    except Exception as e:
+        print(f"\n❌ Error during training: {str(e)}")
+        print("\nTroubleshooting:")
+        print("   1. Ensure Prometheus is running: docker-compose ps")
+        print("   2. Check Prometheus has data: curl http://localhost:9090/api/v1/query?query=up")
+        print("   3. Verify Node Exporter is scraping: curl http://localhost:9100/metrics")
+        return 1
+
+if __name__ == "__main__":
+    sys.exit(main())
+
+#📊 About Your Pre-Built Dashboard
+✨ What's Already Configured
+Your lab environment includes a pre-built Node Health Monitor dashboard with 4 essential panels:
+
+1. CPU Usage (%)
+
+100 - (avg(rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100)
+2. Memory Available (GB)
+
+node_memory_MemAvailable_bytes / 1024 / 1024 / 1024
+3. Disk Usage (%)
+
+(1 - node_filesystem_avail_bytes{fstype=~"ext4|xfs|btrfs"} / node_filesystem_size_bytes{fstype=~"ext4|xfs|btrfs"}) * 100
+4. Network Traffic (MB/s)
+
+RX (Receive):
+
+rate(node_network_receive_bytes_total[5m]) / 1024 / 1024
+TX (Transmit):
+
+rate(node_network_transmit_bytes_total[5m]) / 1024 / 1024
+🎯 Why These Metrics Matter for ML
+These four metrics are the golden signals for system health:
+
+CPU Usage: Shows compute resource utilization patterns
+Memory: Reveals memory leaks and capacity issues
+Disk: Tracks storage consumption trends (filters for real filesystems: ext4, xfs, btrfs)
+Network: Indicates traffic patterns and potential DDoS (separate RX/TX rates)
+Your ML model will learn the normal behavior patterns for these metrics—including daily cycles, weekly patterns, and seasonal trends.
+
+🚀 What You'll Do Next
+Instead of manually setting thresholds for these metrics ("CPU > 80%"), you'll:
+
+Train an IsolationForest ML model on CPU metrics
+Let the model learn normal patterns from historical data
+Run real-time anomaly detection to catch unusual behavior
+Compare ML results vs. static threshold approach
+This dashboard provides the visual context for understanding what the ML model is learning!
+
+#How AI Leads to Proactive Observability
+🎯 The Shift from Reactive to Proactive
+Traditional monitoring is reactive—you set a threshold, wait for it to breach, then respond:
+
+❌ Reactive Monitoring:
+   1. Set rule: "Alert if CPU > 80%"
+   2. CPU hits 81%
+   3. Alert fires
+   4. Engineer investigates
+   5. Problem already impacting users
+AI-powered monitoring is proactive—it detects unusual patterns before they cause outages:
+
+✅ Proactive Monitoring:
+   1. ML learns: "CPU normally 20-40% at 3 PM"
+   2. CPU suddenly at 65% at 3 PM (below threshold!)
+   3. ML flags as anomaly (unusual for this time)
+   4. Engineer investigates early
+   5. Problem fixed before users affected
+🧠 What Makes ML Proactive
+1. Pattern Recognition
+
+ML models learn temporal patterns: CPU usage is naturally higher during business hours, lower at night, and drops on weekends. A spike to 70% at 3 AM is anomalous even if 70% at 2 PM is normal.
+
+2. Statistical Deviation
+
+Instead of "is it above X?", ML asks "is this statistically unusual compared to learned behavior?" A sudden 20% increase might be normal during deployment but anomalous at 3 AM.
+
+3. Early Warning Signs
+
+ML detects subtle changes that precede major incidents: gradual memory growth (leak), slowly increasing latency (database degradation), unusual traffic patterns (security threat).
+
+4. Reduced Alert Fatigue
+
+By eliminating false positives (expected high load) and catching true anomalies, teams can focus on real issues instead of tuning thresholds.
+
+📈 Real-World Impact
+Industry data shows proactive AI monitoring delivers:
+
+70-90% reduction in Mean Time To Detect (MTTD)
+80-95% fewer false positive alerts
+50-70% reduction in Mean Time To Resolve (MTTR)
+40-60% decrease in unplanned downtime
+🎓 What You'll Experience
+In the next tasks, you'll train an IsolationForest model that learns to recognize anomalies. You'll see firsthand how it catches issues that static thresholds miss—and ignores "noise" that would trigger false alerts. This is the future of observability!
+
+ Task 3: Train the IsolationForest Model
+✅
+Perfect Timing!
+By completing Tasks 1 & 2 (package installation + dashboard exploration), Prometheus has now collected sufficient metrics—ideal for training! The script will verify data availability and provide guidance if more time is needed.
+
+📝 What to Do
+Now, you'll train your first machine learning model for anomaly detection! The training script will fetch CPU metrics from Prometheus and teach the IsolationForest algorithm what "normal" looks like.
+
+Step 1: Run the training script
+
+python3 /root/monitoring/scripts/train_anomaly_model.py
+📋
+What the script does:
+
+Connects to Prometheus and fetches up to 1 hour of available CPU metrics
+Requires minimum 15 samples of historical data
+Engineers features: rolling mean, rolling std, rate of change, hour-of-day
+Trains IsolationForest model with 10% contamination (expected outlier rate)
+Saves trained model to /root/monitoring/anomaly_model.pkl
+💡 Tip: If the script says "insufficient data", wait the suggested time or generate some CPU load with stress --cpu 2 --timeout 60s to create varied patterns.
+
+🧠 Understanding the Training Process
+Feature Engineering:
+
+The model doesn't just learn from raw CPU values. It learns from engineered features that capture patterns:
+
+rolling_mean: Average CPU over last 5 samples (smooths noise)
+rolling_std: Variability in CPU (detects instability)
+rate_of_change: How fast CPU is changing (catches spikes)
+hour: Time of day (learns daily patterns)
+Contamination Parameter (10%):
+
+This tells the model to expect about 10% of data to be anomalous. It's a tuning knob—higher values flag more anomalies, lower values are more conservative.
+
+💡 What You'll Learn
+How to train an ML model on real metrics data, the importance of feature engineering for time-series, and how IsolationForest learns what's "normal" without labeled examples.
+
+Task 4: Run Real-Time Anomaly Detection
+📝 What to Do
+With your model trained, it's time to put it to work! The detection script will use your trained model to analyze live CPU metrics and flag any anomalous behavior.
+
+Step 1: Run the detection script
+
+python3 /root/monitoring/scripts/detect_anomalies.py
+📋
+What the script does:
+
+Loads your trained model from disk
+Fetches recent CPU metrics (last 10 minutes)
+Applies the same feature engineering as during training
+Predicts anomalies: -1 = anomaly, 1 = normal
+Calculates anomaly scores (lower = more anomalous)
+Provides detailed analysis of any detected anomalies
+Optional: Continuous Monitoring
+
+The script will ask if you want to run continuous monitoring for a specified duration (e.g., 5 minutes). This lets you see real-time anomaly detection in action!
+
+🔍 Understanding the Output
+Detection Summary:
+
+Shows total samples analyzed, how many were normal vs. anomalous, and the percentage breakdown.
+
+Anomaly Details (if any detected):
+
+Timestamp of the anomaly
+Actual CPU usage value
+Anomaly score (how unusual it is)
+Rolling statistics at that time
+Rate of change (was it a sudden spike?)
+Why Anomalies Occurred:
+
+The script analyzes why each anomaly was flagged: unusually high/low CPU, high volatility (rapid changes), or patterns that differ from learned behavior.
+
+💡 What You'll Learn
+How to apply a trained ML model to live data, interpret anomaly scores and predictions, and understand why certain patterns are flagged as anomalous vs. normal.
+
+⚖️ ML Anomaly Detection vs. Static Thresholds
+🎯 Comparing the Two Approaches
+Now that you've experienced ML-based anomaly detection, let's compare it to the traditional static threshold approach you might be familiar with.
+
+📊 Side-by-Side Comparison
+Aspect	Static Thresholds	ML Anomaly Detection
+Configuration	Manual threshold setting
+(e.g., "CPU > 80%")	Automatic learning from data
+(trains on historical patterns)
+Adaptation	Static - requires manual updates	Dynamic - adapts to changes
+Context Awareness	No time/pattern awareness	Understands daily/weekly cycles
+False Positives	High (expected spikes trigger alerts)	Low (80-95% reduction)
+Missed Issues	Problems below threshold go undetected	Catches unusual patterns even below threshold
+Best Use Cases	Hard limits (disk 95% full, memory exhaustion)	Dynamic metrics (CPU, network, request rates)
+✅ When ML Wins
+Scenario 1: Business Hours Pattern
+
+Static: CPU hits 75% every day at 2 PM (business hours) → Alerts daily (false positive)
+ML: Learns "75% at 2 PM is normal" → No alert
+
+Scenario 2: Subtle Degradation
+
+Static: CPU slowly climbs from 30% to 65% over a week (below 80% threshold) → No alert
+ML: Detects "65% is unusual compared to historical 30%" → Alert (caught early!)
+
+Scenario 3: Unusual Overnight Activity
+
+Static: CPU at 60% at 3 AM (below 80% threshold) → No alert
+ML: Knows "3 AM CPU is normally 10-15%" → Alert (potential security issue!)
+
+⚠️ When Static Thresholds Win
+Hard Resource Limits
+
+Disk at 95% full is always a problem, regardless of patterns. No need for ML here—a simple threshold works perfectly.
+
+Compliance Requirements
+
+Some regulations require fixed thresholds for auditing. "Memory must never exceed X" is a compliance rule, not a pattern-learning problem.
+
+Simplicity & Explainability
+
+Static thresholds are easier to explain to non-technical stakeholders: "We alert when CPU > 80%" is simpler than "We alert on statistical deviations from learned patterns."
+
+🎯 Best Practice: Hybrid Approach
+In production, the best strategy combines both:
+
+ML for dynamic metrics: CPU, memory, network traffic, request rates, latency
+Static for hard limits: Disk space, file descriptors, connection limits
+Layered alerts: Alert if (ML anomaly detected) OR (critical threshold breached)
+This gives you intelligent, context-aware monitoring with a safety net for critical resource limits!
+
+# AI-Driven Forecasting for Proactive Operations
+Module 5: Predict the Future Before Problems Occur
+
+🎯 What You'll Accomplish
+In this lab, you'll train and deploy Prophet time-series forecasting models to predict future resource usage. You'll move beyond reactive alerts and anomaly detection to proactive capacity planning that prevents issues before they impact users.
+
+By the end, you'll understand how AI forecasting transforms operations from reactive to predictive—enabling you to plan infrastructure changes weeks in advance.
+
+📚 The Complete AIOps Journey
+You've built your way through the AIOps pyramid:
+
+⚡
+3. Intelligent Actions
+← (Future: Auto-remediation)
+🧠
+2. AI-Driven Insights
+(Anomaly Detection, Forecasting)
+← 🎯 YOU ARE HERE! (Module 4 and 5)
+📊
+1. High-Quality Data
+← ✅ (Modules 1, 2, and 3)
+You've mastered data collection (Module 2), PromQL analysis (Module 3), and anomaly detection (Module 4). Now you'll add predictive capabilities to complete your AIOps skillset.
+
+🚀 Why Forecasting Matters
+Traditional Monitoring (Reactive):
+
+❌ Disk hits 95% → Alert fires → Emergency response
+❌ Memory exhausted → Users impacted → Scramble to add RAM
+❌ Constant firefighting, always behind the curve
+AI Forecasting (Proactive):
+
+✅ Predict disk full in 14 days → Order storage now
+✅ Forecast memory growth → Plan capacity expansion
+✅ Prevent issues before they occur, stay ahead of problems
+🎓 Ready to predict the future?
+
+Let's deploy AI-powered forecasting for proactive operations!
+
+Task 1: Set up Python Environment & Install Forecasting Packages
+📝 What to Do
+Before we can train forecasting models, we need to install Python 3.12, pip, and specialized time-series libraries including Prophet (Facebook's forecasting library). During installation, Prometheus will collect historical metrics in the background!
+
+Step 1: Update package repository (Ubuntu 24.04)
+
+apt update
+📋
+Step 2: Install Python 3.12 venv and pip
+
+apt install -y python3.12-venv python3-pip
+📋
+Step 3: Navigate to the scripts directory and create a virtual environment
+
+cd /root/monitoring/scripts
+📋
+python3 -m venv venv
+📋
+Step 4: Activate the virtual environment
+
+source /root/monitoring/scripts/venv/bin/activate
+📋
+Step 5: Upgrade pip to latest version
+
+pip install --upgrade pip
+📋
+Step 6: Install forecasting packages from requirements.txt (this may take 3-5 minutes)
+
+pip install -r /root/monitoring/scripts/requirements.txt
+📋
+Step 7: Verify installation
+
+python3 -c "import prophet, pandas, numpy, matplotlib, cmdstanpy, prometheus_api_client, plotly; print('✅ All packages installed successfully')"
+📋
+📦 What Each Package Does
+prophet (1.1.5):
+
+Facebook's robust forecasting library designed for time-series with strong seasonal patterns—automatically detects trends, daily/weekly cycles, and handles missing data
+
+pandas (2.1.3):
+
+Essential for time-series data manipulation, resampling, and feature engineering—Prophet requires data in pandas DataFrame format
+
+numpy (1.26.2):
+
+Powers mathematical operations behind forecasting algorithms (statistics, linear algebra, etc.)
+
+matplotlib (3.8.2):
+
+Visualization library for plotting forecasts, confidence intervals, and trend components
+
+cmdstanpy (1.2.0):
+
+Prophet's backend for Stan model compilation and MCMC sampling—required for Prophet model training
+
+prometheus-api-client (0.5.3):
+
+Python client for querying Prometheus—fetches historical metrics data for model training and validation
+
+plotly (5.18.0):
+
+Interactive visualization library for Prophet—enables interactive forecast plots with zoom, pan, and hover tooltips
+
+💡 What You'll Learn
+How to set up a complete Python environment for time-series forecasting, understand the specialized libraries for prediction, and prepare your system for production-ready AI forecasting.
+
+#cat requirements.txt 
+prophet==1.1.5
+cmdstanpy==1.2.0
+pandas==2.1.3
+numpy==1.26.2
+matplotlib==3.8.2
+prometheus-api-client==0.5.3
+plotly==5.18.0
+
+#cat train_forecasting_model.py 
+#!/usr/bin/env python3
+"""
+AI-Driven Forecasting - Model Training Script
+Module 5: AIOps Foundations
+
+This script trains Prophet time-series forecasting models on historical
+metrics from Prometheus. It learns trends and seasonal patterns to enable
+proactive capacity planning.
+"""
+
+import os
+import sys
+from datetime import datetime, timedelta
+import warnings
+import logging
+
+# Suppress warnings and logging
+warnings.filterwarnings('ignore')
+logging.getLogger('prophet').setLevel(logging.ERROR)
+logging.getLogger('cmdstanpy').setLevel(logging.ERROR)
+
+try:
+    import pandas as pd
+    import numpy as np
+    from prometheus_api_client import PrometheusConnect
+    import pickle
+
+    # Import Prophet and let it initialize cmdstan
+    from prophet import Prophet
+
+except ImportError as e:
+    print(f"❌ Error: Missing required package: {e}")
+    print("\n💡 Please install packages:")
+    print("   pip install -r requirements.txt")
+    sys.exit(1)
+
+
+# Configuration
+PROMETHEUS_URL = "http://localhost:9090"
+MODEL_DIR = "/root/monitoring/forecasting_models"
+TRAINING_HOURS = 1  # Use last 1 hour of data for training (or all available data)
+MIN_DATA_POINTS = 20  # Minimum data points required for training (20 * 30s = 10 minutes)
+
+# Metrics to forecast
+METRICS_CONFIG = {
+    'cpu_usage': {
+        'query': '100 - (avg(rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100)',
+        'name': 'CPU Usage (%)',
+        'threshold': 80,  # Alert if forecast exceeds this
+        'unit': '%'
+    },
+    'memory_available': {
+        'query': 'node_memory_MemAvailable_bytes / 1024 / 1024 / 1024',
+        'name': 'Memory Available (GB)',
+        'threshold': 3,  # Alert if forecast drops below this
+        'unit': 'GB',
+        'inverse': True  # Lower values are worse
+    },
+    'disk_usage': {
+        'query': '(1 - node_filesystem_avail_bytes{fstype=~"ext4|xfs|btrfs"} / node_filesystem_size_bytes{fstype=~"ext4|xfs|btrfs"}) * 100',
+        'name': 'Disk Usage (%)',
+        'threshold': 90,  # Alert if forecast exceeds this
+        'unit': '%'
+    }
+}
+
+
+def print_header():
+    """Print script header."""
+    print("\n" + "="*70)
+    print("🤖 AI-Driven Forecasting - Model Training")
+    print("Module 5: AIOps Foundations")
+    print("="*70 + "\n")
+
+
+def connect_to_prometheus():
+    """Connect to Prometheus API."""
+    try:
+        print(f"🔌 Connecting to Prometheus at {PROMETHEUS_URL}...")
+        prom = PrometheusConnect(url=PROMETHEUS_URL, disable_ssl=True)
+
+        # Test connection
+        prom.check_prometheus_connection()
+        print("✅ Connected to Prometheus successfully\n")
+        return prom
+    except Exception as e:
+        print(f"❌ Error connecting to Prometheus: {e}")
+        print("💡 Make sure Prometheus is running: docker compose ps")
+        sys.exit(1)
+
+
+def fetch_metric_data(prom, metric_name, query, hours=1):
+    """Fetch historical metric data from Prometheus."""
+    try:
+        print(f"📊 Fetching {metric_name} data...")
+
+        # Calculate time range
+        end_time = datetime.now()
+        start_time = end_time - timedelta(hours=hours)
+
+        # Query Prometheus
+        # Use 30-second step to reduce data points and memory usage
+        # (10s = 360 points/hour = high memory, 30s = 120 points/hour = lower memory)
+        result = prom.custom_query_range(
+            query=query,
+            start_time=start_time,
+            end_time=end_time,
+            step='30s'  # 30-second resolution for lab environment
+        )
+
+        if not result or len(result) == 0:
+            print(f"⚠️  No data returned for {metric_name}")
+            return None
+
+        # Extract values
+        values = result[0]['values']
+
+        if len(values) < MIN_DATA_POINTS:
+            print(f"⚠️  Insufficient data for {metric_name}: {len(values)} points")
+            print(f"    (Need at least {MIN_DATA_POINTS} points)")
+            print(f"    💡 Tip: Wait longer or check Prometheus is collecting metrics")
+            return None
+
+        # Convert to DataFrame
+        df = pd.DataFrame(values, columns=['timestamp', 'value'])
+        df['timestamp'] = pd.to_datetime(df['timestamp'], unit='s')
+        df['value'] = pd.to_numeric(df['value'], errors='coerce')
+
+        # Remove NaN values
+        df = df.dropna()
+
+        if len(df) < MIN_DATA_POINTS:
+            print(f"⚠️  Insufficient valid data after cleaning: {len(df)} points")
+            return None
+
+        print(f"✅ Fetched {len(df)} data points for {metric_name}")
+        print(f"   Time range: {df['timestamp'].min()} to {df['timestamp'].max()}")
+        print(f"   Current value: {df['value'].iloc[-1]:.2f}")
+        print(f"   Mean: {df['value'].mean():.2f}, Std: {df['value'].std():.2f}")
+
+        # Warning for lab environment with limited data
+        if len(df) < 500:
+            data_hours = len(df) * 30 / 3600  # 30-second intervals
+            print(f"\n⚠️  Lab Environment Note: Only {len(df)} data points available (~{data_hours:.1f} hours of data).")
+            print("   Prophet requires 2+ weeks for seasonality learning:")
+            print("     • Daily patterns: Need 2+ days of data")
+            print("     • Weekly patterns: Need 2+ weeks of data")
+            print("     • Strong trend detection: Need 1+ week of stable data")
+            print(f"\n   Using simplified model for lab demonstration:")
+            print("     • growth='logistic' for %  metrics (bounded 0-100%, prevents impossible values)")
+            print("     • growth='linear' for other metrics (minimal trend, very restrictive)")
+            print("     • seasonality disabled (insufficient data)")
+            print("     • 30-second intervals (reduced memory usage)")
+            print("     • 3 changepoints max (detect slight trends without wild extrapolation)")
+            print(f"\n   For production: Collect 2+ weeks of data @ 10s intervals, then:")
+            print("     • daily_seasonality=True, weekly_seasonality=True")
+            print("     • changepoint_prior_scale=0.05 (more flexible trend detection)")
+            print("     • n_changepoints=25 (default)")
+            print("   Continuing with available data...\n")
+
+        return df
+
+    except Exception as e:
+        print(f"❌ Error fetching {metric_name}: {e}")
+        return None
+
+
+def prepare_prophet_data(df, metric_config, metric_key):
+    """Convert DataFrame to Prophet format (ds, y) with optional cap/floor."""
+    prophet_df = pd.DataFrame({
+        'ds': df['timestamp'],
+        'y': df['value']
+    })
+
+    # For percentage metrics, set cap and floor to prevent impossible values
+    if metric_config.get('unit') == '%':
+        prophet_df['cap'] = 100.0  # CPU/Disk can't exceed 100%
+
+        # Set realistic floor based on metric type
+        if metric_key == 'cpu_usage':
+            prophet_df['floor'] = 1.0   # CPU can't be 0% on running system (idle processes)
+        else:
+            prophet_df['floor'] = 0.0   # Disk can theoretically be 0%
+
+    return prophet_df
+
+
+def train_prophet_model(df, metric_name, metric_config, metric_key):
+    """Train Prophet model on historical data."""
+    try:
+        print(f"\n🧠 Training forecasting model for {metric_name}...")
+
+        # Prepare data for Prophet
+        prophet_df = prepare_prophet_data(df, metric_config, metric_key)
+
+        # Determine growth type based on metric
+        # For percentage metrics (CPU, Disk), use logistic growth with bounds
+        # For unbounded metrics (Memory GB), use linear growth
+        is_percentage = metric_config.get('unit') == '%'
+        growth_type = 'logistic' if is_percentage else 'linear'
+
+        # Initialize Prophet model
+        # For lab environment with limited data (1 hour), use conservative settings
+        # Allow minimal trend detection for educational purposes (see slight changes)
+        model = Prophet(
+            growth=growth_type,          # Logistic for %, linear for others
+            daily_seasonality=False,     # Disable (need 2+ days of data)
+            weekly_seasonality=False,    # Disable (need 2+ weeks of data)
+            yearly_seasonality=False,    # Disable
+            n_changepoints=3,            # Minimal changepoints (detect slight trends)
+            changepoint_prior_scale=0.001,  # Very restrictive (prevent wild extrapolation)
+            interval_width=0.95,         # 95% confidence interval
+            mcmc_samples=0,              # Disable MCMC (use MAP estimation, much lower memory)
+            uncertainty_samples=100      # Reduce uncertainty samples (default 1000)
+        )
+
+        # Train the model
+        print(f"   Training on {len(prophet_df)} data points...")
+
+        try:
+            model.fit(prophet_df)
+        except AttributeError as e:
+            # Handle Prophet 1.1.5 stan_backend AttributeError
+            if 'stan_backend' in str(e):
+                print(f"   Warning: Prophet stan_backend deprecation issue (continuing anyway)")
+                # The model may still be trained despite the error
+                pass
+            else:
+                print(f"❌ Error during model.fit(): {e}")
+                import traceback
+                traceback.print_exc()
+                return None
+        except Exception as e:
+            print(f"❌ Error during model.fit(): {e}")
+            import traceback
+            traceback.print_exc()
+            return None
+
+        # Verify model was trained successfully
+        if not hasattr(model, 'params') or model.params is None:
+            print(f"❌ Model training failed for {metric_name}: model.params is None")
+            print(f"   This usually means cmdstan is not installed or not working properly")
+            print(f"   Try: pip install cmdstan")
+            return None
+
+        print(f"✅ Model trained successfully for {metric_name}")
+
+        # Analyze learned components
+        data_mean = prophet_df['y'].mean()
+        data_std = prophet_df['y'].std()
+        data_min = prophet_df['y'].min()
+        data_max = prophet_df['y'].max()
+
+        # Calculate simple trend
+        data_start = prophet_df['y'].iloc[0]
+        data_end = prophet_df['y'].iloc[-1]
+        trend = data_end - data_start
+
+        print(f"   Learned baseline: mean={data_mean:.2f}, std={data_std:.2f}")
+        print(f"   Value range: [{data_min:.2f}, {data_max:.2f}]")
+        print(f"   Observed trend: {trend:+.2f} (from {data_start:.2f} to {data_end:.2f})")
+        if is_percentage:
+            print(f"   Model type: Logistic growth (bounded 0-100%, prevents impossible values)")
+        else:
+            print(f"   Model type: Linear growth (minimal, restricted by changepoint_prior=0.001)")
+
+        return model
+
+    except Exception as e:
+        print(f"❌ Error training model for {metric_name}: {e}")
+        return None
+
+
+def save_model(model, metric_key):
+    """Save trained model to disk."""
+    try:
+        # Create model directory if it doesn't exist
+        os.makedirs(MODEL_DIR, exist_ok=True)
+
+        # Save model
+        model_path = os.path.join(MODEL_DIR, f"{metric_key}_forecast_model.pkl")
+        with open(model_path, 'wb') as f:
+            pickle.dump(model, f)
+
+        print(f"💾 Model saved: {model_path}")
+        return model_path
+
+    except Exception as e:
+        print(f"❌ Error saving model: {e}")
+        return None
+
+
+def main():
+    """Main training workflow."""
+    print_header()
+
+    # Connect to Prometheus
+    prom = connect_to_prometheus()
+
+    # Track trained models
+    trained_models = {}
+    failed_metrics = []
+
+    # Train model for each metric
+    for metric_key, config in METRICS_CONFIG.items():
+        print("\n" + "-"*70)
+
+        # Fetch data
+        df = fetch_metric_data(
+            prom,
+            config['name'],
+            config['query'],
+            hours=TRAINING_HOURS  # Use last 1 hour (or all available data)
+        )
+
+        if df is None:
+            failed_metrics.append(metric_key)
+            continue
+
+        # Train model
+        model = train_prophet_model(df, config['name'], config, metric_key)
+
+        if model is None:
+            failed_metrics.append(metric_key)
+            continue
+
+        # Save model
+        model_path = save_model(model, metric_key)
+
+        if model_path:
+            trained_models[metric_key] = {
+                'model_path': model_path,
+                'name': config['name'],
+                'data_points': len(df)
+            }
+
+    # Print summary
+    print("\n" + "="*70)
+    print("📊 Training Summary")
+    print("="*70)
+
+    if trained_models:
+        print(f"\n✅ Successfully trained {len(trained_models)} model(s):\n")
+        for metric_key, info in trained_models.items():
+            print(f"   • {info['name']}")
+            print(f"     Model: {info['model_path']}")
+            print(f"     Training data: {info['data_points']} points")
+
+    if failed_metrics:
+        print(f"\n⚠️  Failed to train {len(failed_metrics)} model(s):")
+        for metric_key in failed_metrics:
+            print(f"   • {METRICS_CONFIG[metric_key]['name']}")
+        print(f"\n💡 Common issues:")
+        print(f"   - Insufficient historical data (need {MIN_DATA_POINTS}+ points)")
+        print(f"   - Prometheus not collecting metrics")
+        print(f"   - Data quality issues (all NaN values)")
+        print(f"\n   Try waiting longer or check: docker compose logs prometheus")
+
+    if trained_models:
+        print("\n✅ Models are ready for forecasting!")
+        print("\n🚀 Next step: Generate forecasts")
+        print("   python3 /root/monitoring/scripts/forecast_metrics.py")
+    else:
+        print("\n❌ No models were trained successfully")
+        print("   Please resolve the issues above and try again")
+        sys.exit(1)
+
+    print("\n" + "="*70 + "\n")
+
+
+if __name__ == "__main__":
+    main()
+
+#cat forecast_metrics.py
+#!/usr/bin/env python3
+"""
+AI-Driven Forecasting - Prediction Script
+Module 5: AIOps Foundations
+
+This script uses trained Prophet models to generate forecasts for infrastructure
+metrics and predict capacity exhaustion dates for proactive planning.
+"""
+
+import os
+import sys
+from datetime import datetime, timedelta
+import warnings
+import logging
+
+# Suppress warnings and logging
+warnings.filterwarnings('ignore')
+logging.getLogger('prophet').setLevel(logging.ERROR)
+logging.getLogger('cmdstanpy').setLevel(logging.ERROR)
+
+try:
+    import pandas as pd
+    import numpy as np
+    from prometheus_api_client import PrometheusConnect
+    import pickle
+
+    # Import Prophet and let it initialize cmdstan
+    from prophet import Prophet
+
+except ImportError as e:
+    print(f"❌ Error: Missing required package: {e}")
+    print("\n💡 Please install packages:")
+    print("   pip install -r requirements.txt")
+    sys.exit(1)
+
+
+# Configuration
+PROMETHEUS_URL = "http://localhost:9090"
+MODEL_DIR = "/root/monitoring/forecasting_models"
+
+# Metrics configuration (must match train_forecasting_model.py)
+METRICS_CONFIG = {
+    'cpu_usage': {
+        'name': 'CPU Usage',
+        'unit': '%',
+        'threshold': 80,
+        'threshold_type': 'upper',  # Alert when forecast exceeds threshold
+        'format': '.1f'
+    },
+    'memory_available': {
+        'name': 'Memory Available',
+        'unit': 'GB',
+        'threshold': 3.0,
+        'threshold_type': 'lower',  # Alert when forecast drops below threshold
+        'format': '.2f'
+    },
+    'disk_usage': {
+        'name': 'Disk Usage',
+        'unit': '%',
+        'threshold': 90,
+        'threshold_type': 'upper',
+        'format': '.1f'
+    }
+}
+
+
+def print_header():
+    """Print script header."""
+    print("\n" + "="*70)
+    print("📈 AI-Driven Forecasting - Generate Predictions")
+    print("Module 5: AIOps Foundations")
+    print("="*70 + "\n")
+
+
+def connect_to_prometheus():
+    """Connect to Prometheus API."""
+    try:
+        prom = PrometheusConnect(url=PROMETHEUS_URL, disable_ssl=True)
+        prom.check_prometheus_connection()
+        return prom
+    except Exception as e:
+        print(f"⚠️  Warning: Could not connect to Prometheus: {e}")
+        return None
+
+
+def get_current_value(prom, metric_key):
+    """Fetch current metric value from Prometheus."""
+    if prom is None:
+        return None
+
+    try:
+        # Get the query for this metric from training config
+        query = None
+        if metric_key == 'cpu_usage':
+            query = '100 - (avg(rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100)'
+        elif metric_key == 'memory_available':
+            query = 'node_memory_MemAvailable_bytes / 1024 / 1024 / 1024'
+        elif metric_key == 'disk_usage':
+            query = '(1 - node_filesystem_avail_bytes{fstype=~"ext4|xfs|btrfs"} / node_filesystem_size_bytes{fstype=~"ext4|xfs|btrfs"}) * 100'
+
+        if query is None:
+            return None
+
+        # Query current value
+        result = prom.custom_query(query=query)
+
+        if result and len(result) > 0:
+            value = float(result[0]['value'][1])
+            return value
+        else:
+            return None
+    except Exception as e:
+        print(f"⚠️  Warning: Could not fetch current value for {metric_key}: {e}")
+        return None
+
+
+def load_model(metric_key):
+    """Load trained model from disk."""
+    model_path = os.path.join(MODEL_DIR, f"{metric_key}_forecast_model.pkl")
+
+    if not os.path.exists(model_path):
+        return None
+
+    try:
+        with open(model_path, 'rb') as f:
+            model = pickle.load(f)
+        return model
+    except Exception as e:
+        print(f"❌ Error loading model for {metric_key}: {e}")
+        return None
+
+
+def generate_forecast(model, metric_key, periods=7):
+    """Generate forecast for specified number of days."""
+    try:
+        # Create future dataframe - use 30 second intervals to match training data
+        # periods in this case is number of 30-second intervals for N days
+        future_periods = periods * 24 * 60 * 2  # days * hours * minutes * (60s/30s)
+        future = model.make_future_dataframe(periods=future_periods, freq='30S')
+
+        # For logistic growth models, need to add cap and floor
+        # Check if model has logistic growth by examining model.growth
+        if hasattr(model, 'growth') and model.growth == 'logistic':
+            future['cap'] = 100.0  # For percentage metrics
+
+            # Set realistic floor based on metric type
+            if metric_key == 'cpu_usage':
+                future['floor'] = 1.0   # CPU can't be 0% on running system
+            else:
+                future['floor'] = 0.0   # Disk can theoretically be 0%
+
+        # Generate forecast
+        forecast = model.predict(future)
+
+        return forecast
+
+    except AttributeError as e:
+        # Handle Prophet 1.1.5 stan_backend AttributeError
+        if 'stan_backend' in str(e):
+            print(f"   Warning: Prophet stan_backend deprecation issue")
+            # Try to continue anyway
+            return None
+        else:
+            print(f"❌ Error generating forecast: {e}")
+            import traceback
+            traceback.print_exc()
+            return None
+    except Exception as e:
+        print(f"❌ Error generating forecast: {e}")
+        import traceback
+        traceback.print_exc()
+        return None
+
+
+def analyze_forecast(forecast, config, current_value, periods=7):
+    """Analyze forecast results and identify capacity issues."""
+    # Calculate number of future data points (at 30-second intervals)
+    future_points = periods * 24 * 60 * 2  # days * hours * minutes * (60s/30s)
+
+    # Get only the FUTURE forecast period (exclude historical data)
+    forecast_period = forecast.tail(future_points)
+
+    # Extract key metrics from forecast period
+    forecast_mean = forecast_period['yhat'].mean()
+    forecast_max = forecast_period['yhat'].max()
+    forecast_min = forecast_period['yhat'].min()
+
+    # Calculate trend
+    trend_start = forecast_period['yhat'].iloc[0]
+    trend_end = forecast_period['yhat'].iloc[-1]
+    trend_change = trend_end - trend_start
+    trend_per_day = trend_change / periods
+
+    # Calculate confidence interval width
+    ci_width = (forecast_period['yhat_upper'] - forecast_period['yhat_lower']).mean()
+
+    # Check for threshold breach
+    threshold = config['threshold']
+    threshold_type = config['threshold_type']
+
+    days_to_threshold = None
+    threshold_breached = False
+
+    if threshold_type == 'upper':
+        # Check if forecast exceeds upper threshold
+        breach_df = forecast_period[forecast_period['yhat'] > threshold]
+        if not breach_df.empty:
+            threshold_breached = True
+            # Calculate days until first breach (using row position, not index)
+            first_breach_pos = breach_df.index.get_loc(breach_df.index[0])
+            forecast_start_pos = forecast_period.index.get_loc(forecast_period.index[0])
+            points_to_breach = first_breach_pos - forecast_start_pos
+            # Convert points (30s intervals) to days
+            days_to_threshold = (points_to_breach * 30) / (24 * 60 * 60)
+
+    elif threshold_type == 'lower':
+        # Check if forecast drops below lower threshold
+        breach_df = forecast_period[forecast_period['yhat'] < threshold]
+        if not breach_df.empty:
+            threshold_breached = True
+            first_breach_pos = breach_df.index.get_loc(breach_df.index[0])
+            forecast_start_pos = forecast_period.index.get_loc(forecast_period.index[0])
+            points_to_breach = first_breach_pos - forecast_start_pos
+            # Convert points (30s intervals) to days
+            days_to_threshold = (points_to_breach * 30) / (24 * 60 * 60)
+
+    return {
+        'current_value': current_value,
+        'forecast_mean': forecast_mean,
+        'forecast_max': forecast_max,
+        'forecast_min': forecast_min,
+        'trend_per_day': trend_per_day,
+        'ci_width': ci_width,
+        'threshold_breached': threshold_breached,
+        'days_to_threshold': days_to_threshold
+    }
+
+
+def print_forecast_report(metric_key, config, analysis, periods):
+    """Print clean, compact forecast report."""
+    fmt = config['format']
+    unit = config['unit']
+
+    print(f"\n{config['name']} Forecast:")
+    print(f"  Current: {analysis['current_value']:{fmt}}{unit}")
+
+    # {periods}-day prediction with range
+    forecast_range = f"{analysis['forecast_min']:{fmt}}{unit} - {analysis['forecast_max']:{fmt}}{unit}"
+    print(f"  {periods}-day prediction: {analysis['forecast_mean']:{fmt}}{unit} (range: {forecast_range})")
+
+    # Trend analysis with arrow
+    trend = analysis['trend_per_day']
+    if abs(trend) > 0.01:
+        arrow = "↗" if trend > 0 else "↘"
+        direction = "Increasing" if trend > 0 else "Decreasing"
+        total_change = trend * periods
+        print(f"  Trend: {arrow} {direction} ({total_change:+{fmt}}{unit} over {periods} days, {trend:+{fmt}}{unit}/day)")
+    else:
+        print(f"  Trend: → Stable (minimal change)")
+
+    # Threshold status
+    threshold = config['threshold']
+    threshold_type = config['threshold_type']
+
+    if analysis['threshold_breached']:
+        days = analysis['days_to_threshold']
+
+        if threshold_type == 'upper':
+            verb = "exceed"
+            threshold_msg = f"will exceed {threshold}{unit}"
+        else:
+            verb = "drop below"
+            threshold_msg = f"will drop below {threshold}{unit}"
+
+        # Urgency indicator
+        if days < 7:
+            urgency = "🚨"
+        elif days < 14:
+            urgency = "⚠️"
+        else:
+            urgency = "💡"
+
+        print(f"  Alert: {urgency} {config['name']} {threshold_msg} in ~{days:.1f} days")
+
+        # Single-line recommendation
+        if metric_key == 'disk_usage':
+            recommendation = "Plan storage expansion or cleanup"
+        elif metric_key == 'cpu_usage':
+            recommendation = "Consider scaling up or optimizing workloads"
+        elif metric_key == 'memory_available':
+            recommendation = "Investigate memory leaks or add more RAM"
+        else:
+            recommendation = "Review capacity planning"
+
+        print(f"  Recommendation: {recommendation}")
+    else:
+        if threshold_type == 'upper':
+            status_msg = f"will not exceed {threshold}{unit}"
+        else:
+            status_msg = f"will not drop below {threshold}{unit}"
+
+        print(f"  Status: ✅ {config['name']} {status_msg} within {periods} days")
+        print(f"  Recommendation: Monitor trend, no immediate action needed")
+
+
+def prompt_forecast_horizon():
+    """Ask user for forecast horizon."""
+    print("📅 Select forecast horizon:")
+    print("   1) 7 days (recommended for short-term planning)")
+    print("   2) 14 days (recommended for capacity orders)")
+    print("   3) 30 days (recommended for quarterly planning)")
+    print("   4) Custom")
+
+    while True:
+        try:
+            choice = input("\nEnter choice (1-4): ").strip()
+
+            if choice == '1':
+                return 7
+            elif choice == '2':
+                return 14
+            elif choice == '3':
+                return 30
+            elif choice == '4':
+                days = input("Enter number of days (1-90): ").strip()
+                days = int(days)
+                if 1 <= days <= 90:
+                    return days
+                else:
+                    print("❌ Please enter a value between 1 and 90")
+            else:
+                print("❌ Invalid choice, please enter 1-4")
+
+        except (ValueError, KeyboardInterrupt):
+            print("\n❌ Invalid input, using default: 7 days")
+            return 7
+
+
+def main():
+    """Main forecasting workflow."""
+    print_header()
+
+    # Check if model directory exists
+    if not os.path.exists(MODEL_DIR):
+        print(f"❌ Model directory not found: {MODEL_DIR}")
+        print("\n💡 Please train models first:")
+        print("   python3 /root/monitoring/scripts/train_forecasting_model.py")
+        sys.exit(1)
+
+    # Load all available models
+    print("🔍 Loading trained models...")
+    models = {}
+    for metric_key, config in METRICS_CONFIG.items():
+        model = load_model(metric_key)
+        if model:
+            models[metric_key] = model
+            print(f"   ✅ Loaded model for {config['name']}")
+        else:
+            print(f"   ⚠️  Model not found for {config['name']}")
+
+    if not models:
+        print("\n❌ No trained models found!")
+        print("💡 Please train models first:")
+        print("   python3 /root/monitoring/scripts/train_forecasting_model.py")
+        sys.exit(1)
+
+    print(f"\n✅ Loaded {len(models)} model(s)\n")
+
+    # Connect to Prometheus to fetch current values
+    print("🔌 Connecting to Prometheus...")
+    prom = connect_to_prometheus()
+    if prom:
+        print("✅ Connected to Prometheus\n")
+    else:
+        print("⚠️  Could not connect to Prometheus - will use training end values\n")
+
+    # Get forecast horizon from user
+    periods = prompt_forecast_horizon()
+
+    print(f"\n🔮 Generating {periods}-day forecasts...\n")
+
+    # Generate forecasts for each metric
+    forecast_results = {}
+
+    for metric_key, model in models.items():
+        config = METRICS_CONFIG[metric_key]
+
+        print(f"📊 Processing {config['name']}...")
+
+        # Get current value from Prometheus
+        current_value = get_current_value(prom, metric_key)
+        if current_value is None:
+            print(f"   ⚠️  Could not fetch current value, using training end value")
+            # Fallback to Prophet's fitted value from training end
+            # This requires generating forecast first to access historical data
+            temp_forecast = generate_forecast(model, metric_key, periods=1)
+            if temp_forecast is not None:
+                future_points = 1 * 24 * 60 * 2  # 1 day in 30-second intervals
+                current_value = temp_forecast.iloc[-(future_points + 1)]['yhat']
+            else:
+                print(f"   ❌ Failed to get current value for {config['name']}")
+                continue
+
+        # Generate forecast
+        forecast = generate_forecast(model, metric_key, periods=periods)
+
+        if forecast is None:
+            print(f"   ❌ Failed to generate forecast for {config['name']}")
+            continue
+
+        # Analyze forecast
+        analysis = analyze_forecast(forecast, config, current_value, periods=periods)
+
+        # Store results
+        forecast_results[metric_key] = {
+            'forecast': forecast,
+            'analysis': analysis
+        }
+
+        print(f"   ✅ Forecast generated for {config['name']}")
+
+    # Print detailed reports
+    print("\n" + "="*70)
+    print(f"📊 {periods}-Day Forecast Results")
+    print("="*70)
+
+    for metric_key, results in forecast_results.items():
+        config = METRICS_CONFIG[metric_key]
+        print_forecast_report(
+            metric_key,
+            config,
+            results['analysis'],
+            periods
+        )
+
+    # Print summary
+    print("\n" + "="*70)
+    print("📋 Summary")
+    print("="*70)
+
+    alerts = []
+    ok_metrics = []
+
+    for metric_key, results in forecast_results.items():
+        config = METRICS_CONFIG[metric_key]
+        analysis = results['analysis']
+
+        if analysis['threshold_breached']:
+            alerts.append({
+                'metric': config['name'],
+                'days': analysis['days_to_threshold']
+            })
+        else:
+            ok_metrics.append(config['name'])
+
+    if alerts:
+        print(f"\n⚠️  Capacity Alerts ({len(alerts)}):")
+        # Sort by urgency (days to threshold)
+        alerts.sort(key=lambda x: x['days'])
+        for alert in alerts:
+            urgency = "🚨" if alert['days'] < 7 else "⚠️" if alert['days'] < 14 else "💡"
+            print(f"  {urgency} {alert['metric']}: Action needed in ~{alert['days']:.1f} days")
+
+    if ok_metrics:
+        print(f"\n✅ Healthy Metrics ({len(ok_metrics)}):")
+        for metric in ok_metrics:
+            print(f"  • {metric}")
+
+    print("\n" + "="*70)
+    print("✨ Forecast generation complete!")
+    print("\n💡 Next Steps:")
+    print("  • Review forecasts weekly and retrain models monthly")
+    print("  • Compare predictions to actual values to validate accuracy")
+    print("  • View detailed metrics in Grafana dashboard")
+    print("="*70 + "\n")
+
+
+if __name__ == "__main__":
+    main()
+
+#Task 2: Access Grafana and Verify Environment
+📝 What to Do
+Your monitoring stack (Prometheus + Grafana + Node Exporter) is running with a pre-built dashboard. Let's verify that historical metrics are being collected—this data will train your forecasting models!
+
+Step 1: Click on the Grafana UI icon on the top right side to open Grafana
+
+Step 2: Log in with credentials: admin / GrafanaRocks123!
+
+Step 3: Navigate to Dashboards from the left menu
+
+Step 4: Open the "Node Health Monitor" dashboard
+
+Step 5: Verify you can see historical data across all 4 panels
+
+🔗 Quick Access
+Use the icons on the top right side of the screen to access:
+
+Grafana UI icon - Visualization dashboard (port 3000)
+Prometheus UI icon - Metrics database (port 9090)
+💡 What You'll Learn
+How to verify that sufficient historical data exists for training forecasting models. Time-series forecasting requires historical patterns—the more data, the better the predictions!
+#Task 3: Train Forecasting Models
+✅
+Perfect Timing!
+By completing Tasks 1 & 2 (package installation + dashboard exploration), Prometheus has now collected sufficient historical metrics—ideal for training! The script will verify data availability.
+
+📝 What to Do
+Now, you'll train your first forecasting models! The training script will fetch CPU, memory, and disk metrics from Prometheus and teach Prophet what "normal" growth looks like.
+
+Run the training script:
+
+python3 /root/monitoring/scripts/train_forecasting_model.py
+📋
+What the script does:
+
+Connects to Prometheus and fetches 1 hour of data at 30-second intervals (lab-optimized)
+Requires minimum 20 samples per metric (10 minutes of data)
+Trains Prophet models on CPU, memory, and disk metrics
+Detects trend (growing/declining/stable)
+Lab config: logistic growth for % metrics (CPU/Disk bounded 0-100%), linear growth for Memory (GB), no seasonality (insufficient data)
+Production: enable daily/weekly seasonality with 2+ weeks data
+Saves trained models to /root/monitoring/forecasting_models/*.pkl
+💡 Tip: Training takes 1-2 minutes. Watch for "Model trained successfully" messages.
+
+🧠 Understanding the Training Process
+Prophet Model Components:
+
+Prophet decomposes the time-series into:
+
+g(t) = Trend component (long-term growth)
+s(t) = Seasonality component (daily/weekly patterns)
+h(t) = Holiday effects (optional)
+ε(t) = Error/noise term
+Output:
+
+Three trained models saved as .pkl files, ready to generate forecasts!
+
+💡 What You'll Learn
+How to train time-series forecasting models on real infrastructure metrics, how Prophet learns trends and seasonality, and how to save models for future predictions.
+
+#Task 4: Generate and Analyze Forecasts
+📝 What to Do
+Now that your models are trained, it's time to generate forecasts and analyze future resource trends. The forecast script will:
+
+Load your trained models
+Generate predictions for the specified horizon (7/14/30 days)
+Calculate confidence intervals (95% upper/lower bounds)
+Predict when thresholds will be breached
+Provide actionable capacity planning recommendations
+🚀 Run the Forecasting Script
+Command:
+
+python3 /root/monitoring/scripts/forecast_metrics.py
+📋
+What you'll be prompted for:
+
+Forecast Horizon: Choose 7, 14, or 30 days (or custom)
+Recommendation: Start with 7 days for this lab (shorter horizon = better accuracy)
+⚠️ Important: Lab Environment Limitations
+This lab environment collects only ~1 hour of training data (instead of the 2+ weeks needed for production). This means:
+
+Forecasts may show limited variation or extrapolate short-term trends unrealistically
+Predictions won't capture daily/weekly patterns (insufficient data for seasonality)
+This is expected and demonstrates why data quality matters in forecasting!
+💡 To see forecasts change: Wait 10-15 minutes, retrain the model, then forecast again. You'll see predictions update as more data is collected!
+
+📊 What to Look For in Output
+Trend Analysis: Is the metric increasing, decreasing, or stable?
+Confidence Intervals: The range of likely values (yhat_lower to yhat_upper)
+Threshold Predictions: When will CPU hit 80%? When will disk reach 90%?
+Recommendations: Actionable steps based on forecasts
+💡 Understanding the Output
+CPU Usage Forecast:
+  Current: 45.2%
+  7-day prediction: 52.8% (range: 48.1% - 57.5%)
+  Trend: ↗ Increasing (+7.6% over 7 days, +1.1%/day)
+  Status: ✅ CPU Usage will not exceed 80% within 7 days
+  Recommendation: Monitor trend, no immediate action needed
+This tells you: CPU is trending upwardand projected to reach ~53% in 7 days (with a 95% confidence between 48-58%), but it will not breach the 80% threshold. No immediate action required—continue monitoring!
+
+✨ Once you see forecast output with recommendations, you're done!
+
+The script will show detailed predictions for CPU, Memory, and Disk usage
+#Forecasting Best Practices
+📋 Production Forecasting Guidelines
+1️⃣ Data Quality is Critical
+Minimum History: At least 2-3 weeks for daily patterns, 2-3 months for weekly patterns
+Completeness: Handle gaps gracefully—Prophet interpolates, but too many gaps reduce accuracy
+Consistency: Ensure scrape intervals are regular (our lab uses 10s for node-exporter)
+2️⃣ Choose Appropriate Horizons
+Short-term (7 days): High accuracy, immediate operational decisions
+Medium-term (14-30 days): Balance accuracy and planning time—ideal for most use cases
+Long-term (60-90 days): Strategic capacity planning, but wider confidence intervals
+3️⃣ Act on the Upper Bound
+For resource exhaustion (disk, memory): Use yhat_upper for conservative planning
+For resource availability (free memory): Use yhat_lower for worst-case scenarios
+Don't wait for the point prediction (yhat) to breach—plan for the confidence bound!
+🔄 Operational Workflows
+Daily/Weekly Retraining
+Retrain models regularly to capture evolving patterns:
+
+# Cron job: Retrain models daily at 2 AM
+0 2 * * * /usr/bin/python3 /root/monitoring/scripts/train_forecasting_model.py
+
+# Cron job: Generate forecasts daily at 6 AM
+0 6 * * * /usr/bin/python3 /root/monitoring/scripts/forecast_metrics.py
+Integrate with Alerting
+Combine forecasts with Prometheus alerts:
+
+Reactive alert: Disk > 90% (immediate action)
+Predictive alert: Forecast shows disk > 90% in 14 days (proactive planning)
+Both work together—forecasts give you advance warning!
+⚠️ Common Pitfalls to Avoid
+Over-trusting long-term forecasts: Accuracy decreases with horizon—use 90+ day forecasts for strategic planning only
+Ignoring confidence intervals: Always consider yhat_upper/yhat_lower for risk management
+Forgetting seasonality changes: Business patterns evolve (new features, traffic growth)—retrain regularly!
+Not validating forecasts: Compare predictions to actual values—adjust model parameters if accuracy drops
+Reacting to every forecast: Filter for actionable predictions (e.g., threshold breaches within planning horizon)
+🎯 The Goal: Proactive, Not Perfect
+
+Forecasting isn't about predicting the exact future—it's about gaining enough lead time to plan capacity changes, order hardware, and prevent incidents. Even a rough forecast that gives you 2 weeks' notice is infinitely better than a reactive alert at 95% disk usage!

@@ -1,0 +1,1173 @@
+# Learn By Doing: AIOps in Practice - Logging and Alerting at Scale
+Welcome to Lab 0: Introduction to Grafana Loki
+📚 What You'll Learn
+This introductory lab covers the fundamentals of Grafana Loki, a modern log aggregation system. You'll learn about Loki's architecture, understand why it's 10x more cost-effective than traditional solutions, and discover how it fits into the observability ecosystem.
+
+This lab sets the foundation for the hands-on labs that follow, where you'll deploy and configure a complete logging infrastructure.
+
+🎯 Lab Structure
+Section 1: Course Introduction (10 min)
+Section 2: Understanding Loki (10 min)
+Section 3: Loki Architecture Deep Dive (15 min)
+Section 4: Installation Overview (10 min)
+
+#Real-World Context
+Why This Matters
+In modern cloud-native environments, logging is not just about collecting data—it's about doing so efficiently and cost-effectively at scale. Traditional logging solutions present significant challenges:
+
+The Elasticsearch Problem:
+
+Indexes every word in every log line
+Requires expensive infrastructure
+Complex to configure and maintain
+Often needs dedicated personnel
+Costs can spiral out of control at scale
+The Loki Solution:
+
+Indexes only labels (metadata), not content
+Runs on commodity hardware or object storage
+Simple configuration similar to Prometheus
+Manages itself with minimal overhead
+10x cheaper at scale
+Real-World Impact
+Consider a real scenario:
+
+Startup with 100 microservices: Switched from Elasticsearch to Loki
+Result: Reduced logging infrastructure costs from $10,000/month to $1,000/month
+Benefit: Same query performance, simpler operations, freed up engineering time
+This is the power of Loki's design philosophy: simplicity and cost-effectiveness without compromising functionality.
+
+Who Uses Loki?
+Grafana Loki has been adopted by organizations worldwide:
+
+Cloud-Native Startups: Building on Kubernetes from day one
+Fortune 500 Companies: Migrating from expensive proprietary solutions
+Financial Services: Meeting compliance requirements with open-source tools
+E-Commerce Platforms: Handling massive log volumes during peak traffic
+SaaS Providers: Multi-tenant logging with strong isolation
+Gaming Companies: Real-time log analysis for player experience
+As a Cloud Native Computing Foundation (CNCF) project, Loki has massive industry backing and is considered a critical component of modern observability stacks.
+
+Key Concepts Explained
+The Three Pillars of Observability
+Modern observability relies on three data types working together:
+
+1. Metrics (Prometheus)
+
+Numerical measurements over time
+Examples: CPU usage, request rate, error rate
+Best for: Trends, alerts, capacity planning
+Limitation: Shows "what" but not "why"
+2. Logs (Loki)
+
+Detailed event records
+Examples: Error messages, request traces, debug info
+Best for: Troubleshooting, debugging, audit trails
+Limitation: High volume, expensive to store traditionally
+3. Traces (Tempo)
+
+Request flow across services
+Examples: Distributed transaction paths
+Best for: Understanding service dependencies, latency analysis
+Limitation: Requires instrumentation
+Together, they provide complete visibility: Metrics alert you to problems, logs explain what went wrong, and traces show how requests flowed through your system.
+
+Label-Based Indexing
+This is Loki's key innovation and why it's so cost-effective:
+
+Traditional Approach (Elasticsearch):
+
+Log: "User john@example.com failed login attempt at 2024-01-15 10:30:45"
+
+Indexed Terms:
+- User
+- john
+- example
+- com
+- failed
+- login
+- attempt
+- at
+- 2024
+- 01
+- 15
+- 10
+- 30
+- 45
+
+Result: Every word indexed, massive storage overhead
+Loki's Approach:
+
+Labels: {app="auth-service", level="error", environment="production"}
+Log Content: "User john@example.com failed login attempt at 2024-01-15 10:30:45"
+
+Indexed: Only the labels
+Stored: Compressed log content in chunks
+
+Result: Minimal index size, lower costs
+Query Flow:
+
+Select logs by labels: {app="auth-service", level="error"}
+Filter content: |= "failed login"
+Loki searches only relevant log chunks
+Fast results, low costs
+Log Streams
+Loki organizes logs into streams based on label combinations:
+
+Stream 1: {app="frontend", env="prod", region="us-east"}
+├── Log 1: "Request received"
+├── Log 2: "User authenticated"
+└── Log 3: "Response sent"
+
+Stream 2: {app="backend", env="prod", region="us-east"}
+├── Log 1: "Database query executed"
+├── Log 2: "Cache hit"
+└── Log 3: "Response generated"
+
+Stream 3: {app="frontend", env="dev", region="us-west"}
+├── Log 1: "Debug: variable value"
+└── Log 2: "Warning: slow response"
+Each unique label combination creates a separate stream. This organization:
+
+Enables efficient storage compression
+Allows fast label-based queries
+Keeps related logs together
+Supports time-based searching within streams
+Cardinality Management
+Cardinality refers to the number of unique label combinations. Managing it is critical:
+
+Low Cardinality (Good):
+
+Labels: {app="web", env="prod"}
+Streams: ~10 unique combinations
+
+Result: Efficient, fast queries
+High Cardinality (Bad):
+
+Labels: {app="web", user_id="12345", request_id="abc-xyz", timestamp="..."}
+Streams: Millions of unique combinations
+
+Result: Performance degradation, high costs
+Best Practice: Use labels for dimensions you want to filter by, not for unique values like user IDs or request IDs. Put those in the log content instead.
+
+#Welcome to Lab : Centralized Logging with Grafana Loki
+📚 What You'll Learn
+In this hands-on lab, you'll deploy a complete centralized logging infrastructure using Grafana Loki and Grafana Alloy. You'll learn how Loki's innovative label-based indexing makes it 10x more cost-effective than traditional logging systems like Elasticsearch.
+
+By the end of this lab, you'll have logs flowing from Docker containers into Loki, ready to be queried through Grafana's powerful interface.
+
+🎯 Lab Structure
+Task 1: Understanding Log-Based Observability (15 min)
+Task 2: Deploy Loki Stack with Docker Compose (20 min)
+Task 3: Configure Alloy for Log Collection (25 min)
+Task 4: Deploy Sample Application (15 min)
+
+#Task 2: Deploy Loki Stack with Docker Compose
+🎯 Objective
+Deploy Grafana Loki, Grafana Alloy, and Grafana using Docker Compose.
+
+📝 Step 1: Verify Pre-Configured Files
+Your lab environment has been pre-configured with all necessary files. Let's verify they exist:
+
+ls -la /root/
+You should see directories: loki/, alloy/, sample-app/, grafana/
+
+🚀 Step 2: Review Docker Compose Configuration
+The docker-compose.yml file is located at /root/docker-compose.yml. Review it:
+
+cat /root/docker-compose.yml
+This file defines 4 services: loki, alloy, grafana, and sample-app
+
+🎬 Step 3: Deploy the Stack
+Start all services with Docker Compose:
+
+cd /root && docker compose up -d
+The -d flag runs containers in detached mode (background).
+
+✅ Step 4: Verify Services Are Running
+Check that all containers started successfully:
+
+docker compose ps
+All services should show status: Up
+
+Test Loki's API endpoint:
+
+curl http://localhost:3100/ready
+💡 Troubleshooting: If services fail to start, check logs with docker compose logs loki
+
+#~ ➜  cat docker-compose.yml 
+services:
+  loki:
+    image: grafana/loki:3.0.0
+    container_name: loki
+    user: "0"
+    ports:
+      - "3100:3100"
+    volumes:
+      - ./loki/config.yml:/etc/loki/config.yml
+      - loki-data:/tmp/loki
+    command: -config.file=/etc/loki/config.yml
+    networks:
+      - aiops-logging
+    restart: unless-stopped
+
+  alloy:
+    image: grafana/alloy:latest
+    container_name: alloy
+    ports:
+      - "12345:12345"
+    volumes:
+      - ./alloy/config.alloy:/etc/alloy/config.alloy
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    command: run --server.http.listen-addr=0.0.0.0:12345 /etc/alloy/config.alloy
+    depends_on:
+      - loki
+    networks:
+      - aiops-logging
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_SERVER_ROOT_URL=http://localhost:3000
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Viewer
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning
+    networks:
+      - aiops-logging
+    restart: unless-stopped
+    depends_on:
+      - loki
+
+  sample-app:
+    build: ./sample-app
+    container_name: sample-app
+    ports:
+      - "5000:5000"
+    networks:
+      - aiops-logging
+    restart: unless-stopped
+    labels:
+      logging: "enabled"
+      app: "sample-flask"
+
+volumes:
+  loki-data:
+  grafana-data:
+
+networks:
+  aiops-logging:
+    driver: bridge
+
+#cat config.alloy      
+// Discover Docker containers
+discovery.docker "containers" {
+        host = "unix:///var/run/docker.sock"
+}
+
+// Relabel to extract container name properly
+discovery.relabel "docker_containers" {
+        targets = discovery.docker.containers.targets
+
+        rule {
+                source_labels = ["__meta_docker_container_name"]
+                target_label  = "container_name"
+                regex         = "/(.*)"
+                replacement   = "$1"
+        }
+
+        rule {
+                source_labels = ["__meta_docker_container_label_app"]
+                target_label  = "app"
+        }
+}
+
+// Collect logs from discovered containers
+loki.source.docker "docker_logs" {
+        host       = "unix:///var/run/docker.sock"
+        targets    = discovery.relabel.docker_containers.output
+        forward_to = [loki.process.add_labels.receiver]
+}
+
+// Process logs: extract and add labels
+loki.process "add_labels" {
+        // Add static labels
+        stage.static_labels {
+                values = {
+                        source = "docker",
+                }
+        }
+
+        // Parse JSON logs and extract fields (optional, only works for JSON formatted logs)
+        stage.match {
+                selector = "{source=\"docker\"}"
+                stage.json {
+                        expressions = {
+                                level     = "level",
+                                message   = "message",
+                                app       = "app",
+                                timestamp = "timestamp",
+                        }
+                }
+
+                // Set extracted log level as a label
+                stage.labels {
+                        values = {
+                                extracted_level = "level",
+                        }
+                }
+        }
+
+        forward_to = [loki.write.local_loki.receiver]
+}
+
+// Write logs to Loki
+loki.write "local_loki" {
+        endpoint {
+                url = "http://loki:3100/loki/api/v1/push"
+        }
+}
+
+#cat loki-datasource.yml 
+apiVersion: 1
+
+datasources:
+  - name: Loki
+    type: loki
+    access: proxy
+    url: http://loki:3100
+    isDefault: true
+    version: 1
+    editable: true
+    jsonData:
+      maxLines: 1000
+      derivedFields:
+        - datasourceUid: loki
+          matcherRegex: "trace_id=(\\w+)"
+          name: "trace_id"
+          url: "$${__value.raw}"
+#loki config:cat config.yml         
+auth_enabled: false
+
+server:
+  http_listen_port: 3100
+  grpc_listen_port: 9096
+
+common:
+  instance_addr: 127.0.0.1
+  path_prefix: /tmp/loki
+  storage:
+    filesystem:
+      chunks_directory: /tmp/loki/chunks
+      rules_directory: /tmp/loki/rules
+  replication_factor: 1
+  ring:
+    kvstore:
+      store: inmemory
+
+query_range:
+  results_cache:
+    cache:
+      embedded_cache:
+        enabled: true
+        max_size_mb: 100
+
+schema_config:
+  configs:
+    - from: 2020-10-24
+      store: tsdb
+      object_store: filesystem
+      schema: v13
+      index:
+        prefix: index_
+        period: 24h
+
+ruler:
+  alertmanager_url: http://localhost:9093
+
+# Apply limits to prevent resource exhaustion
+limits_config:
+  reject_old_samples: true
+  reject_old_samples_max_age: 168h
+  max_cache_freshness_per_query: 10m
+  split_queries_by_interval: 15m
+  ingestion_rate_mb: 50
+  ingestion_burst_size_mb: 100
+  per_stream_rate_limit: 50MB
+  per_stream_rate_limit_burst: 100MB
+  cardinality_limit: 100000
+
+#sample-app
+#cat Dockerfile        
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# Install dependencies
+RUN pip install --no-cache-dir flask python-json-logger
+
+# Copy application code
+COPY app.py /app/
+
+# Expose port
+EXPOSE 5000
+
+# Set environment variables
+ENV FLASK_APP=app.py
+ENV PYTHONUNBUFFERED=1
+
+# Run application
+CMD ["python", "app.py"]
+
+# cat app.py    
+import logging
+import json
+import time
+import random
+from datetime import datetime
+from flask import Flask, jsonify
+from pythonjsonlogger import jsonlogger
+
+app = Flask(__name__)
+
+# Configure JSON logging
+class CustomJsonFormatter(jsonlogger.JsonFormatter):
+    def add_fields(self, log_record, record, message_dict):
+        super(CustomJsonFormatter, self).add_fields(log_record, record, message_dict)
+        log_record['timestamp'] = datetime.utcnow().isoformat()
+        log_record['level'] = record.levelname
+        log_record['logger'] = record.name
+        log_record['app'] = 'sample-flask-app'
+
+logger = logging.getLogger()
+logHandler = logging.StreamHandler()
+formatter = CustomJsonFormatter('%(timestamp)s %(level)s %(name)s %(message)s')
+logHandler.setFormatter(formatter)
+logger.addHandler(logHandler)
+logger.setLevel(logging.INFO)
+
+# Simulate various log levels
+LOG_MESSAGES = {
+    'INFO': [
+        'User logged in successfully',
+        'API request processed',
+        'Cache hit for key: session_{}',
+        'Database query completed in {}ms',
+        'Request routed to backend service',
+        'Authentication token validated',
+    ],
+    'WARNING': [
+        'API rate limit approaching for user_id: {}',
+        'Database connection pool at 80% capacity',
+        'Slow query detected: {}ms',
+        'Memory usage above 75% threshold',
+        'Retry attempt {} for failed operation',
+    ],
+    'ERROR': [
+        'Failed to connect to database: connection timeout',
+        'API authentication failed for token: invalid_token_{}',
+        'Unexpected error in payment processing: {}',
+        'Service dependency unavailable: external-api',
+        'Data validation failed for request',
+        'Failed to write to cache: Redis connection error',
+    ]
+}
+
+@app.route('/')
+def index():
+    logger.info('Homepage accessed')
+    return jsonify({'status': 'healthy', 'app': 'sample-flask-app', 'version': '1.0'})
+
+@app.route('/generate-logs')
+def generate_logs():
+    """Generate a variety of log messages"""
+    count = 0
+
+    # Generate INFO logs (70%)
+    for _ in range(7):
+        msg = random.choice(LOG_MESSAGES['INFO'])
+        if '{}' in msg:
+            msg = msg.format(random.randint(1, 1000))
+        logger.info(msg, extra={'request_id': f'req-{random.randint(1000, 9999)}'})
+        count += 1
+
+    # Generate WARNING logs (20%)
+    for _ in range(2):
+        msg = random.choice(LOG_MESSAGES['WARNING'])
+        if '{}' in msg:
+            msg = msg.format(random.randint(100, 500))
+        logger.warning(msg, extra={'request_id': f'req-{random.randint(1000, 9999)}'})
+        count += 1
+
+    # Generate ERROR logs (10%)
+    for _ in range(1):
+        msg = random.choice(LOG_MESSAGES['ERROR'])
+        if '{}' in msg:
+            msg = msg.format(random.randint(1, 100))
+        logger.error(msg, extra={'request_id': f'req-{random.randint(1000, 9999)}'})
+        count += 1
+
+    return jsonify({
+        'status': 'success',
+        'logs_generated': count,
+        'message': 'Check Loki for generated logs'
+    })
+
+@app.route('/health')
+def health():
+    logger.debug('Health check endpoint called')
+    return jsonify({'status': 'UP', 'timestamp': datetime.utcnow().isoformat()})
+
+@app.route('/simulate-error')
+def simulate_error():
+    logger.error('Simulated error occurred', extra={
+        'error_code': 'SIM_ERROR_500',
+        'user_action': 'checkout',
+        'trace_id': f'trace-{random.randint(10000, 99999)}',
+        'request_id': f'req-{random.randint(1000, 9999)}'
+    })
+    return jsonify({'error': 'Simulated error', 'code': 'SIM_ERROR_500'}), 500
+
+@app.route('/simulate-warning')
+def simulate_warning():
+    logger.warning('Performance degradation detected', extra={
+        'response_time_ms': random.randint(1000, 5000),
+        'threshold_ms': 1000,
+        'service': 'database',
+        'request_id': f'req-{random.randint(1000, 9999)}'
+    })
+    return jsonify({'warning': 'Performance degradation detected', 'check_logs': True})
+
+if __name__ == '__main__':
+    logger.info('Sample Flask application starting...', extra={
+        'port': 5000,
+        'environment': 'lab',
+        'log_format': 'json'
+    })
+    app.run(host='0.0.0.0', port=5000, debug=False)
+
+#ask 3: Configure Grafana Alloy for Log Collection
+🎯 Objective
+Verify Alloy is collecting logs from Docker containers and forwarding them to Loki.
+
+📖 Understanding Alloy
+Grafana Alloy is the next-generation telemetry collector that replaces Promtail. It:
+
+Automatically discovers Docker containers
+Collects logs from container stdout/stderr
+Extracts labels from log content (e.g., log level)
+Forwards logs to Loki
+📝 Step 1: Review Alloy Configuration
+The Alloy configuration is at /root/alloy/config.alloy. Review it:
+
+cat /root/alloy/config.alloy
+Key components: discovery.docker, loki.source.docker, loki.process, loki.write
+
+✅ Step 2: Verify that Alloy is Collecting Logs
+Check Alloy logs to see if it's discovering containers:
+
+docker compose logs alloy --tail=30
+Wait 30 seconds for logs to be ingested, then query Loki for available labels:
+
+sleep 30 && curl -s http://localhost:3100/loki/api/v1/labels | jq
+You should see labels such as container_name, source, extracted_level
+
+🔍 Step 3: Query Logs via API
+Test querying logs for a specific container:
+
+curl -G -s "http://localhost:3100/loki/api/v1/query_range" \
+  --data-urlencode 'query={container_name="loki"}' \
+  --data-urlencode 'limit=5' | jq '.data.result'
+🎯 Success Criteria: If you see labels returned from Loki's API and can query logs, Alloy is working correctly!
+
+#Task 4: Deploy Sample Application
+🎯 Objective
+Deploy a sample Python Flask application that generates structured JSON logs and verify they appear in Loki.
+
+📖 About Structured Logging
+Structured logging outputs logs in a consistent format (like JSON) instead of unstructured text. Benefits:
+
+Easy to parse and extract fields programmatically
+Consistent format across all services
+Enables advanced filtering and aggregation
+Machine-readable for automated analysis
+🚀 Step 1: Build and Start Sample App
+The sample-app is already defined in docker-compose.yml. Build and start it:
+
+docker compose build sample-app && docker compose up -d sample-app
+Verify the app is running:
+
+docker compose ps sample-app && curl http://localhost:5000/
+📊 Step 2: Generate Logs
+The sample app has an endpoint that generates various log levels. Call it multiple times:
+
+
+for i in {1..5}; do
+  curl -s http://localhost:5000/generate-logs
+  sleep 2
+done
+  
+This generates INFO, WARNING, and ERROR logs in JSON format.
+
+🔍 Step 3: Query Sample App Logs
+Wait for logs to be ingested, then query Loki for sample-app logs:
+
+sleep 15 && curl -G -s 'http://localhost:3100/loki/api/v1/query_range' \
+  --data-urlencode 'query={container_name="sample-app"}' \
+  --data-urlencode 'limit=10' | jq '.data.result'
+You should see JSON-formatted logs with fields like timestamp, level, message.
+
+🎨 Step 4: Explore Logs in Grafana
+Open Grafana in your browser and explore the logs visually:
+
+Navigate to Explore (compass icon in left sidebar)
+Select Loki as the datasource
+Enter query: {container_name="sample-app"}
+Click Run Query
+Try filtering by level: {container_name="sample-app", extracted_level="ERROR"}
+🎉 Congratulations! You've successfully set up centralized logging with Loki and can now query logs from your applications!
+
+
+Note: Access the Grafana dashboard by navigating to port 3000 in the terminal. Click on sign in and use the username and password admin && admin . Change password if prompted.
+
+#Querying Logs LogQL
+🐳 Task : Deploy Loki Stack with Docker Compose
+🎯 Objective
+Deploy Grafana Loki, Grafana Alloy, and Grafana using Docker Compose.
+
+📝 Step 1: Verify Pre-Configured Files
+Your lab environment has been pre-configured with all necessary files. Let's verify they exist:
+
+ls -la /root/
+You should see directories such as: loki/, alloy/, sample-app/, grafana/
+
+🚀 Step 2: Review Docker Compose Configuration
+The docker-compose.yml file is located at /root/docker-compose.yml. Review it:
+
+cat /root/docker-compose.yml
+This file defines 4 services: loki, alloy, grafana, and sample-app
+
+🎬 Step 3: Deploy the Stack
+Start all services with Docker Compose:
+
+cd /root && docker compose up -d
+The -d flag runs containers in detached mode (background).
+
+✅ Step 4: Verify That Services Are Running
+Check that all containers started successfully:
+
+docker compose ps
+All services should show status: Up
+
+Test Loki's API endpoint:
+
+curl http://localhost:3100/ready 
+ready 
+You should get ready status.It will take some time.
+💡 Troubleshooting: If services fail to start, check logs with docker compose logs loki
+
+Note: Click on Grafana on top of terminal. Use Username and Password as admin && admin
+
+#🚀 Task : Basic Stream Selectors
+🎯 Objective
+Master label-based stream selection to filter logs efficiently before analyzing content.
+
+📖 Understanding Stream Selectors
+LogQL queries start with label selectors in curly braces:
+
+{container_name="sample-app"}
+Label Operators:
+
+= - Exact match
+!= - Not equal
+=~ - Regex match
+!~ - Regex not match
+🔧 Step 1: Generate Sample Logs
+First, generate diverse logs from the sample app:
+
+
+for i in {1..5}; do
+  curl -s http://localhost:5000/generate-logs
+  sleep 2
+done
+This generates INFO, WARNING, and ERROR logs with various patterns.
+
+🔍 Step 2: Query All Sample App Logs
+In Grafana Explore, try this basic query:
+
+{container_name="sample-app"}
+Or via API:
+
+curl -G -s 'http://localhost:3100/loki/api/v1/query_range' --data-urlencode 'query={container_name="sample-app"}' --data-urlencode 'limit=10' | jq '.data.result'
+⚡ Step 3: Filter by Log Level
+Try these queries in Grafana Explore:
+
+Only ERROR logs:
+
+{container_name="sample-app", extracted_level="ERROR"}
+WARNING and ERROR logs (regex):
+
+{container_name="sample-app", extracted_level=~"WARNING|ERROR"}
+Exclude INFO logs:
+
+{container_name="sample-app", extracted_level!="INFO"}
+✅ Success Criteria: You should see different log volumes when filtering by level. ERROR logs should be much fewer than INFO logs.
+
+
+Please ensure that you click on Grafana at the top of the terminal. When prompted for credentials, use the Username and Password as admin and admin, respectively.
+
+#Task : Content Filtering & Text Search
+🎯 Objective
+Learn to search log content using text filters and regex patterns.
+
+📖 Line Filter Operators
+After selecting streams with labels, filter content with these operators:
+
+|= - Contains text
+!= - Does not contain
+|~ - Regex match
+!~ - Regex not match
+💻 Practice Queries
+Find database-related logs:
+
+{container_name="sample-app"} |= "database"
+Find payment or order logs:
+
+{container_name="sample-app"} |~ "payment|order"
+Exclude health check logs:
+
+{container_name="sample-app"} != "health"
+Chain filters (database errors only):
+
+{container_name="sample-app"} |= "database" |~ "error|failed|timeout"
+💡 Challenge: Try to find all logs containing "timeout" OR "failed" using regex. Then exclude any that contain "retry".
+
+Please ensure that you click on Grafana at the top of the terminal. When prompted for credentials, use the Username and Password as admin and admin, respectively.
+
+#📊 Task 4: Deriving Metrics from Logs
+🎯 Objective
+Transform logs into metrics using aggregation functions.
+
+📖 Metric Functions
+LogQL can derive metrics from log data:
+
+count_over_time() - Count log lines
+rate() - Calculate per-second rate
+avg_over_time() - Average numeric values
+sum_over_time() - Sum values
+quantile_over_time() - Calculate percentiles
+💻 Example Queries
+Count errors in last 5 minutes:
+
+count_over_time({extracted_level="ERROR"}[5m])
+Error rate (errors per second):
+
+sum(rate({extracted_level="ERROR"}[1m]))
+Average response time:
+
+avg_over_time({container_name="sample-app"} | json | unwrap response_time_ms [5m])
+95th percentile response time:
+
+quantile_over_time(0.95, {container_name="sample-app"} | json | unwrap response_time_ms [5m])
+Error rate by container:
+
+sum by(container_name) (rate({extracted_level="ERROR"}[1m]))
+💡 Try It: Create a query to calculate the percentage of 5xx errors out of total requests in the last 5 minutes.
+ sum(rate({container_name="sample-app"} |= " 5" [5m]))
+#Correlating Metrics and Logs
+🐳 Task : Deploy Loki Stack with Docker Compose
+🎯 Objective
+Deploy Grafana Loki, Grafana Alloy, and Grafana using Docker Compose.
+
+📝 Step 1: Verify Pre-Configured Files
+Your lab environment has been pre-configured with all necessary files. Let's verify they exist:
+
+ls -la /root/
+You should see directories such as loki/, alloy/, sample-app/, grafana/
+
+🚀 Step 2: Review Docker Compose Configuration
+The docker-compose.yml file is located at /root/docker-compose.yml. Review it:
+
+cat /root/docker-compose.yml
+This file defines 4 services: loki, alloy, grafana, and sample-app
+
+🎬 Step 3: Deploy the Stack
+Start all services with Docker Compose:
+
+cd /root && docker compose up -d
+The -d flag runs containers in detached mode (background).
+
+✅ Step 4: Verify That Services Are Running
+Check that all containers started successfully:
+
+docker compose ps
+All services should show status: Up
+
+Test Loki's API endpoint:
+
+curl http://localhost:3100/ready
+💡 Troubleshooting: If services fail to start, check logs with docker compose logs loki
+
+#🔍 Task 1: Understanding Correlation Workflows
+🎯 Objective
+Understand why correlation is critical and learn the workflow for investigating incidents using unified observability.
+
+📖 Real-World Incident Scenario
+The Problem:
+
+At 3:15 PM, your monitoring dashboard shows a sudden spike in HTTP 500 errors for the payment service. The error rate jumped from 0% to 15%. Users are complaining that payments are failing.
+
+Traditional Approach (30-45 minutes):
+
+Notice the spike in the dashboard
+Manually open the Grafana Explore view
+Guess which logs to search (payment service?)
+Try to remember the exact time of the spike
+Manually adjust the time range
+Try different LogQL queries to find errors
+Eventually find the root cause after 30+ minutes
+Unified Observability Approach (< 3 minutes):
+
+Click on the metric spike
+Automatically navigate to Explore with pre-filled LogQL query for payment service
+Time range automatically set to spike moment
+Immediately see ERROR logs: "Database connection pool exhausted"
+Root cause identified in under 3 minutes!
+💡 Key Insight: Correlation eliminates manual steps and guesswork, enabling you to go from "what's wrong" to "why it's wrong" in seconds.
+
+#🏷️ Task 2: Establish Consistent Labeling
+🎯 Objective
+Review and verify that your metrics and logs share consistent labels for correlation.
+
+📋 Step 1: Review Prometheus Labels
+First, check what labels are available in your Prometheus metrics:
+
+curl -s http://localhost:9090/api/v1/labels | jq '.data'
+Common labels you should see: job, instance, container
+
+📋 Step 2: Review Loki Labels
+Check what labels are available in your Loki logs:
+
+curl -s http://localhost:3100/loki/api/v1/labels | jq '.data'
+Common labels you should see: container_name, source, extracted_level
+
+✅ Step 3: Verify Label Overlap
+Check if there are common labels between Prometheus and Loki. The container_name label should exist in both.
+
+Query Prometheus for container metrics:
+
+curl -s 'http://localhost:9090/api/v1/query?query=up' | jq '.data.result[].metric'
+Query Loki for container names:
+
+curl -s 'http://localhost:3100/loki/api/v1/label/container_name/values' | jq '.data'
+🎯 Success Criteria: You should see overlapping container identifiers in both systems. This is what enables correlation!
+
+#Task 3: Configure Data Links
+🎯 Objective
+Create data links that allow you to click on a metric in a dashboard and automatically navigate to the relevant logs in Grafana Explore.
+
+📖 Understanding Data Links
+Data links in Grafana allow you to create clickable links from dashboard panels. They can:
+
+Use variables from the metric labels (like ${__field.labels.container})
+Use time range variables (like ${__from} and ${__to})
+Open Grafana Explore with a pre-filled LogQL query
+Automatically set the correct time range
+🛠️ Step 1: Access Grafana
+Open Grafana in your browser (the URL will be provided in your lab environment). Log in with:
+
+Username: admin
+Password: admin
+🎨 Step 2: Create or Open a Dashboard
+Create a new dashboard with name `metric dashboard` that displays Prometheus metrics. Add a panel that shows a metric like:
+
+rate(http_requests_total[5m])
+Or any other metric from your sample application.
+
+🔗 Step 3: Add Data Link
+Edit the panel and navigate to the Panel options > Data links section. Add a new data link with:
+
+Title: View Logs
+
+URL:
+
+/explore?left={"datasource":"Loki","queries":[{"expr":"{container_name=\"sample-app\"}"}],"range":{"from":"${__from}","to":"${__to}"}}
+This creates a link that:
+
+Opens Grafana Explore
+Selects Loki as the data source
+Pre-fills a LogQL query for the sample-app container
+Sets the time range to match your dashboard
+✅ Step 4: Test the Data Link
+Save the panel and return to the dashboard view. Hover over a data point in your graph and you should see a "View Logs" link appear. Click it to verify that it opens Explore with the correct query and time range.
+
+💡 Advanced: You can use ${__field.labels.container_name} to dynamically use the container label from the clicked metric, making the link work for multiple services automatically!
+
+#Task 4: Build Split-View Dashboards
+🎯 Objective
+Create a unified dashboard that displays metrics and logs side-by-side with synchronized time ranges.
+
+🎨 Step 1: Create New Dashboard
+In Grafana, create a new dashboard titled "Unified Observability - Metrics & Logs."
+
+📈 Step 2: Add Metrics Panel
+Add a panel at the top to display key metrics. Example queries include:
+
+HTTP Request Rate: rate(http_requests_total[5m])
+HTTP Error Rate: rate(http_errors_total[5m])
+Total Requests: sum(http_requests_total) by (status)
+Total Errors: sum(http_errors_total)
+📝 Step 3: Add Logs Panel
+Below the metrics panel, add a new panel:
+
+Select Loki as the data source.
+Use visualization type: Logs.
+Enter a LogQL query: {container_name="sample-app"} | json.
+This panel will show logs from the same service as your metrics.
+⏱️ Step 4: Configure Time Sync
+Both panels will automatically utilize the dashboard's time range picker. When you adjust the time range at the top of the dashboard, both metrics and logs will update to reflect data for that specific period.
+
+#🚨 Task 5: Real-World Incident Investigation
+🎯 Objective
+Apply your correlation skills to investigate a simulated production incident from metric spike to root cause.
+
+🚨 Incident Scenario
+Alert Received:
+
+"HIGH ERROR RATE: sample-app service showing 15% error rate (threshold: 5%)"
+
+Your Mission:
+
+Use your unified observability dashboard to identify the root cause in under 3 minutes.
+
+🔍 Investigation Steps
+Step 1: Generate Sample Incident
+
+curl http://localhost:5000/simulate-incident
+This endpoint generates a burst of errors to simulate a real incident.
+
+Step 2: Identify the Spike
+
+Open your unified dashboard
+Observe the error rate metric spike
+Note the exact time of the spike
+Step 3: Correlate to Logs
+
+Click on the spike or use your data link
+Navigate to the logs for that exact time period
+Filter for ERROR level logs
+Step 4: Analyze Error Messages
+
+Use LogQL to parse and filter: {container_name="sample-app", extracted_level="ERROR"} | json
+Look for common error patterns
+Identify the root cause message
+Step 5: Verify Context
+
+Click on an error log line
+Use "Show Context" to see surrounding logs
+Understand what happened before and after the error
+💡 Common Root Causes to Look for:
+
+"Database connection pool exhausted"
+"Timeout connecting to external API"
+"Out of memory error"
+"Failed to acquire lock"
+"Disk full"
+✅ Mission Complete! If you identified the root cause in under 3 minutes, you've successfully demonstrated 10x faster incident diagnosis through unified observability!
+
+#Intelligent Alerting Alertmanager
+
+Task 2: Create Prometheus Alert Rules
+🎯 Objective
+Create the alert_rules.yml file with exactly 4 alert rules that monitor error rate, latency, service uptime, and memory usage.
+
+📝 Instructions
+In the file /root/assets/prometheus/alert_rules.yml, create a new alert group named application_alerts with an interval of 30s. Add the following 4 alerts with the exact expressions, thresholds, durations, labels, and annotations specified below:
+
+1. HighErrorRate
+
+Expression: rate(http_errors_total[5m]) > 0.05
+Duration: 1m
+Labels: severity=critical, team=backend, service=sample-app
+Annotations:
+summary: “High error rate detected on {{ $labels.instance }}”
+description: “Error rate is {{ $value | humanize }} errors/sec on {{ $labels.instance }}. Check application logs immediately.”
+runbook_url: “https://runbooks.example.com/high-error-rate”
+2. HighRequestLatency
+
+Expression: histogram_quantile(0.95,  rate(http_request_duration_seconds_bucket[5m])) > 0.5
+Duration: 2m
+Labels: severity=warning, team=backend, service=sample-app
+Annotations:
+summary: “High request latency on {{ $labels.instance }}”
+description: “95th percentile latency is {{ $value | humanize }}s on {{ $labels.instance }}. Performance degradation detected.”
+runbook_url: “https://runbooks.example.com/high-latency”
+3. ServiceDown
+
+Expression: up{job="sample-app"} == 0
+Duration: 30s
+Labels: severity=critical, team=platform, service=sample-app
+Annotations:
+summary: “Service {{ $labels.job }} is down”
+description: “Instance {{ $labels.instance }} has been down for more than 30 seconds. Immediate action required.”
+runbook_url: “https://runbooks.example.com/service-down”
+4. HighMemoryUsage
+
+Expression: (node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes) / node_memory_MemTotal_bytes * 100 > 80
+Duration: 2m
+Labels: severity=warning, team=platform, service=infrastructure
+Annotations:
+summary: “High memory usage on {{ $labels.instance }}”
+description: “Memory usage is {{ $value | humanize }}% on {{ $labels.instance }}. Consider scaling or investigating memory leaks.”
+runbook_url: “https://runbooks.example.com/high-memory”
+Ensure your YAML structure is valid, the indentation is correct, and all values are utilized exactly as specified.
+
+
+Note: Please review the description carefully to gain a thorough understanding of the alert_rules.yaml file. Based on your insights, proceed to construct a new file.
+
+Ans:
+Perfect — below is the **exact correctly structured YAML file** with:
+
+* ✅ One group: `application_alerts`
+* ✅ `interval: 30s`
+* ✅ Exactly 4 alerts
+* ✅ Exact expressions
+* ✅ Exact durations
+* ✅ Exact labels
+* ✅ Exact annotations (including templating and URLs)
+* ✅ Proper indentation
+* ✅ Valid Prometheus syntax
+
+---
+
+# 📄 `/root/assets/prometheus/alert_rules.yml`
+
+```yaml
+groups:
+  - name: application_alerts
+    interval: 30s
+    rules:
+
+      - alert: HighErrorRate
+        expr: rate(http_errors_total[5m]) > 0.05
+        for: 1m
+        labels:
+          severity: critical
+          team: backend
+          service: sample-app
+        annotations:
+          summary: "High error rate detected on {{ $labels.instance }}"
+          description: "Error rate is {{ $value | humanize }} errors/sec on {{ $labels.instance }}. Check application logs immediately."
+          runbook_url: "https://runbooks.example.com/high-error-rate"
+
+      - alert: HighRequestLatency
+        expr: histogram_quantile(0.95,  rate(http_request_duration_seconds_bucket[5m])) > 0.5
+        for: 2m
+        labels:
+          severity: warning
+          team: backend
+          service: sample-app
+        annotations:
+          summary: "High request latency on {{ $labels.instance }}"
+          description: "95th percentile latency is {{ $value | humanize }}s on {{ $labels.instance }}. Performance degradation detected."
+          runbook_url: "https://runbooks.example.com/high-latency"
+
+      - alert: ServiceDown
+        expr: up{job="sample-app"} == 0
+        for: 30s
+        labels:
+          severity: critical
+          team: platform
+          service: sample-app
+        annotations:
+          summary: "Service {{ $labels.job }} is down"
+          description: "Instance {{ $labels.instance }} has been down for more than 30 seconds. Immediate action required."
+          runbook_url: "https://runbooks.example.com/service-down"
+
+      - alert: HighMemoryUsage
+        expr: (node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes) / node_memory_MemTotal_bytes * 100 > 80
+        for: 2m
+        labels:
+          severity: warning
+          team: platform
+          service: infrastructure
+        annotations:
+          summary: "High memory usage on {{ $labels.instance }}"
+          description: "Memory usage is {{ $value | humanize }}% on {{ $labels.instance }}. Consider scaling or investigating memory leaks."
+          runbook_url: "https://runbooks.example.com/high-memory"
+```
+
+---
+
+# ✅ After Creating the File
+
+Run:
+
+```bash
+promtool check rules /root/assets/prometheus/alert_rules.yml
+```Not installaed promtool
+cd /tmp
+
+# Download the correct release archive
+wget https://github.com/prometheus/prometheus/releases/download/v3.9.1/prometheus-3.9.1.linux-amd64.tar.gz
+
+# Extract it
+tar -xzf prometheus-3.9.1.linux-amd64.tar.gz
+
+# Go into the extracted directory
+cd prometheus-3.9.1.linux-amd64
+
+# Copy promtool so it’s in your PATH
+sudo cp promtool /usr/local/bin/
+
+
+It should return:
+
+```
+SUCCESS: 4 rules found
+```
+
+Then reload Prometheus (depending on setup):
+
+```bash
+systemctl restart prometheus
+```
+
+OR
+
+```bash
+curl -X POST http://localhost:9090/-/reload
+```
+
+#Task 3: Configure Alertmanager Routing and Receivers
+🎯 Objective
+Create an alertmanager.yml configuration that intelligently routes, groups, and suppresses alerts received from Prometheus.
+
+📝 Instructions
+Update the /root/assets/alertmanager/alertmanager.yml file with the following configuration goals:
+
+🌐 Global Section: Set resolve_timeout to 5m to automatically resolve inactive alerts after 5 minutes.
+🧩 Root Route:
+Default receiver: default-receiver
+Group alerts by alertname, severity, and service
+Use group_wait: 10s, group_interval: 30s, and repeat_interval: 12h
+🚦 Sub-Routes:
+Critical alerts → Send to critical-receiver with group_wait: 5s and repeat_interval: 5m
+Warning alerts → Send to warning-receiver with group_wait: 30s and repeat_interval: 30m
+🚫 Inhibition Rules:
+If ServiceDown alert is active, silence HighErrorRate and HighRequestLatency alerts for the same service.
+If a critical alert exists, suppress all warning alerts for that service.
+📬 Receivers:
+default-receiver → http://sample-app:5000/webhook/default
+critical-receiver → http://sample-app:5000/webhook/critical
+warning-receiver → http://sample-app:5000/webhook/warning
+Ensure each receiver has send_resolved: true enabled so resolution notifications are delivered.
+
+💡 Tip: Test routing using Prometheus’s amtool or by manually triggering alerts from the alert_rules.yml file you created earlier.

@@ -1,0 +1,776 @@
+#The Challenge of Microservices & The Rise of Distributed Tracing
+The Challenge of Microservices and the Rise of Distributed Tracing
+Welcome to the first lab of this completely hands-on course, Learn by Doing - Distributed Tracing & Root Cause Analysis!
+In this module, we explore why modern microservice architectures break traditional monitoring approaches - and how distributed tracing restores the missing context needed for effective troubleshooting.
+
+🐳 Navigating the Lab Environment
+Before we begin, let's take a quick tour of the lab environment:
+
+Overview Tab: You are here! This is your starting point, with detailed information on the lab's topic. Make sure to review it thoroughly before moving on to the tasks.
+
+Tasks Tab: When you're ready to put your knowledge to the test, switch to the Tasks tab. You'll find a mix of multiple-choice questions and hands-on tasks that will challenge the effectiveness of the prompts you craft.
+
+Toggle Panel Size: Need to access the Terminal? Just click the Toggle Panel Size button at the top (next to the timer).
+
+⚠️ Why Microservices Break Traditional Monitoring?
+Modern systems are no longer single applications running on a single server. With microservices:
+
+A single user request may travel through dozens of services
+Each service may call databases, caches, third-party APIs, and message queues
+Failures propagate across multiple components
+Latency may be introduced anywhere along the call chain
+The Problem with Logs and Metrics Alone
+Logs and metrics are essential, but insufficient in distributed environments:
+
+Logs lack request context when a call jumps between services
+Metrics show symptoms, not causes
+Correlation is difficult because each service logs independently
+No visibility into the full request path, only fragments
+When something breaks in a microservice architecture, you're often left asking:
+
+"How did the service actually propagate?"
+"Which service was slow?"
+"What was the origin of the failure?"
+
+This loss of context is the core challenge that distributed tracing solves.
+
+🚀 Introducing Distributed Tracing
+Distributed tracing restores the missing visibility by providing:
+
+End-to-end tracking of a request
+Causality: which operation triggered which one
+Service-to-service relationships
+Timing details at each step
+Key Concepts
+Trace
+A trace represents the entire end-to-end journey of a single request across multiple services.
+
+Example:
+A user clicks "Place Order", triggering calls across authentication, inventory, payment, shipping, and notification services.
+
+Span
+A span is a single unit of work within that journey - such as:
+
+Receiving an API request
+Executing a database query
+Calling an external service
+Publishing a message to a queue
+A trace is composed of multiple spans.
+
+Spans form a hierarchical structure:
+
+A parent span starts an action
+Child spans represent work triggered by that action
+This structure re-establishes cause-and-effect relationships across the entire request flow.
+
+Why This Matters
+With distributed tracing, teams can quickly identify:
+
+Where latency originated
+Which service caused the issue
+What sequence of events led to a failure
+🌟 OpenTelemetry: The Industry Standard
+To solve the fragmentation across languages, frameworks, and vendors, the industry has rallied around OpenTelemetry - a unified, vendor-neutral observability framework.
+
+OpenTelemetry provides:
+
+APIs to generate traces, metrics, and logs
+SDKs for all major programming languages
+The OpenTelemetry Collector for processing and exporting telemetry
+Compatibility with backends like Jaeger, Grafana Tempo, Zipkin, and Datadog
+In this course, you'll use OpenTelemetry to instrument real services and capture the telemetry needed to perform meaningful analysis.
+
+📌 Conclusion
+Microservices introduce complexity that traditional monitoring cannot handle alone. Distributed tracing provides the missing visibility by tracking requests end-to-end across all services. Combined with OpenTelemetry, it offers a powerful, standardized way to collect and analyze telemetry data at scale.
+
+👣 What's Next?
+When you're ready, head over to the Tasks tab.
+There, you'll begin hands-on activities to instrument services, generate traces, and perform root cause analysis using real telemetry data.
+
+# Installing the OpenTelemetry Collector
+Installing the OpenTelemetry Collector
+Welcome to the second module of Learn by Doing - Distributed Tracing & Root Cause Analysis!
+In this module, you'll take your first practical step into real observability tooling by installing and working with the OpenTelemetry Collector Contrib.
+
+The Collector is the backbone of modern telemetry pipelines. It can receive trace, metric, and log data from many sources, process that data, and export it to different backends. In this module, you'll install it, learn how it's structured, and run it with a simple configuration that prints all telemetry directly to your terminal.
+
+By the end of this module, you'll understand how the Collector works internally and have a fully functioning instance running in your environment.
+
+🐳 Navigating the Lab Environment
+Before we begin, let's take a quick tour of the lab environment:
+
+Overview Tab: You are here! This is your starting point, with detailed information on the lab's topic. Make sure to review it thoroughly before moving on to the tasks.
+
+Tasks Tab: When you're ready to put your knowledge to the test, switch to the Tasks tab. You'll find a mix of multiple-choice questions and hands-on tasks that will challenge the effectiveness of the prompts you craft.
+
+Toggle Panel Size: Need to access the Terminal? Just click the Toggle Panel Size button at the top (next to the timer).
+
+🏗 What Is the OpenTelemetry Collector?
+The OpenTelemetry Collector is a vendor-neutral, extensible telemetry processing service.
+It acts as the central pipeline in an observability system.
+
+The Collector:
+
+Receives telemetry data (traces, metrics, logs)
+Processes and transforms that data
+Exports it to one or more destinations
+In this module, your goal is to install the Collector Contrib distribution, which includes many additional receivers, processors, and exporters not found in the core version.
+
+🚀 Collector Core Concepts
+The Collector is built around three essential building blocks. Understanding these is key before you run it.
+
+📨 Receivers
+Receivers define how telemetry enters the Collector.
+
+Examples include:
+
+otlp receiver (for OTLP over gRPC/HTTP)
+prometheus receiver
+zipkin receiver
+In this module, we will use the OTLP receiver, which is the industry standard for OpenTelemetry data.
+
+⚙️ Processors
+Processors modify or enrich telemetry after it is received and before it is exported.
+
+Common processors include:
+
+batch: groups telemetry for efficient export
+memory_limiter: prevents overload
+attributes: adds/modifies attributes
+You'll review a configuration that includes the batch processor, one of the most common in production.
+
+⬆️ Exporters
+Exporters define where telemetry goes next.
+
+Examples:
+
+Debug exporter
+Jaeger exporter
+OTLP exporter
+Prometheus exporter
+In this module, you will use the debug exporter, which prints telemetry directly to the terminal - perfect for learning and debugging.
+
+🔌 Pipelines (The Glue)
+Receivers, processors, and exporters are connected into pipelines, typically defined as shown below:
+
+receivers -> processors -> exporters
+
+A simple traces pipeline might look like:
+
+Receive trace data using OTLP
+Batch the data
+Export it to logs
+You will inspect such a pipeline in the Collector's configuration file.
+
+📦 Installing the Collector Contrib
+Your main tasks in this module will be:
+
+Download the correct version of the OpenTelemetry Collector Contrib
+Verify the installation
+Review the included configuration
+Start the Collector in the foreground
+Watch it listen on OTLP ports (4317/4318)
+Observe log output confirming the Collector is running properly
+This will give you hands-on experience with how the Collector is installed and how it behaves at runtime.
+
+🔎 Viewing Collector Logs
+Once the Collector starts, it will output logs showing:
+
+Which receivers are active
+Which ports it is listening on
+Which pipelines are enabled
+Health/diagnostic checks
+Telemetry as it flows through the pipelines (via the debug exporter)
+These logs will be your gateway into understanding how the Collector handles telemetry internally.
+
+📌 Conclusion
+Installing and understanding the OpenTelemetry Collector Contrib is a crucial step in building any modern observability system.
+This module gives you a strong foundation by focusing solely on the Collector - its components, structure, and runtime behavior.
+
+With this knowledge, you'll be ready to send real trace data into the Collector in future modules.
+
+👣 What's Next?
+When you're ready, switch to the Tasks tab.
+You'll download the OpenTelemetry Collector Contrib, review its configuration, run it, and explore how it behaves through its logs.
+
+
+#
+Use the following link:
+https://github.com/open-telemetry/opentelemetry-collector-releases/releases/download/v0.139.0/otelcol-contrib_0.139.0_linux_amd64.deb
+
+First, navigate to /root/code:
+cd /root/code
+
+wget https://github.com/open-telemetry/opentelemetry-collector-releases/releases/download/v0.139.0/otelcol-contrib_0.139.0_linux_amd64.deb
+dpkg -x otelcol-contrib_0.139.0_linux_amd64.deb .
+
+ls /root/code/usr/bin/otelcol-contrib
+
+
+There is a template file located under /root/code named config.yaml.
+
+Complete this file with the following specs:
+
+Receiver name: otlp
+Receiver GRPC port: 4317
+Receiver HTTP port: 4318
+Processor name: batch without any sub-configurations
+Exporter name: debug
+Verbosity: detailed
+To each pipeline, add the receiver, processor, and exporter names that we have configured above.
+
+edit config.yaml 
+extensions:
+  health_check:
+  pprof:
+    endpoint: 0.0.0.0:1777
+  zpages:
+    endpoint: 0.0.0.0:55679
+
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+
+processors:
+  batch:
+
+exporters:
+  debug:
+    verbosity: detailed
+
+service:
+
+  pipelines:
+
+    traces:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [debug]
+
+    metrics:
+      receivers: [otlp] 
+      processors: [batch]
+      exporters: [debug]
+
+    logs:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [debug]
+
+  extensions: [health_check, pprof, zpages]
+
+Now that we have the collector binary and the config.yaml both ready, let's run our collector.
+
+From under the /root/code directory, run the following command:
+./usr/bin/otelcol-contrib --config config.yaml
+
+# Instrumenting Applications with OpenTelemetry
+Instrumenting Applications With OpenTelemetry
+In this module, you'll take your first hands-on steps into OpenTelemetry instrumentation.
+You will learn how to enable auto-instrumentation for Java and Python so that traces are generated without modifying any code, and observe these traces in the already-running Collector logs.
+
+By the end of this module, you'll understand how auto-instrumentation works and how to use it in practice.
+
+🐳 Navigating the Lab Environment
+Before we begin, let's take a quick tour of the lab environment:
+
+Overview Tab: You are here! This is your starting point, with detailed information on the lab's topic. Make sure to review it thoroughly before moving on to the tasks.
+
+Tasks Tab: When you're ready to put your knowledge to the test, switch to the Tasks tab. You'll find a mix of multiple-choice questions and hands-on tasks that will challenge the effectiveness of the prompts you craft.
+
+Toggle Panel Size: Need to access the Terminal? Just click the Toggle Panel Size button at the top (next to the timer).
+
+🤖 What Is Instrumentation?
+Instrumentation is how your application produces telemetry data.
+
+There are two approaches:
+
+Manual Instrumentation: You explicitly add API calls in your code to create spans and propagate context.
+Auto-Instrumentation: An agent or package automatically hooks into common frameworks, libraries, and drivers to generate spans without touching the application code.
+In this module, we focus on auto-instrumentation.
+
+☕️ Auto-Instrumenting Java Applications
+OpenTelemetry provides a Java agent for automatic instrumentation.
+
+Steps for instrumentation:
+
+Download the Java agent from https://github.com/open-telemetry/opentelemetry-java-instrumentation/releases/latest/download/opentelemetry-javaagent.jar.
+Run your service with the agent:
+java -javaagent:<path_to_agent_jar> -Dotel.service.name=<service_name> -Dotel.exporter.otlp.endpoint=<endpoint_address> -Dotel.exporter.otlp.protocol=<endpoint_protocol> -jar <target_jar_file>
+The agent then automatically instruments frameworks (HTTP servers, clients, database drivers, etc.) and sends spans to the Collector.
+
+🐍 Auto-Instrumenting Python Applications
+OpenTelemetry provides a Python instrumentation package that works with frameworks like Flask, Django, and SQL libraries.
+
+Steps for instrumentation:
+
+Install the auto-instrumentation packages:
+opentelemetry-api
+opentelemetry-sdk
+opentelemetry-instrumentation-flask
+opentelemetry-exporter-otlp
+opentelemetry-distro
+opentelemetry-instrumentation-requests
+Set environment variables:
+OTEL_PYTHON_AUTO_INSTRUMENTATION_ENABLED
+OTEL_EXPORTER_OTLP_INSECURE
+OTEL_LOG_LEVEL
+Run your application with instrumentation:
+opentelemetry-instrument --traces_exporter <exporting_protocol> --exporter_otlp_endpoint=<endpoint_address> --service_name=<service_name> python <python_code_file>
+The opentelemetry-instrument command automatically wraps supported libraries and frameworks, generating spans sent to the Collector.
+
+🔎 Observing Traces
+Once the application runs:
+
+Spans are automatically generated for HTTP requests, database calls, and other common operations
+Spans are sent via OTLP to the Collector
+You can see the traces in the Collector logs (trace IDs, span names, attributes, timestamps, and parent/child relationships)
+This lets you verify auto-instrumentation is working without modifying any application code.
+
+📌 Conclusion
+Instrumentation is how telemetry enters your system. Auto-instrumentation saves development time and provides instant observability. Java and Python apps can be instrumented with one agent/command. Traces then flow from the application -> SDK -> Collector automatically.
+
+👣 What's Next?
+When you're ready, open the Tasks tab.
+There, you'll enable auto-instrumentation for the frontend and backend, run your instrumented services, and inspect the traces they produce.
+
+#
+Launch the chequemgmt backend service with OpenTelemetry enabled by executing the Java command below, which loads the agent from the /opt/ folder and configures the following OTLP system properties:
+
+Otel Service Name: cheque-backend
+Otel Exporter OTLP Endpoint: http://localhost:4317
+Otel Exporter OTLP Protocol: grpc
+The backend target JAR file is located at /root/code/chequemgmt/backend/target/chequebackend-0.0.1-SNAPSHOT.jar.
+
+
+Note: We have already built the application backend for you.
+Navigate to the backend/target directory under /root/code/chequemgmt:
+cd /root/code/chequemgmt/backend/target
+
+Then, use the following command to run the backend Java service:
+java -javaagent:/opt/opentelemetry-javaagent.jar \
+  -Dotel.service.name=cheque-backend \
+  -Dotel.exporter.otlp.endpoint=http://localhost:4317 \
+  -Dotel.exporter.otlp.protocol=grpc \
+  -jar chequebackend-0.0.1-SNAPSHOT.jar
+
+# python
+Navigate to the /root directory and activate the virtual environment:
+
+cd ~
+source venv/bin/activate
+Then, install the instrumentation packages:
+
+pip install opentelemetry-api opentelemetry-sdk opentelemetry-instrumentation-flask opent
+
+Set the following environment variables now:
+
+export OTEL_PYTHON_AUTO_INSTRUMENTATION_ENABLED=true
+export OTEL_EXPORTER_OTLP_INSECURE=true
+export OTEL_LOG_LEVEL=debug
+export OTEL_TRACES_SAMPLER=always_on
+
+
+cd /root/code/chequemgmt/frontend/
+
+opentelemetry-instrument \
+      --traces_exporter otlp \
+      --exporter_otlp_endpoint=localhost:4317 \
+      --service_name=frontend-service \
+
+
+# Visualizing Traces with Jaeger
+Visualizing Traces with Jaeger
+In this module, you will learn how to take the spans your applications already produce and send them to Jaeger, a popular distributed tracing backend with a clean and intuitive UI.
+
+You've already instrumented your Java and Python services and confirmed that spans reach the OpenTelemetry Collector. However, reading traces from Collector logs is limited and cumbersome. Jaeger provides an easy way to view trace data visually, removing the need to dig through terminal output.
+
+By the end of this module, you'll have Jaeger running and receiving trace data from the Collector - ready to be explored in the next module.
+
+🐳 Navigating the Lab Environment
+Before we begin, let's take a quick tour of the lab environment:
+
+Overview Tab: You are here! This is your starting point, with detailed information on the lab's topic. Make sure to review it thoroughly before moving on to the tasks.
+
+Tasks Tab: When you're ready to put your knowledge to the test, switch to the Tasks tab. You'll find a mix of multiple-choice questions and hands-on tasks that will challenge the effectiveness of the prompts you craft.
+
+Toggle Panel Size: Need to access the Terminal? Just click the Toggle Panel Size button at the top (next to the timer).
+
+📡 What Is Jaeger?
+Jaeger is a distributed tracing system that provides a full UI for inspecting spans and understanding how requests move through your system.
+
+Unlike Collector logs, which output raw trace data line-by-line, Jaeger gives you:
+
+A browser-based interface
+Clean service-level filtering
+Visual trace timelines
+A clear overview of trace structure
+It's the ideal next step when you want to move beyond simple log verification.
+
+Jaeger All-In-One bundles the entire Jaeger stack into a single binary with:
+
+Collector
+Query service
+UI
+In-memory storage
+Perfect for labs, demos, and quick-development environments.
+
+📦 Installing Jaeger All-In-One
+We will run Jaeger in all-in-one mode, which exposes:
+
+OTLP gRPC receiver: 0.0.0.0:4317
+OTLP HTTP receiver: 0.0.0.0:4318
+Jaeger UI: http://localhost:16686
+First, we install and extract the package from the releases page:
+https://github.com/jaegertracing/jaeger/releases/
+
+Then, we run the extracted binary:
+
+/opt/jaeger/jaeger-1.75.0-linux-amd64/jaeger-all-in-one \
+  --collector.otlp.enabled=true \
+  --collector.otlp.grpc.host-port=:14251 \
+  --collector.otlp.http.host-port=:14252
+Once running, Jaeger will be ready to accept traces directly from the Collector.
+
+Note: We changed the default OTLP gRPC and HTTP ports for Jaeger because the OpenTelemetry Collector is already running on ports 4317 (gRPC) and 4318 (HTTP). To avoid port conflicts and ensure both services can run simultaneously, Jaeger is configured to listen on alternative OTLP ports (14251 for gRPC and 14252 for HTTP).
+
+🔗 Connecting the Collector to Jaeger
+The application's services already send spans to the OpenTelemetry Collector via OTLP.
+Then the Collector's configuration needs to be updated so it exports those spans into Jaeger.
+
+A typical Collector pipeline for Jaeger looks like:
+
+exporters:
+  debug:
+    verbosity: detailed
+  otlp/jaeger:
+    endpoint: 0.0.0.0:14251
+    tls:
+      insecure: true
+
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [debug, otlp/jaeger]
+This means:
+Application Service -> OTLP -> Collector -> OTLP -> Jaeger
+
+After this connection is established, Jaeger becomes the central place where all trace data is sent - eliminating the need to scroll through raw Collector logs.
+
+📌 Conclusion
+Collector logs helped you validate that your applications were sending trace data correctly.
+Jaeger takes the next step by providing a full UI so you no longer need to inspect logs to understand your traces.
+
+👣 What's Next?
+When you’re ready, open the Tasks tab.
+There, you’ll install Jaeger All-In-One, configure your OpenTelemetry Collector to export traces to it, and confirm that Jaeger is receiving your telemetry - without relying on Collector logs.
+
+Once Jaeger is connected, the next module will guide you through exploring your trace data in the Jaeger UI.
+
+# Install the linux amd64 tar file for version 1.75.0 from the Jaeger release page at https://github.com/jaegertracing/jaeger/releases/.
+
+Then, extract this file under the /root folder.
+
+wget https://github.com/jaegertracing/jaeger/releases/download/v1.75.0/jaeger-1.75.0-linux-amd64.tar.gz
+
+tar -xvzf jaeger-1.75.0-linux-amd64.tar.gz
+
+Run the Jaeger binary located at /root/jaeger-1.75.0-linux-amd64/jaeger-all-in-one with OTLP enabled, and configure Jaeger to listen on ports 14251 (gRPC) and 14252 (HTTP) instead of the default 4317/4318.
+
+
+Note: Keep the process running for the remainder of this lab.
+
+Ans:
+/root/jaeger-1.75.0-linux-amd64/jaeger-all-in-one \
+  --collector.otlp.enabled=true \
+  --collector.otlp.grpc.host-port=:14251 \
+  --collector.otlp.http.host-port=:14252
+
+Jaeger UI is now running. Click the link on the top right to open it. You should see no traces yet.
+
+Open the frontend link provided and perform some actions. You will still see no traces in Jaeger.
+
+This happens because our OpenTelemetry Collector is not yet configured to send telemetry to Jaeger. We will set this up in the subsequent tasks.
+#
+Update the OpenTelemetry Collector configuration file at /opt/otel/etc/otelcol-contrib/config.yaml.
+
+Add otlp/jaeger as an extra exporter, with OTLP endpoint at port 14251, and include it in the traces pipeline.
+
+Then, restart the otelcol-contrib Collector service.
+
+
+Note: Set tls.insecure as true so that the Collector can send data to Jaeger without TLS.
+
+Ans:
+Use vi or any other editor to edit the config.yaml under /opt/otel/etc/otelcol-contrib/.
+
+The final updated file would look like this:
+
+# To limit exposure to denial of service attacks, change the host in endpoints below from 0.0.0.0 to a specific network interface.
+# See https://github.com/open-telemetry/opentelemetry-collector/blob/main/docs/security-best-practices.md#safeguards-against-denial-of-service-attacks
+
+extensions:
+  health_check:
+  pprof:
+    endpoint: 0.0.0.0:1777
+  zpages:
+    endpoint: 0.0.0.0:55679
+
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+
+processors:
+  batch:
+
+exporters:
+  debug:
+    verbosity: detailed
+  otlp/jaeger:
+    endpoint: 0.0.0.0:14251
+    tls:
+      insecure: true
+
+service:
+
+  pipelines:
+
+    traces:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [debug, otlp/jaeger]
+
+    metrics:
+      receivers: [otlp] 
+      processors: [batch]
+      exporters: [debug]
+
+    logs:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [debug]
+
+  extensions: [health_check, pprof, zpages]
+#
+yq e '.exporters."otlp/jaeger".endpoint = "14251"' -i /opt/otel/etc/otelcol-contrib/config.yaml
+yq e '.exporters."otlp/jaeger".insecure = true' -i /opt/otel/etc/otelcol-contrib/config.yaml
+
+sudo systemctl restart otelcol-contrib
+
+# Practical Root Cause Analysis with Distributed Traces
+Practical Root Cause Analysis with Distributed Traces
+In the previous module, you installed Jaeger, connected it to the OpenTelemetry Collector, and confirmed that your applications' spans are now visible in the Jaeger UI.
+
+Now, it's time to use that data for what distributed tracing was built for: finding and understanding the root cause of problems in complex systems.
+
+This module focuses on how to analyze traces, interpret them correctly, and use them to answer questions like:
+
+Why is my request slow?
+Which service is the bottleneck?
+Where is an error originating?
+How do upstream and downstream dependencies behave?
+Is latency caused by network issues, the application itself, or an external call?
+🐳 Navigating the Lab Environment
+Before we begin, let's take a quick tour of the lab environment:
+
+Overview Tab: You are here! This is your starting point, with detailed information on the lab's topic. Make sure to review it thoroughly before moving on to the tasks.
+
+Tasks Tab: When you're ready to put your knowledge to the test, switch to the Tasks tab. You'll find a mix of multiple-choice questions and hands-on tasks that will challenge the effectiveness of the prompts you craft.
+
+Toggle Panel Size: Need to access the Terminal? Just click the Toggle Panel Size button at the top (next to the timer).
+
+💭 Understanding How to Analyze Traces in Jaeger
+Now that your traces are flowing into Jaeger, it's time to understand how to read them and what they represent.
+Distributed tracing is built around two core concepts: traces and spans.
+
+This section explains what they are, how Jaeger visualizes them, and how to use that information to analyze system behavior.
+
+🔗 What Is a Trace?
+A trace represents the entire journey of a request as it travels through your system.
+
+Examples:
+
+A user hitting the /checkout endpoint
+A background job that triggers a workflow
+A service calling another service
+A trace captures every step of that request - across microservices, networks, external calls, databases, etc.
+
+A single trace is made up of multiple spans.
+
+💡 What Is a Span?
+A span is a single unit of work in a trace.
+
+Examples of spans:
+
+"HTTP GET /products"
+"Database query: SELECT * FROM items"
+"Call to payment-service"
+"Serialize JSON response"
+Every span has:
+
+Name (the operation being done)
+Start time + duration
+Parent span (except the root span)
+Attributes/tags (metadata)
+Status (OK or ERROR)
+Events/logs (e.g., exceptions)
+Spans are connected as a hierarchy.
+
+🌳 Trace Structure: Parent/Child Relationships
+Traces form a tree:
+
+Root span
+ ├── Child span A
+ │     ├── Sub-span A1
+ │     └── Sub-span A2
+ └── Child span B
+        └── Sub-span B1
+`
+
+This structure shows:
+
+Which operations triggered others?
+Where was time spent?
+How do delays/errors propagate?
+Jaeger visualizes this as a timeline waterfall, making it easy to follow request flow.
+
+🖥 Understanding the Jaeger UI
+Jaeger gives you several useful analysis views:
+
+Search Panel
+Before viewing a trace, you use:
+Service (select the service that generated the root span)
+Operation (e.g., GET /cart)
+Tags (filter by HTTP status, errors, etc.)
+Duration range (e.g., "only show slow requests")
+Time range
+This helps you find:
+
+Slowest traces
+Error traces
+Specific endpoints
+Patterns over time
+Trace Timeline (Waterfall View)
+This is the heart of Jaeger.
+
+Each horizontal bar equals one span.
+The indentation shows parent/child structure.
+The bar length shows duration.
+You can analyze:
+a. Latency
+Which span is the longest?
+Is the root span slow or a dependency?
+Is the bottleneck local or network-based?
+
+b. Concurrency
+Are spans running in parallel?
+Are there unexpected sequential operations?
+
+c. Propagation
+Does a slow database query slow down everything upstream?
+Do retries cause cascading delays?
+This view is the #1 tool for root cause analysis.
+
+Span Details Panel
+Clicking a span reveals its detailed information:
+
+Attributes / Tags
+Common tags include: http.method, http.url, http.status_code, db.system, db.statement
+These provide context to understand what the span is doing.
+
+Events / Logs
+
+Events can show:
+
+Exceptions
+Warnings
+Retries
+Timeouts
+This is crucial for diagnosing errors.
+
+Span Status
+
+STATUS_CODE=OK
+STATUS_CODE=ERROR
+It often includes an error message.
+
+🔬 How to Analyze a Trace Step by Step
+Here is a practical workflow:
+
+Step 1 - Look at the total trace duration
+Is the entire request slow? If so, examine the longest span inside it.
+
+Step 2 - Identify the critical path
+The slowest parent -> child -> sub-child chain determines the request time.
+Jaeger highlights this path.
+
+Step 3 - Look for long-running spans
+Examples:
+
+Database queries taking 500ms
+External API calls taking 2s
+Retry loops
+These are often the root cause.
+
+Step 4 - Look for errors
+Find spans marked as ERROR.
+
+Analyze:
+
+Which service threw the error?
+
+How far does the error propagate upstream?
+
+What tags/logs explain the issue?
+
+Step 5 - Inspect tags and metadata
+
+Tags reveal:
+
+Which endpoint was hit
+Query parameters
+SQL statements
+Status codes
+Retry counts
+Error messages
+They often contain everything you need to diagnose the problem.
+
+Step 6 - Check for fan-out and fan-in patterns
+Fan-out
+A service calls multiple dependencies.
+Are they parallel?
+Is one slow?
+
+Fan-in
+Many upstream requests depend on a single resource.
+Is that resource overloaded?
+
+This helps pinpoint bottlenecks.
+
+📌 Conclusion
+Now that your traces are flowing into Jaeger, you can move beyond simply verifying that telemetry exists.
+By understanding what a trace is, how spans are structured, and how to read latency, errors, and dependencies in the Jaeger UI, you are equipped to perform practical root cause analysis.
+
+Jaeger transforms raw trace data into actionable insights, letting you quickly identify performance bottlenecks, detect failures, and understand how requests propagate through your system - all without digging through logs.
+
+With this knowledge, you can diagnose issues, optimize services, and improve overall system reliability.
+
+👣 What's Next?
+When you're ready, open the Tasks tab.
+There, you'll practice analyzing real traces in Jaeger, inspecting spans, investigating errors, and identifying performance bottlenecks.
+
+By working through these exercises, you'll apply root cause analysis techniques to discover why requests are slow or failing, and see firsthand how distributed tracing helps you pinpoint issues across services.
+
+After completing these tasks, you'll be ready to tackle more advanced scenarios, such as optimizing performance and preventing cascading failures in your applications.
